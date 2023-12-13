@@ -2,16 +2,16 @@
 
 @section('content')
 
-        @include('Frontend.app')
-        @include('Frontend.slider')
-        @include('Frontend.about')
-        @include('Frontend.whywe')
-        @include('Frontend.services')
-        @include('Frontend.wedo')
-        @include('Frontend.team')
-        @include('Frontend.timer')
-        @include('Frontend.testimonials')
-        @include('Frontend.overview')
-        @include('Frontend.wrapper')
+        @include('Frontend.Home.slider')
+        @include('Frontend.Home.about')
+        @include('Frontend.Home.whywe')
+        @include('Frontend.Home.services')
+        @include('Frontend.Home.wedo')
+        @include('Frontend.Home.team')
+        @include('Frontend.Home.timer')
+        @include('Frontend.Home.testimonials')
+        @include('Frontend.Home.overview')
+        @include('Frontend.Home.wrapper')
+        
         
 @endsection()

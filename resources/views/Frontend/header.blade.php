@@ -175,7 +175,7 @@
                             <li><a href="/appointment">appointment</a></li>                           
                             <li><a href="#">pages</a>
                                 <ul class="submenu">
-                                    <li><a href="/team">Our Team</a></li>
+                                    <li><a href="/our_team">Our Team</a></li>
                                     <li><a href="/privacy">privacy policy</a></li>
                                     <li><a href="/faq">FAQ</a></li>
                                 </ul>
