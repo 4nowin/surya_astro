@@ -23,38 +23,20 @@ $('.owl-carousel').owlCarousel({
     x.style.display = "none";
     y.style.display = "none";
     
-    function myFunction(){
+    $('#login').on('click', function(){
         if(x.style.display  == "none"){
             x.style.display = "block";
             document.getElementById("signup-dialog").style.display = "none";
         } else {
             x.style.display = "none";
         }
-    }
-    function myFunction1(){
+    });
+
+    $('#signup').on('click', function(){
         if(y.style.display  == "none"){
             y.style.display = "block";
             document.getElementById("login-dialog").style.display = "none";
         } else {
             y.style.display = "none";
         }
-    }
-
-
-    // $(document).on('click', '#login', function(){
-    //     if(x.style.display  == "none"){
-    //         x.style.display = "block";
-    //         document.getElementById("signup-dialog").style.display = "none";
-    //     } else {
-    //         x.style.display = "none";
-    //     }
-    // });
-
-    // $(document).on('click', '#sign_up', function(){
-    //     if(x.style.display  == "none"){
-    //         x.style.display = "block";
-    //         document.getElementById("signup-dialog").style.display = "none";
-    //     } else {
-    //         x.style.display = "none";
-    //     }
-    // });
+    });

@@ -36,8 +36,9 @@
 
                         @else
 
-                        <li><a id="login" class="login" onclick="myFunction()"><i class="fa fa-sign-in" aria-hidden="true"></i> Log In</a></li>
-                        <li><a id="sign_up" class="signup" onclick="myFunction1()"><i class="fa fa-user-plus" aria-hidden="true"></i> Sign Up</a></li>
+                        <li><a class="login" id="login"><i class="fa fa-sign-in" aria-hidden="true"></i> Log In</a></li>
+                        <li><a class="signup" id="signup"><i class="fa fa-user-plus" aria-hidden="true"></i> Sign Up</a></li>
+
                         
                         @endif
                     </ul>
