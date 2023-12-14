@@ -39,3 +39,22 @@ $('.owl-carousel').owlCarousel({
             y.style.display = "none";
         }
     }
+
+
+    // $(document).on('click', '#login', function(){
+    //     if(x.style.display  == "none"){
+    //         x.style.display = "block";
+    //         document.getElementById("signup-dialog").style.display = "none";
+    //     } else {
+    //         x.style.display = "none";
+    //     }
+    // });
+
+    // $(document).on('click', '#sign_up', function(){
+    //     if(x.style.display  == "none"){
+    //         x.style.display = "block";
+    //         document.getElementById("signup-dialog").style.display = "none";
+    //     } else {
+    //         x.style.display = "none";
+    //     }
+    // });
