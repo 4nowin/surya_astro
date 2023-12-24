@@ -16,9 +16,9 @@
             </div>
             <div class="col-lg-12 col-md-12 col-sm-12">
                 <ul class="breadcrumb">
-                    <li><a href="index.html">home</a></li>
+                    <li><a href="/">home</a></li>
                     <li>//</li>
-                    <li><a href="faq.html">FAQ</a></li>
+                    <li><a href="/faq">FAQ</a></li>
                 </ul>
             </div>
         </div>

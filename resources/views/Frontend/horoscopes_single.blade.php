@@ -17,11 +17,11 @@
             </div>
             <div class="col-lg-12 col-md-12 col-sm-12">
                 <ul class="breadcrumb">
-                    <li><a href="index.html">home</a></li>
+                    <li><a href="/">home</a></li>
                     <li>//</li>
-                    <li><a href="horoscopes.html">horoscopes</a></li>
+                    <li><a href="/horoscopes">horoscopes</a></li>
                     <li>//</li>
-                    <li><a href="horoscopes_single.html">horoscopes single</a></li>
+                    <li><a href="/horoscopes_single">horoscopes single</a></li>
                 </ul>
             </div>
         </div>

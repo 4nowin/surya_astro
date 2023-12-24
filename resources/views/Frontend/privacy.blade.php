@@ -16,9 +16,9 @@
             </div>
             <div class="col-lg-12 col-md-12 col-sm-12">
                 <ul class="breadcrumb">
-                    <li><a href="index.html">home</a></li>
+                    <li><a href="/">home</a></li>
                     <li>//</li>
-                    <li><a href="privacy_policy.html">privacy & policy</a></li>
+                    <li><a href="/privacy_policy">privacy & policy</a></li>
                 </ul>
             </div>
         </div>

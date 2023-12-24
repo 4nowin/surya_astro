@@ -16,11 +16,11 @@
             </div>
             <div class="col-lg-12 col-md-12 col-sm-12">
                 <ul class="breadcrumb">
-                    <li><a href="index.html">home</a></li>
+                    <li><a href="/">home</a></li>
                     <li>//</li>
-                    <li><a href="team.html">astrologer</a></li>
+                    <li><a href="/team">astrologer</a></li>
                     <li>//</li>
-                    <li><a href="team_single.html">astrologer single</a></li>
+                    <li><a href="/team_single">astrologer single</a></li>
                 </ul>
             </div>
         </div>
