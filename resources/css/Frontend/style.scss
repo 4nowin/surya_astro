@@ -284,7 +284,7 @@ input:focus, textarea:focus, select:focus, button:focus {
     width: 100%;
     position: absolute;
     margin-top: 51px;
-    z-index: 2;
+    z-index: 3;
 }
 .ast_header_bottom.style_2{
     margin-top: 21px;
@@ -1213,6 +1213,7 @@ input:focus, textarea:focus, select:focus, button:focus {
 	right:0%;
 	bottom:0%;
 	background-color:rgba(0, 0, 0, 0.5);
+    z-index: -1;
 }
 .ast_timer_wrapper .ast_heading h1, .ast_timer_wrapper .ast_heading p{
     color:#ffffff;

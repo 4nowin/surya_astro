@@ -1,0 +1,108 @@
+:root {
+    --angle: 45deg;
+    --opacity: 0.5;
+}
+  
+
+.fun {
+z-index: 2;
+position: absolute;
+padding: 1.1em 0em 0em 1em;
+font-size: 8em;
+text-transform: uppercase;
+font-weight: bold;
+color: transparent;
+user-select: none;
+}
+
+.fun .L_s:hover{
+  color: black;
+text-shadow: 0px 0px 23px cyan;
+}
+
+.fun .L_u:hover{
+  color: black;
+text-shadow: 0px 0px 25px blue;
+}
+
+.fun .L_r:hover{
+  color: black;
+text-shadow: 0px 0px 25px red;
+}
+
+.fun .L_y:hover{
+  color: black;
+text-shadow: 0px 0px 25px yellow;
+}
+
+.fun .L_a:hover{
+  color: black;
+text-shadow: 0px 0px 23px rgb(0, 255, 0);
+}
+
+.fun .L_aa:hover{
+  color: black;
+text-shadow: 0px 0px 23px rgb(149, 1, 255);
+}
+
+.fun .L_t:hover{
+  color: black;
+text-shadow: 0px 0px 25px rgb(0, 255, 255);
+}
+
+.fun .L_o:hover{
+  color: black;
+text-shadow: 0px 0px 25px orange;
+}
+
+// .L_o{
+    
+//     position: absolute;
+//     animation: slidein 4s linear infinite alternate;
+// }
+// @keyframes slidein{
+//     100%{
+//         transform: translateX(calc(-82vw - 0px));
+//         transform: translateY(calc(100vh - 100px));
+//     }
+// }
+
+
+
+
+ // card border css //
+
+  .ast_service_box {
+    --border-size: 0.2rem;
+    border: var(--border-size) solid transparent;
+  
+    /* Paint an image in the border */
+    border-image: conic-gradient(
+        from var(--angle),
+        #d53e33,
+        #fbb300,
+        gray,
+        cyan,
+        violet,
+        #377af5,
+        #399953
+      )
+      1 stretch;    
+    animation: rotate 4s linear infinite;
+  }
+  
+  @property --angle {
+    syntax: "<angle>";
+    initial-value: 0deg;
+    inherits: false;
+  }
+
+  @keyframes rotate {
+    to {
+      --angle: 360deg;
+    }
+  }
+  
+  
+// card border css ends //
+    

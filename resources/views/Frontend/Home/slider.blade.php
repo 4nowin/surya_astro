@@ -24,7 +24,7 @@
         </div>
         <div class="container">
             <div class="ast_bannertext_wrapper">
-                <h1>Astrology revels the will of God</h1>
+                <h1>Astrology reveals the will of God</h1>
                 <ul class="ast_toppadder40 ast_bottompadder50">
                     <li>horoscopes</li>
                     <li>gemstones</li>
