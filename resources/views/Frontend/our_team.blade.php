@@ -1,6 +1,6 @@
 @extends('Frontend.app')
 
-@section('title', 'Surya Astrologers')
+@section('title', 'Our Team')
 
 @section('content')
     

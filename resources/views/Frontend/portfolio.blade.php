@@ -1,5 +1,7 @@
 @extends('Frontend.app')
 
+@section('title', 'Portfolio')
+
 @section('content')
     
 
