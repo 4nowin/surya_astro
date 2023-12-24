@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
 
-        @vite(['resources/css/app.scss', 'resources/js/app.js'])
+    <link rel="stylesheet" href="{{ asset('build/assets/app-v1.0.0.css') }}">
+    <script type="module" src="{{ asset('build/assets/app-v1.0.0.js') }}"></script>
+        <!-- @vite(['resources/css/app.scss', 'resources/js/app.js']) -->
     
 </head>
 <body>
