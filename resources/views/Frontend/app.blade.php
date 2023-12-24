@@ -12,7 +12,7 @@
 
     <link rel="stylesheet" href="{{ asset('build/assets/app-v1.0.0.css') }}">
     <script type="module" src="{{ asset('build/assets/app-v1.0.0.js') }}"></script>
-        
+       
     
 </head>
 <body>

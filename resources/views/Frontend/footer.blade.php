@@ -79,7 +79,7 @@
         </div>
         <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
             <div class="ast_copyright_wrapper">
-                <p>&copy; Copyright 2021, All Rights Reserved <br><small>Made with love by<a href="https://cubebitz.com/"> Cube Bitz</a></small></p>                
+                <p>&copy; Copyright 2024, All Rights Reserved <br><small>Made with love by<a href="https://cubebitz.com/"> Cube Bitz</a></small></p>                
             </div>          
         </div>  
     </div>
