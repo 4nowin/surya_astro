@@ -151,7 +151,7 @@
         <div class="row">
             <div class="col-lg-3 col-md-3 col-sm-3 col-xs-12">
                 <div class="ast_logo">
-                    <a href="index.html"><img src="images/header/logo.png" alt="Logo" title="Logo"></a>
+                    <a href="/"><img src="images/header/logo.png" alt="Logo" title="Logo"></a>
                     <button class="ast_menu_btn"><i class="fa fa-bars" aria-hidden="true"></i></button>
                 </div>
             </div>

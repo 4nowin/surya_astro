@@ -1,5 +1,7 @@
 @extends('Frontend.app')
 
+@section('title', 'About Us')
+
 @section('content')
     
 

@@ -1,6 +1,6 @@
 @extends('Frontend.app')
 
-@section('title', 'Surya Astrologers')
+@section('title', 'Palmistry')
 
 @section('content')
     
@@ -59,7 +59,7 @@
                         <img src="images/page/heart.jpg" alt="" class="img-responsive">
                     </div>  
                     <div class="ast_palm_content">
-                        <h4><a href="palmistry_single.html">basic heart line meaning</a></h4>
+                        <h4><a href="/palmistry_single">basic heart line meaning</a></h4>
                         <p>The heart line is the first of the major lines examined by a reader and represents love and attraction. It is found towards the top of the palm, under the fingers. In some traditions, the line is read as starting from the edge of the palm under the little finger and flowing across the palm towards the thumb; in others, it is seen as starting under the fingers and flowing toward the outside edge of the palm. Palmists interpret this line to represent their subject's emotional life; it is therefore believed to give an insight into how the emotional side of their mindframe will act out and be acted upon during their lifetime.</p>
                     </div>
                 </div>
@@ -70,7 +70,7 @@
                         <img src="images/page/head.jpg" alt="" class="img-responsive">
                     </div>  
                     <div class="ast_palm_content">
-                        <h4><a href="palmistry_single.html">Basic Head Line Meaning</a></h4>
+                        <h4><a href="/palmistry_single">Basic Head Line Meaning</a></h4>
                         <p>The next line identified by palmists is the head line. This line starts at the edge of the palm under the index finger and flows across the palm towards the outside edge. Often, the head line is joined with the life line (see below) at inception. Palmists generally interpret this line to represent their subject's mind and the way it works, including learning style, communication style, intellectualism, and thirst for knowledge. It is also believed to indicate a preference for creative or analytical approaches to information (i.e., right brain or left brain).</p>
                     </div>
                 </div>
@@ -81,7 +81,7 @@
                         <img src="images/page/life.jpg" alt="" class="img-responsive">
                     </div>  
                     <div class="ast_palm_content">
-                        <h4><a href="palmistry_single.html">Life Line</a></h4>
+                        <h4><a href="/palmistry_single">Life Line</a></h4>
                         <p>The life line is perhaps the most controversial line on the hand.[citation needed] This line extends from the edge of the palm above the thumb and travels in an arc towards the wrist. This line is believed to represent the person's vitality and vigor, physical health and general well-being. The life line is also believed to reflect major life changes, including cataclysmic events, physical injuries, and relocations. Modern palmists generally do not believe that the length of a person's life line is tied to the length of a person's life.</p>
                     </div>
                 </div>
@@ -92,7 +92,7 @@
                         <img src="images/page/love.jpg" alt="" class="img-responsive">
                     </div>  
                     <div class="ast_palm_content">
-                        <h4><a href="palmistry_single.html">Marriage Line</a></h4>
+                        <h4><a href="/palmistry_single">Marriage Line</a></h4>
                         <p>The marriage line on the palm reflects the time and duration of the love relationship. The marriage line on palm is located below the base of the little finger and just above the line of the heart on the right palm. It is different for everyone. Palmistry says there is only one line talking about love. Although some people may have several. In addition, some women and men cannot find their lines for marriage at all due to its absence. Marriage lines are said to reveal many details of an individual’s romantic life. They indicate everything from the number of marriages to the number of children born from those marriages. This may seem like a strange leap of faith to some, but palm reading has been around for centuries. The lines of marriage are found on the sides of the hand below the little finger. Turn the part of the hand that you rest on while writing in the light and you will see some (it could be one, two or three) deep cut lines on the hand that run horizontally under the little finger. These are the marriage lines.</p>
                     </div>
                 </div>

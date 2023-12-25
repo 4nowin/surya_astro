@@ -1,5 +1,7 @@
 @extends('Frontend.app')
 
+@section('title', 'Navgrah')
+
 @section('content')
 
         @include('Frontend.Home.slider')

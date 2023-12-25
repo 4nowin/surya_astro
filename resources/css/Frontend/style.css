@@ -1,6 +1,48 @@
+@font-face {
+    font-family: 'phil_bold';
+    src: url('/resources/fonts/phil/phil_bold.ttf');
+    font-weight: normal;
+    font-style: normal;
+  }
+  
+  @font-face {
+    font-family: 'Philosopher';
+    src: url('/resources/fonts/phil/phil_regular.ttf');
+    font-weight: normal;
+    font-style: normal;
+  }
+  
+  @font-face {
+    font-family: 'Caudex';
+    src: url('/resources/fonts/caudex/Caudex-Regular.ttf');
+    font-weight: normal;
+    font-style: normal;
+  }
+  
+  @font-face {
+    font-family: 'Sacramento';
+    src: url('/resources/fonts/Sacramento.ttf');
+    font-weight: normal;
+    font-style: normal;
+  }
+  
+  @font-face {
+    font-family: 'Montserrat';
+    src: url('/resources/fonts/montserrat/Montserrat-Light.ttf');
+    font-weight: normal;
+    font-style: normal;
+  }
+  
+  @font-face {
+    font-family: 'Sansita Swashed';
+    src: url('/resources/fonts/sansita/SansitaSwashed-Light.ttf');
+    font-weight: normal;
+    font-style: normal;
+  }
+
 
 body {
-	font-family: 'Open Sans', sans-serif;
+	font-family: 'Caudex', sans-serif;
 	font-size: 15px;
 	line-height: 1.5;
 	color: #777777;

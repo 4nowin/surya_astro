@@ -1,6 +1,6 @@
 @extends('Frontend.app')
 
-@section('title', 'Surya Astrologers')
+@section('title', 'Blog')
 
 @section('content')
     
@@ -16,7 +16,7 @@
             </div>
             <div class="col-lg-12 col-md-12 col-sm-12">
                 <ul class="breadcrumb">
-                    <li><a href="index.html">home</a></li>
+                    <li><a href="/">home</a></li>
                     <li>//</li>
                     <li><a href="/blog">blog</a></li>
                     <li>//</li>
@@ -52,14 +52,14 @@
                 <div class="ast_blog_box">
                     <div class="ast_blog_img">
                         <span class="ast_date_tag">None</span>
-                        <a href="blog_single.html"><img src="#" alt="Blog" title="Blog"></a>
+                        <a href="#"><img src="#" alt="Blog" title="Blog"></a>
                     </div>
                     <div class="ast_blog_info">
                         <ul class="ast_blog_info_text">
                             <li><a href="#"><i class="fa fa-comments-o" aria-hidden="true"></i> By </a></li>
                             <li><a href="#"><i class="fa fa-user" aria-hidden="true"></i> Aacharya Pt. Ravinder Sharma</a></li>
                         </ul>
-                        <h3 class="ast_blog_info_heading"><a href="blog_single.html">None</a></h3>
+                        <h3 class="ast_blog_info_heading"><a href="#">None</a></h3>
                         <p class="ast_blog_info_details">None</p>
                         <a class="ast_btn" href="#">read more</a>
                     </div>

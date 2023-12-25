@@ -1,6 +1,6 @@
 @extends('Frontend.app')
 
-@section('title', 'Surya Astrologers')
+@section('title', 'Palmistry')
 
 @section('content')
     
@@ -16,11 +16,11 @@
             </div>
             <div class="col-lg-12 col-md-12 col-sm-12">
                 <ul class="breadcrumb">
-                    <li><a href="index.html">home</a></li>
+                    <li><a href="/">home</a></li>
                     <li>//</li>
-                    <li><a href="index-palmistry.html">palmistry</a></li>
+                    <li><a href="/index-palmistry">palmistry</a></li>
                     <li>//</li>
-                    <li><a href="palmistry_single.html">palmistry single</a></li>
+                    <li><a href="/palmistry_single">palmistry single</a></li>
                 </ul>
             </div>
         </div>

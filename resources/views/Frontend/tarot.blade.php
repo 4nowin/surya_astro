@@ -1,6 +1,6 @@
 @extends('Frontend.app')
 
-@section('title', 'Surya Astrologers')
+@section('title', 'Tarot')
 
 @section('content')
     
@@ -65,7 +65,7 @@
                     <div class="row">
                         <div class="col-lg-3 col-md-3 col-sm-4 col-xs-12">
                             <div class="ast_tarot_box">
-                                <a href="tarot_single.html">
+                                <a href="/tarot_single">
                                     <img src="http://via.placeholder.com/213x389" alt="tarot" title="Tarot Card">
                                     <div class="terot_content">
                                         <h3>about this card</h3>
@@ -77,7 +77,7 @@
                         </div>
                         <div class="col-lg-3 col-md-3 col-sm-4 col-xs-12">
                             <div class="ast_tarot_box">
-                                <a href="tarot_single.html">
+                                <a href="/tarot_single">
                                     <img src="http://via.placeholder.com/213x389" alt="tarot" title="Tarot Card">
                                     <div class="terot_content">
                                         <h3>about this card</h3>
@@ -89,7 +89,7 @@
                         </div>
                         <div class="col-lg-3 col-md-3 col-sm-4 col-xs-12">
                             <div class="ast_tarot_box">
-                                <a href="tarot_single.html">
+                                <a href="/tarot_single">
                                     <img src="http://via.placeholder.com/213x389" alt="tarot" title="Tarot Card">
                                     <div class="terot_content">
                                         <h3>about this card</h3>
@@ -101,7 +101,7 @@
                         </div>
                         <div class="col-lg-3 col-md-3 col-sm-4 col-xs-12">
                             <div class="ast_tarot_box">
-                                <a href="tarot_single.html">
+                                <a href="/tarot_single">
                                     <img src="http://via.placeholder.com/213x389" alt="tarot" title="Tarot Card">
                                     <div class="terot_content">
                                         <h3>about this card</h3>
@@ -113,7 +113,7 @@
                         </div>
                         <div class="col-lg-3 col-md-3 col-sm-4 col-xs-12">
                             <div class="ast_tarot_box">
-                                <a href="tarot_single.html">
+                                <a href="/tarot_single">
                                     <img src="http://via.placeholder.com/213x389" alt="tarot" title="Tarot Card">
                                     <div class="terot_content">
                                         <h3>about this card</h3>
@@ -125,7 +125,7 @@
                         </div>
                         <div class="col-lg-3 col-md-3 col-sm-4 col-xs-12">
                             <div class="ast_tarot_box">
-                                <a href="tarot_single.html">
+                                <a href="/tarot_single">
                                     <img src="http://via.placeholder.com/213x389" alt="tarot" title="Tarot Card">
                                     <div class="terot_content">
                                         <h3>about this card</h3>
@@ -137,7 +137,7 @@
                         </div>
                         <div class="col-lg-3 col-md-3 col-sm-4 col-xs-12">
                             <div class="ast_tarot_box">
-                                <a href="tarot_single.html">
+                                <a href="/tarot_single">
                                     <img src="http://via.placeholder.com/213x389" alt="tarot" title="Tarot Card">
                                     <div class="terot_content">
                                         <h3>about this card</h3>
@@ -149,7 +149,7 @@
                         </div>
                         <div class="col-lg-3 col-md-3 col-sm-4 col-xs-12">
                             <div class="ast_tarot_box">
-                                <a href="tarot_single.html">
+                                <a href="/tarot_single">
                                     <img src="http://via.placeholder.com/213x389" alt="tarot" title="Tarot Card">
                                     <div class="terot_content">
                                         <h3>about this card</h3>
@@ -161,7 +161,7 @@
                         </div>
                         <div class="col-lg-3 col-md-3 col-sm-4 col-xs-12">
                             <div class="ast_tarot_box">
-                                <a href="tarot_single.html">
+                                <a href="/tarot_single">
                                     <img src="http://via.placeholder.com/213x389" alt="tarot" title="Tarot Card">
                                     <div class="terot_content">
                                         <h3>about this card</h3>
@@ -173,7 +173,7 @@
                         </div>
                         <div class="col-lg-3 col-md-3 col-sm-4 col-xs-12">
                             <div class="ast_tarot_box">
-                                <a href="tarot_single.html">
+                                <a href="/tarot_single">
                                     <img src="http://via.placeholder.com/213x389" alt="tarot" title="Tarot Card">
                                     <div class="terot_content">
                                         <h3>about this card</h3>
@@ -185,7 +185,7 @@
                         </div>
                         <div class="col-lg-3 col-md-3 col-sm-4 col-xs-12">
                             <div class="ast_tarot_box">
-                                <a href="tarot_single.html">
+                                <a href="/tarot_single">
                                     <img src="http://via.placeholder.com/213x389" alt="tarot" title="Tarot Card">
                                     <div class="terot_content">
                                         <h3>about this card</h3>
@@ -197,7 +197,7 @@
                         </div>
                         <div class="col-lg-3 col-md-3 col-sm-4 col-xs-12">
                             <div class="ast_tarot_box">
-                                <a href="tarot_single.html">
+                                <a href="/tarot_single">
                                     <img src="http://via.placeholder.com/213x389" alt="tarot" title="Tarot Card">
                                     <div class="terot_content">
                                         <h3>about this card</h3>
@@ -209,7 +209,7 @@
                         </div>
                         <div class="col-lg-3 col-md-3 col-sm-4 col-xs-12">
                             <div class="ast_tarot_box">
-                                <a href="tarot_single.html">
+                                <a href="/tarot_single">
                                     <img src="http://via.placeholder.com/213x389" alt="tarot" title="Tarot Card">
                                     <div class="terot_content">
                                         <h3>about this card</h3>
@@ -221,7 +221,7 @@
                         </div>
                         <div class="col-lg-3 col-md-3 col-sm-4 col-xs-12">
                             <div class="ast_tarot_box">
-                                <a href="tarot_single.html">
+                                <a href="/tarot_single">
                                     <img src="http://via.placeholder.com/213x389" alt="tarot" title="Tarot Card">
                                     <div class="terot_content">
                                         <h3>about this card</h3>
@@ -233,7 +233,7 @@
                         </div>
                         <div class="col-lg-3 col-md-3 col-sm-4 col-xs-12">
                             <div class="ast_tarot_box">
-                                <a href="tarot_single.html">
+                                <a href="/tarot_single">
                                     <img src="http://via.placeholder.com/213x389" alt="tarot" title="Tarot Card">
                                     <div class="terot_content">
                                         <h3>about this card</h3>
@@ -245,7 +245,7 @@
                         </div>
                         <div class="col-lg-3 col-md-3 col-sm-4 col-xs-12">
                             <div class="ast_tarot_box">
-                                <a href="tarot_single.html">
+                                <a href="/tarot_single">
                                     <img src="http://via.placeholder.com/213x389" alt="tarot" title="Tarot Card">
                                     <div class="terot_content">
                                         <h3>about this card</h3>
@@ -257,7 +257,7 @@
                         </div>
                         <div class="col-lg-3 col-md-3 col-sm-4 col-xs-12">
                             <div class="ast_tarot_box">
-                                <a href="tarot_single.html">
+                                <a href="/tarot_single">
                                     <img src="http://via.placeholder.com/213x389" alt="tarot" title="Tarot Card">
                                     <div class="terot_content">
                                         <h3>about this card</h3>
@@ -269,7 +269,7 @@
                         </div>
                         <div class="col-lg-3 col-md-3 col-sm-4 col-xs-12">
                             <div class="ast_tarot_box">
-                                <a href="tarot_single.html">
+                                <a href="/tarot_single">
                                     <img src="http://via.placeholder.com/213x389" alt="tarot" title="Tarot Card">
                                     <div class="terot_content">
                                         <h3>about this card</h3>
@@ -281,7 +281,7 @@
                         </div>
                         <div class="col-lg-3 col-md-3 col-sm-4 col-xs-12">
                             <div class="ast_tarot_box">
-                                <a href="tarot_single.html">
+                                <a href="/tarot_single">
                                     <img src="http://via.placeholder.com/213x389" alt="tarot" title="Tarot Card">
                                     <div class="terot_content">
                                         <h3>about this card</h3>
@@ -293,7 +293,7 @@
                         </div>
                         <div class="col-lg-3 col-md-3 col-sm-4 col-xs-12">
                             <div class="ast_tarot_box">
-                                <a href="tarot_single.html">
+                                <a href="/tarot_single">
                                     <img src="http://via.placeholder.com/213x389" alt="tarot" title="Tarot Card">
                                     <div class="terot_content">
                                         <h3>about this card</h3>
@@ -305,7 +305,7 @@
                         </div>
                         <div class="col-lg-3 col-md-3 col-sm-4 col-xs-12">
                             <div class="ast_tarot_box">
-                                <a href="tarot_single.html">
+                                <a href="/tarot_single">
                                     <img src="http://via.placeholder.com/213x389" alt="tarot" title="Tarot Card">
                                     <div class="terot_content">
                                         <h3>about this card</h3>
@@ -317,7 +317,7 @@
                         </div>
                         <div class="col-lg-3 col-md-3 col-sm-4 col-xs-12">
                             <div class="ast_tarot_box">
-                                <a href="tarot_single.html">
+                                <a href="/tarot_single">
                                     <img src="http://via.placeholder.com/213x389" alt="tarot" title="Tarot Card">
                                     <div class="terot_content">
                                         <h3>about this card</h3>
@@ -350,7 +350,7 @@
             <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
                 <div class="ast_team_box">  
                     <img src="http://via.placeholder.com/150x150" alt="team">
-                    <h4><a href="team_single.html">Clarence Kissel</a></h4>
+                    <h4><a href="/team_single">Clarence Kissel</a></h4>
                     <p>astrologer</p>
                     <ul>
                         <li><a href="#"><i class="fa fa-facebook" aria-hidden="true"></i></a></li>
@@ -362,7 +362,7 @@
             <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
                 <div class="ast_team_box">  
                     <img src="http://via.placeholder.com/150x150" alt="team">
-                    <h4><a href="team_single.html">Marie J. Vela</a></h4>
+                    <h4><a href="/team_single">Marie J. Vela</a></h4>
                     <p>tarot reader</p>
                     <ul>
                         <li><a href="#"><i class="fa fa-facebook" aria-hidden="true"></i></a></li>
@@ -374,7 +374,7 @@
             <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
                 <div class="ast_team_box">  
                     <img src="http://via.placeholder.com/150x150" alt="team">
-                    <h4><a href="team_single.html">Tim M. Hall</a></h4>
+                    <h4><a href="/team_single">Tim M. Hall</a></h4>
                     <p>gemstonist</p>
                     <ul>
                         <li><a href="#"><i class="fa fa-facebook" aria-hidden="true"></i></a></li>
@@ -386,7 +386,7 @@
             <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
                 <div class="ast_team_box">  
                     <img src="http://via.placeholder.com/150x150" alt="team">
-                    <h4><a href="team_single.html">Judith Travis</a></h4>
+                    <h4><a href="/team_single">Judith Travis</a></h4>
                     <p>astrologist</p>
                     <ul>
                         <li><a href="#"><i class="fa fa-facebook" aria-hidden="true"></i></a></li>
