@@ -5,7 +5,7 @@
             <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
                 <div class="ast_contact_details">
                     <ul>
-                        <li><i class="fa fa-phone" aria-hidden="true"></i><a href="tel:+91-8894876075">+91-8894876075</a> </li>
+                        <li><i class="fa fa-phone" aria-hidden="true"></i><a href="tel:+91-7018565737">+91-7018565737</a> </li>
                         <li><a href="mailto:astro@ownyog.com"><i class="fa fa-envelope-o" aria-hidden="true"></i> astro@ownyog.com</a></li>
                     </ul>
                 </div>
