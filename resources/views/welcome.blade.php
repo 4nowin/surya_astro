@@ -9,7 +9,6 @@
         @include('Frontend.Home.whywe')
         @include('Frontend.Home.services')
         @include('Frontend.Home.wedo')
-        @include('Frontend.Home.team')
         @include('Frontend.Home.timer')
         @include('Frontend.Home.testimonials')
         @include('Frontend.Home.overview')

@@ -35,8 +35,8 @@
                     <div class="ast_servicelink">
                         <ul>
                             <li><a href="/horoscope">Horoscopes</a></li>
-                            <li><a href="/gemstone">Gemstones</a></li>
-                            <li><a href="/numerology">Numerology</a></li>
+                            <!-- <li><a href="/gemstone">Gemstones</a></li>
+                            <li><a href="/numerology">Numerology</a></li> -->
                             <li><a href="/tarot">Tarot Cards</a></li>
                             <li><a href="/palmistry">Palmistry</a></li>
                         </ul>

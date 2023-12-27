@@ -5254,3 +5254,57 @@ li.ast_search , li.ast_cart{
           }
 
       }
+
+.rashifal-container{
+    grid-template-areas: "left right";
+    display: grid;
+    padding: 5px;
+}
+
+.left_container{
+    background: #807182;
+    overflow: hidden;
+    padding: 40px 0 0 0;
+    position: relative;
+    text-align: center;
+    width: 300px;
+}
+.right_container{
+    background: #f9c7c2;
+    display: grid;
+    grid-template-areas: "." ".";
+    width: 500px;
+}
+.left_container h1{
+    color: rgba(0, 0, 0, 0.8);
+  display: inline-block;
+  font-size: 24px;
+}
+.left_container img{
+    background: #F7B1AB;
+    border-radius: 50%;
+    color: #807182;
+    font-size: 24px;
+    margin-right: 5px;
+    padding: 10px;
+    transform: rotate(-45deg);
+}
+.left_container .left_img{
+    bottom: -5px;
+    position: absolute;
+    text-align: center;
+}
+.left-container .left_img:before {
+    background: #807182;
+    content: "";
+    height: 100%;
+    left: 0;
+    opacity: 0.4;
+    position: absolute;
+    width: 100%;
+    z-index: 1;
+  }
+  .left_container .left_img img {
+    filter: sepia(100%);
+    width: 70%;
+  }

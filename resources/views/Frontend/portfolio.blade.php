@@ -92,7 +92,6 @@
 </div>
 
 
-@include('Frontend.Home.team')
 @include('Frontend.Home.wrapper')
 
 <script>
