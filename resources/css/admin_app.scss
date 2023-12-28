@@ -1,0 +1,12 @@
+@import './bootstrap';
+@import '../../node_modules/bootstrap-icons/font/bootstrap-icons.scss';
+
+@import '../../node_modules/@fortawesome/fontawesome-free/css/fontawesome.min.css';
+@import '../../node_modules/@fortawesome/fontawesome-free/css/regular.min.css';
+@import '../../node_modules/@fortawesome/fontawesome-free/css/solid.min.css';
+@import '../../node_modules/@fortawesome/fontawesome-free/css/brands.min.css';
+
+
+//admin area 
+@import 'admin/navbar.scss';
+@import 'admin/datepicker.min.css';

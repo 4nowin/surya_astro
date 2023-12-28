@@ -35,7 +35,7 @@
     <section id="buy-tickets" class="section-with-bg wow fadeInUp">
       <div class="container">
         <div class="section-header" style="text-align: center;">
-          <h2>Maha Shivratri 2021 Puja</h2>
+          <h2>Maha Shivratri 2024 Puja</h2>
           <p>Below are the puja plans for Maha Shivratri.</p>
         </div>
         <div class="row">
