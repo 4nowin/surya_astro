@@ -67,27 +67,19 @@ class InquiryController extends Controller
     }
 
  
-    public function update(Inquiry $inquiries, Request $request)
+    public function update($id)
     {
-        $this->validate($request, [
-            'name' => 'required',
-            'permission' => 'required',
-        ]);
-
-        $inquiries->update($request->only('name'));
-
-        $inquiries->syncPermissions($request->get('permission'));
+        Inquiry::where('id', $id)->update(array('status' => 1));
 
         return redirect()->route('enquiry.index')
                         ->with('success','Enquiry updated successfully');
     }
 
-    public function completed($id)
+    public function completed(Request $request)
     {
-        Inquiry::where('id', $id)->update(array('status' => 1));
-
-        return redirect()->route('enquiry.index')
-                        ->with('success','Enquiry Completed successfully');
+        $inquiries = Inquiry::orderBy('name','DESC')->paginate(5);
+        return view('admin.inquiry.completed',compact('inquiries'))
+            ->with('i', ($request->input('page', 1) - 1) * 5);
     }
 
     public function destroy($id)

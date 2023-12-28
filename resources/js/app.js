@@ -1,4 +1,5 @@
 import './bootstrap.bundle.min';
+import './datepicker.min';
 import './jquery';
 import './owl.carousel';
 import './Frontend/custom';

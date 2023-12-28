@@ -1,7 +1,7 @@
 import './bootstrap.bundle.min';
 import './admin/navbar';
 
-import './admin/datepicker.min';
+import './datepicker.min';
 
 import axios from 'axios';
 import Crop from 'tinycrop';
