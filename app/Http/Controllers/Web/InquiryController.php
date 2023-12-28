@@ -19,6 +19,7 @@ class InquiryController extends Controller
             "date_of_birth" => $request->date_of_birth,
             "place_of_birth" => $request->place_of_birth,
             "for" => $request->for,
+            "type" => $request->type,
             "message" => $request->message,
         ]);
 
