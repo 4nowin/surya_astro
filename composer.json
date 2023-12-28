@@ -7,12 +7,27 @@
     "require": {
         "php": "^8.1",
         "guzzlehttp/guzzle": "^7.2",
+        "intervention/image": "^2.7",
+        "intervention/imagecache": "^2.5",
+        "jenssegers/agent": "^2.6",
         "laravel/framework": "^10.10",
         "laravel/sanctum": "^3.3",
-        "laravel/tinker": "^2.8"
+        "laravel/socialite": "^5.11",
+        "laravel/tinker": "^2.8",
+        "laravel/ui": "^4.3",
+        "laravelcollective/html": "^6.4",
+        "mikehaertl/phpwkhtmltopdf": "^2.5",
+        "monarobase/country-list": "^3.4",
+        "simplesoftwareio/simple-qrcode": "^4.2",
+        "spatie/laravel-permission": "^6.3",
+        "spatie/laravel-sitemap": "^7.0",
+        "staudenmeir/eloquent-json-relations": "^1.1",
+        "tinymce/tinymce": "^6.8",
+        "tymon/jwt-auth": "^2.0"
     },
     "require-dev": {
         "fakerphp/faker": "^1.9.1",
+        "laravel/breeze": "^1.27",
         "laravel/pint": "^1.0",
         "laravel/sail": "^1.18",
         "mockery/mockery": "^1.4.4",
