@@ -15,7 +15,7 @@
                     <li>gemstones</li>
                     <li>numerology</li>
                 </ul>
-                <a class="ast_btn" data-bs-toggle="modal" data-bs-target="#horescope-chart-form">make it now</a>
+                <a class="ast_btn" data-bs-toggle="modal" data-bs-target="#horoscope-chart-form">make it now</a>
             </div>
         </div>
     </div>

@@ -107,7 +107,7 @@
 
 <!-- horescope model start here -->
 
-<div class="form_container modal" id="horescope-chart-form" tabindex="-1" role="dialog">
+<div class="form_container modal" id="horoscope-chart-form" tabindex="-1" role="dialog">
     <div class="modal-dialog modal-dialog-centered" role="document">
         <div class="chart-container modal-content">
             <div class="left_container">
@@ -121,7 +121,7 @@
                     @csrf
                     <input type="text" name="for" value="horescope" hidden>
                     <header>
-                        <h1>Get Horescope</h1>
+                        <h1>Get Horoscope</h1>
                         <div class="container">
                         <div class='row'>
                             <div class="col-12">
@@ -149,7 +149,7 @@
                         </div>
                         <div class='row mt-2'>
                             <div class='col-6'>
-                                <label for='dob'>Horescope for</label>
+                                <label for='dob'>Horoscope for</label>
                                 <input id='birth' class="form-control" name="date_of_birth" placeholder="DD/MM/YY" type='date' required>
                             </div>
                             <div class='col-6'>
