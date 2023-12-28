@@ -21,6 +21,7 @@ return new class extends Migration
             $table->string("date_of_birth")->nullable();
             $table->string("place_of_birth")->nullable();
             $table->string("for");
+            $table->string("type")->nullable();
             $table->string("from")->nullable();
             $table->integer('status')->default(0);
             $table->longText("message")->nullable();
