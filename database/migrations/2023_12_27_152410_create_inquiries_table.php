@@ -14,15 +14,15 @@ return new class extends Migration
         Schema::create('inquiries', function (Blueprint $table) {
             $table->id();
             $table->string("name");
-            $table->string("email");
+            $table->string("email")->nullable();
             $table->string("phone");
             $table->string("gender");
-            $table->string("country");
-            $table->string("course");
-            $table->string("month");
-            $table->string("accommodation");
-            $table->string("from");
-            $table->boolean('isDeleted')->default(0);
+            $table->string("country")->nullable();
+            $table->string("date_of_birth")->nullable();
+            $table->string("place_of_birth")->nullable();
+            $table->string("for");
+            $table->string("from")->nullable();
+            $table->integer('status')->default(0);
             $table->longText("message")->nullable();
             $table->timestamps();
         });

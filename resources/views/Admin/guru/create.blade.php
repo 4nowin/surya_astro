@@ -2,12 +2,12 @@
 
 @section('content')
 
-<h4>New Teacher</h4>
+<h4>New Guru</h4>
 <p class="text-muted">Add new post.</p>
 
 <div class="mt-4">
 
-    <form method="POST" action="{{ route('teacher.store') }}" enctype="multipart/form-data">
+    <form method="POST" action="{{ route('guru.store') }}" enctype="multipart/form-data">
         @csrf
 
         <x-image-chooser class="border border-grey p-4 mb-3" height="auto" width="100%" :value="null" name="cover">
@@ -70,8 +70,8 @@
         </div>
 
 
-        <button type="submit" class="btn btn-info">Save Teacher</button>
-        <a href="{{ route('teacher.index') }}" class="btn btn-dark">Back</a>
+        <button type="submit" class="btn btn-info">Save Guru</button>
+        <a href="{{ route('guru.index') }}" class="btn btn-dark">Back</a>
     </form>
 </div>
 

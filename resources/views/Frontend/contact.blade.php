@@ -47,7 +47,7 @@
                 <div class="ast_contact_info">
                     <span><i class="fa fa-envelope-open-o" aria-hidden="true"></i></span>
                     <h4>email</h4>
-                    <p><a href="mailto:asto@ownyog.com">astro@ownyog.com</a></p>
+                    <p><a href="mailto:asto@navgarah.com">astro@navgarah.com</a></p>
                 </div>
             </div>
             <div class="col-lg-4 col-md-4 col-sm-4 col-xs-12">

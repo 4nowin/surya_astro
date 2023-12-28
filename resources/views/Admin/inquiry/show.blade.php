@@ -35,20 +35,20 @@
                 <td>{{ $inquiry->country }}</td>
             </tr>
             <tr>
-                <td>Course</td>
-                <td>{{ $inquiry->course }}</td>
+                <td>For</td>
+                <td>{{ $inquiry->for }}</td>
             </tr>
             <tr>
-                <td>month</td>
-                <td>{{ $inquiry->month }}</td>
+                <td>Date Of Birth</td>
+                <td>{{ $inquiry->date_of_birth }}</td>
             </tr>
             <tr>
-                <td>Accommodation</td>
-                <td>{{ $inquiry->accommodation }}</td>
+                <td>Place of Birth</td>
+                <td>{{ $inquiry->place_of_birth }}</td>
             </tr>
             <tr>
-                <td>Got From</td>
-                <td>{{ $inquiry->from }}</td>
+                <td>Status</td>
+                <td>{{ $inquiry->status }}</td>
             </tr>
             <tr>
                 <td>Message</td>

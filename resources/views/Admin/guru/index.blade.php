@@ -4,10 +4,10 @@
 
 
 <div class="bg-light p-4 rounded">
-    <h4>Teacher</h4>
+    <h4>Guru</h4>
     <div class="lead">
-        Manage your Teacher here.
-        <a href="{{ route('teacher.create') }}" class="btn btn-primary btn-sm float-right">Add teacher</a>
+        Manage your Guru here.
+        <a href="{{ route('guru.create') }}" class="btn btn-primary btn-sm float-right">Add guru</a>
     </div>
 
     <div class="mt-2">
@@ -21,15 +21,15 @@
             <th>Name</th>
             <th colspan="2">Action</th>
         </tr>
-        @foreach ($teachers as $key => $teacher)
+        @foreach ($gurus as $key => $guru)
         <tr>
-            <td>{{ $teacher->id }}</td>
-            <td>{{ $teacher->name }}</td>
+            <td>{{ $guru->id }}</td>
+            <td>{{ $guru->name }}</td>
             <td width="1%">
-                <a class="btn btn-primary btn-sm" href="{{ route('teacher.edit', $teacher->id) }}">Edit</a>
+                <a class="btn btn-primary btn-sm" href="{{ route('guru.edit', $guru->id) }}">Edit</a>
             </td>
             <td width="1%">
-                {!! Form::open(['method' => 'DELETE','route' => ['teacher.destroy', $teacher->id],'style'=>'display:inline']) !!}
+                {!! Form::open(['method' => 'DELETE','route' => ['guru.destroy', $guru->id],'style'=>'display:inline']) !!}
                 {!! Form::submit('Delete', ['class' => 'btn btn-danger btn-sm']) !!}
                 {!! Form::close() !!}
             </td>
@@ -40,7 +40,7 @@
 
 
     <div class="d-flex mt-4">
-        @include('admin.common.pagination', ['paginator' => $teachers])
+        @include('admin.common.pagination', ['paginator' => $gurus])
     </div>
 
 </div>

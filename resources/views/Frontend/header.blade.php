@@ -6,7 +6,7 @@
                 <div class="ast_contact_details">
                     <ul>
                         <li><i class="fa fa-phone" aria-hidden="true"></i><a href="tel:+91-7018565737">+91-7018565737</a> </li>
-                        <li><a href="mailto:astro@ownyog.com"><i class="fa fa-envelope-o" aria-hidden="true"></i> astro@ownyog.com</a></li>
+                        <li><a href="mailto:astro@navgarah.com"><i class="fa fa-envelope-o" aria-hidden="true"></i> astro@navgarah.com</a></li>
                     </ul>
                 </div>
                 <div class="ast_autho_wrapper">

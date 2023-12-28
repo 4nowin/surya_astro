@@ -66,7 +66,7 @@
                                 <p>Rishikesh, India</p>
                             </li>
                             <li><i class="fa fa-at" aria-hidden="true"></i> 
-                                <a href="mailto:asto@ownyog.com">astro@ownyog.com</a>
+                                <a href="mailto:asto@navgarah.com">astro@navgarah.com</a>
                             </li>
                             <li><i class="fa fa-phone" aria-hidden="true"></i> 
                                 <p><a href="tel:+91-7018565737">+91-7018565737</a></p>

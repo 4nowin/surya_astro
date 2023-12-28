@@ -2,7 +2,7 @@
 
 @section('content')
 
-    <h1 class="mb-3">Own Yog</h1>
+    <h1 class="mb-3">Navgarah</h1>
 
     <div class="bg-light p-4 rounded">
         <h2>banners</h2>

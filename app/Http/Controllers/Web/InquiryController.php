@@ -16,10 +16,9 @@ class InquiryController extends Controller
             "phone" => $request->phone,
             "gender" => $request->gender,
             "country" => $request->country,
-            "course" => $request->course,
-            "month" => $request->month,
-            "accommodation" => $request->accommodation,
-            "from" => $request->from,
+            "date_of_birth" => $request->date_of_birth,
+            "place_of_birth" => $request->place_of_birth,
+            "for" => $request->for,
             "message" => $request->message,
         ]);
 
@@ -33,23 +32,14 @@ class InquiryController extends Controller
             ->with('i', ($request->input('page', 1) - 1) * 5);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     *
-     * @return \Illuminate\Http\Response
-     */
+
     public function create()
     {
         $inquiries = Inquiry::get();
         return view('admin.inquiry.create', compact('inquiries'));
     }
 
-    /**
-     * Store a newly created resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @return \Illuminate\Http\Response
-     */
+
     public function store(Request $request)
     {
         $this->validate($request, [
@@ -64,36 +54,18 @@ class InquiryController extends Controller
                         ->with('success','Role created successfully');
     }
 
-    /**
-     * Display the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
     public function show($id)
     {
         $inquiry = Inquiry::where('id', $id)->first();
         return view('admin.inquiry.show', compact('inquiry'));
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
     public function edit(Inquiry $inquiries)
     {
         return view('admin.inquiry.edit', compact('inquiries'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
+ 
     public function update(Inquiry $inquiries, Request $request)
     {
         $this->validate($request, [
@@ -109,15 +81,17 @@ class InquiryController extends Controller
                         ->with('success','Enquiry updated successfully');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
+    public function completed($id)
+    {
+        Inquiry::where('id', $id)->update(array('status' => 1));
+
+        return redirect()->route('enquiry.index')
+                        ->with('success','Enquiry Completed successfully');
+    }
+
     public function destroy($id)
     {
-        Inquiry::where('id', $id)->update(array('isDeleted' => 1));
+        Inquiry::where('id', $id)->update(array('status' => 2));
 
         return redirect()->route('enquiry.index')
                         ->with('success','Enquiry deleted successfully');

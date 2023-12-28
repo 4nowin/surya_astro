@@ -16,8 +16,8 @@ class AdminSeeder extends Seeder
     public function run(): void
     {
         $admin = Admin::create([
-            'name' => 'Ownyog Admin', 
-            'email' => 'webmaster@ownyog.com',
+            'name' => 'Navgrah Admin', 
+            'email' => 'webmaster@navgarah.com',
             'password' => bcrypt('12345678')
         ]);
     
