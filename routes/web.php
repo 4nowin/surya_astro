@@ -50,7 +50,7 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::get("/admin/login", function () {
-    return view("Admin.auth.login");
+    return view("admin.auth.login");
 })->name("admin.login");
 
 Route::post("/admin/login", [App\Http\Controllers\Admin\AuthController::class, 'login']);
