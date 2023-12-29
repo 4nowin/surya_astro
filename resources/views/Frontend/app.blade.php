@@ -10,17 +10,13 @@
        
     <title>@yield('title')</title>
 
-    <!-- <link rel="stylesheet" href="@if((new Jenssegers\Agent\Agent)->isMobile()) {{ asset('build/assets/mobile_app-v1.0.5.css') }}
-            @else {{ asset('build/assets/app-v1.0.5.css') }} @endif">
+    <link rel="stylesheet" href="@if((new Jenssegers\Agent\Agent)->isMobile()) {{ asset('build/assets/mobile_app-v1.0.0.css') }}
+            @else {{ asset('build/assets/app-v1.0.0.css') }} @endif">
 
-    <script type="module" src="@if((new Jenssegers\Agent\Agent)->isMobile()) {{ asset('build/assets/mobile_app-v1.0.5.js') }}
-            @else {{ asset('build/assets/app-v1.0.5.js') }}@endif"></script> -->
+    <script type="module" src="@if((new Jenssegers\Agent\Agent)->isMobile()) {{ asset('build/assets/mobile_app-v1.0.0.js') }}
+            @else {{ asset('build/assets/app-v1.0.0.js') }}@endif"></script>
 
-    @if((new Jenssegers\Agent\Agent)->isMobile())
-        @vite(['resources/css/mobile_app.scss', 'resources/js/mobile_app.js'])
-    @else
-        @vite(['resources/css/app.scss', 'resources/js/app.js'])
-    @endif
+    
    
 </head>
 <body>
