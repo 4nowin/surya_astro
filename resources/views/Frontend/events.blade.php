@@ -53,13 +53,20 @@
                     </div>
                   </div><hr>
                   <div class="card bg-light mb-3" style="text-align: center;">
-                      <h5 class="card-header">TYPES OF PUJA PLANS</h5>
+                      <h5 class="card-header">TYPES OF SERVICES</h5>
                     <div class="card-body" style="padding: 5px;" style="text-align: left;">
                       <h5 class="card-title">Kirpa</h5>
                       <h5 class="card-title">Siddhi</h5>
                       <h5 class="card-title">Rudra</h5>
                     </div>
                   </div><hr>
+                  <div class="card text-white bg-success mb-3" style="padding: 5px;">
+                      <h5 class="card-header text-white">For payments please use this QR Code</h5>
+                    <div class="card-body">
+                      <img src="#" alt="">
+                      <p>For confirmation please share your payment screenshot with us on the following WhatsApp number +91 70185 65737</p>
+                    </div>
+                  </div> <hr>
                   <div class="card text-white bg-danger mb-3" style="padding: 5px;">
                       <h5 class="card-header text-white">IMPORTANT NOTES</h5>
                     <div class="card-body">
@@ -82,8 +89,8 @@
           <div class="col-lg-3">
             <div class="card mb-5 mb-lg-0">
               <div class="card-body" style="text-align: center;">
-                <h1 class="card-price text-center" id="astros">Kripa Puja</h1>
-                <h2 class="text-muted text-uppercase text-center">$29</h2>
+                <h1 class="card-price text-center" id="astros">Horoscope</h1>
+                <h2 class="text-muted text-uppercase text-center">&#8377; 11 - 2551</h2>
                 <p>For long life and good health, happiness and prosperity</p>
                 <hr>
                 <ul class="fa-ul" style="text-align: left;">
@@ -101,7 +108,7 @@
                   <li>Photo of jyotirlinga</li>
                 </ul><br>
                 <div class="text-center">
-                  <button type="button" class="btn payme btn-danger" amount="29" goal-selector="Kripa Puja" data-ticket-type="standard-access">Book Now</button>
+                  <button type="button" class="btn payme btn-danger" data-bs-toggle="modal" data-bs-target="#horoscope-chart-form" amount="29" goal-selector="Kripa Puja" data-ticket-type="standard-access">Book Now</button>
                 </div>
               </div>
             </div>
@@ -109,8 +116,8 @@
           <div class="col-lg-3">
             <div class="card mb-5 mb-lg-0">
               <div class="card-body" style="text-align: center;">
-                <h1 class="text-center">Siddhi Puja</h1>
-                <h2 class="text-muted text-uppercase text-center">$59</h2>
+                <h1 class="text-center">Kundali</h1>
+                <h2 class="text-muted text-uppercase text-center">&#8377; 111</h2>
                 <p>For your life at present, the future that past life karma you brought & relationships & career.</p>
                 <hr>
                 <ul class="fa-ul" style="text-align: left;">
@@ -126,7 +133,7 @@
                   <li>Photo of jyotirlinga</li>
                 </ul><br>
                 <div class="text-center">
-                  <button type="button" class="btn payme btn-danger" amount="59" goal-selector="Siddhi Puja" data-ticket-type="standard-access">Book Now</button>
+                  <button type="button" class="btn payme btn-danger" data-bs-toggle="modal" data-bs-target="#kundali-chart-form" amount="59" goal-selector="Siddhi Puja" data-ticket-type="standard-access">Book Now</button>
                 </div>
               </div>
             </div>
@@ -134,8 +141,8 @@
           <div class="col-lg-3">
             <div class="card">
               <div class="card-body"style="text-align: center;">
-                <h1 class="text-center">Rudra Puja</h1>
-                <h2 class=" text-muted text-uppercase text-center">$69</h2>
+                <h1 class="text-center">Vastu</h1>
+                <h2 class=" text-muted text-uppercase text-center">&#8377; 151</h2>
                 <p>To fulfill all wishes, do Rudrabhishek in this Shivaratri</p>
                 <hr>
                 <ul class="fa-ul">
@@ -152,7 +159,7 @@
                   <li>Photo of jyotirlinga</li>
                 </ul><br>
                 <div class="text-center">
-                  <button type="button" class="btn payme btn-danger" amount="69" goal-selector="Rudra Puja"  data-ticket-type="standard-access">Book Now</button>
+                  <button type="button" class="btn payme btn-danger" data-bs-toggle="modal" data-bs-target="#vastu-chart-form" amount="69" goal-selector="Rudra Puja"  data-ticket-type="standard-access">Book Now</button>
                 </div>
 
               </div>
