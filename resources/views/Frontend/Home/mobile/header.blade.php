@@ -10,10 +10,10 @@
         <a class="{{ Request::is('know-palmistry') ? 'active' : '' }}" href="/know-palmistry"><i class="fa-solid fa-hand-sparkles"></i> &nbsp;Palmistry</a>
         <a class="{{ Request::is('know-vastu') ? 'active' : '' }}" href="/know-vastu"><i class="fa-solid fa-couch"></i> &nbsp;Vastu Shastra</a>
         <br />
-        <span>ENROLLMENT</span> 
+        <span>MORE</span> 
         <a class="{{ Request::is('know-events') ? 'active' : '' }}" href="/know-events"><i class="fas fa-swatchbook"></i> &nbsp;Events</a>
         <a class="{{ Request::is('know-services') ? 'active' : '' }}" href="/know-services"><i class="fa-solid fa-tachograph-digital"></i> &nbsp;Services</a>
-        <a class="{{ Request::is('know-portfolio') ? 'active' : '' }}" href="/know-portfolio"><i class="fa-brands fa-megaport"></i> &nbsp;Portfolio</a>
+        <!-- <a class="{{ Request::is('know-portfolio') ? 'active' : '' }}" href="/know-portfolio"><i class="fa-brands fa-megaport"></i> &nbsp;Portfolio</a> -->
         <a class="{{ Request::is('know-appointment') ? 'active' : '' }}" href="/know-appointment"><i class="fa-regular fa-calendar-check"></i> &nbsp;Appointment</a>
         <br />
         <hr />

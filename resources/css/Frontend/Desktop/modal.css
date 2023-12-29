@@ -1,0 +1,159 @@
+    /* Kundali chart  CSS Start*/
+
+    
+    .modal-content{
+        display: grid !important;
+        background-color: unset !important;
+      }
+
+.chart-container{
+    transform: translate(-84px, 10px);
+    grid-template-areas: "left right";
+    display: grid;
+    max-width: 900px;
+}
+
+.left_container{
+    background: #1e1f24;
+    overflow: hidden;
+    padding: 10px 0 0 0;
+    position: relative;
+    text-align: center;
+    width: 300px;
+}
+.right_container{
+    background: linear-gradient(rgba(118,108,152,.97), rgba(70,121,153,.97), rgba(118,108,152,.97));
+    display: grid;
+    grid-template-areas: "." ".";
+    width: 500px;
+}
+.left_container h1{
+    color: rgba(0, 0, 0, 0.8);
+  display: inline-block;
+  font-size: 24px;
+}
+.left_container i{
+    background: #F7B1AB;
+    border-radius: 50%;
+    color: #807182;
+    font-size: 24px;
+    margin-right: 5px;
+    padding: 10px;
+    transform: rotate(-45deg);
+}
+
+.left_container .left_img .l_img {
+    display: block;
+    width: 100vw;
+    height: auto;
+    object-fit: cover;
+}
+.right_container header h1 {
+    color: rgba(0, 0, 0, 0.8);
+    font-size: 28px;
+    font-weight: 600;
+}
+.right_container .set {
+    display: flex;
+    justify-content: space-between;
+    margin: 10px 0;
+}
+
+.right_container input, .right-container label {
+color: rgba(0, 0, 0, 0.8);
+}
+.right_container header {
+padding: 40px;
+}
+
+
+.name label, .DoB label, .gender label, .PoB label, .pets-spayed-neutered label, .pets-weight label {
+    display: block;
+    margin-bottom: 5px;
+  }
+.radio-container {
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+    display: inline-block;
+    padding: 5px;
+}
+
+.radio-container label {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 2px;
+    display: inline-block;
+    height: 26px;
+    line-height: 26px;
+    margin: 0;
+    padding: 0;
+    text-align: center;
+    transition: 0.2s all ease-in-out;
+    width: 80px;
+}
+
+.radio-container input[type=radio] {
+    display: none;
+}
+
+.radio-container input[type=radio]:checked + label {
+    background: #1e1f24;
+    color: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+.right_container .question_container {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.question_container, .upload_container{
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+    display: inline-block;
+    padding: 5px;
+  }
+  .question_container input, .upload_container input{
+    width: 100%;
+  }
+
+  .question_container textarea{
+    width: 100%;
+    border-style: inset;
+    border-width: 0px;
+  }
+.right_container footer {
+    align-items: center;
+    display: grid;
+    padding: 5px 40px;
+  }
+.right_container footer button {
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    height: 38px;
+    line-height: 38px;
+    width: 100px;
+    border-radius: 19px;
+    font-family: "Montserrat", sans-serif;
+  }
+  .right_container footer #back {
+    background: rgba(170,221,253,1);
+    transition: 0.2s all ease-in-out;
+  }
+  .right_container footer #back:hover {
+    background: #171A2B;
+    color: white;
+  }
+  .right_container footer #next {
+    background: rgba(218,208,252,.4);
+    border: 1px solid rgba(0, 0, 0, 0.2);
+    color: #fff;
+  }
+  .right_container footer #next:hover {
+    background: #171A2B;
+    color: #fff;
+  }
+  
+
+  

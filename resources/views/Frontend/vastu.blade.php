@@ -22,7 +22,7 @@
 </div>
 <!--Slider End-->
 <!--Vastu Start-->
-<div class="ast_vastu_wrapper ast_toppadder70 ast_bottompadder70">
+<div class="ast_vastu_wrapper ast_toppadder100 ast_bottompadder70">
     <div class="container">
         <div class="row">
             <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">

@@ -163,19 +163,17 @@
                             <li><a href="/">home</a>
                                 <ul class="submenu">
                                     <li><a href="/">home</a></li>
-                                    <!-- <li><a href="/gemstone">gemstone</a></li>
-                                    <li><a href="/numerology">numerology</a></li> -->
                                     <li><a href="/know-horoscope">horoscope</a></li>
                                     <li><a href="/know-palmistry">palmistry</a></li>
                                     <li><a href="/know-vastu">vastu shastra</a></li>
-                                    <li><a href="/know-gemstone">gemstone</a></li>
-                                    <li><a href="/know-numerology">numerology</a></li>\
+                                    <!-- <li><a href="/know-gemstone">gemstone</a></li>
+                                    <li><a href="/know-numerology">numerology</a></li> -->
                                 </ul>
                             </li>
                             <li><a href="/know-about">about</a></li>
                             <li><a href="/know-services">services</a></li>
                             <li><a href="/know-events">events</a></li>
-                            <li><a href="/know-portfolio">portfolio</a></li>
+                            <!-- <li><a href="/know-portfolio">portfolio</a></li> -->
                             <li><a href="/know-appointment">appointment</a></li>                           
                             <li><a href="#">pages</a>
                                 <ul class="submenu">
