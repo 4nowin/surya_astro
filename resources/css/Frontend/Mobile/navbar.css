@@ -1,0 +1,219 @@
+.nav-top {
+    position: fixed;
+    left: 0;
+    top: 0;
+    right: 0;
+    transition: all 0.5s;
+    z-index: 3;
+    background: rgba(221, 242, 255, 0.2);
+    padding: 5%;
+}
+
+@media (max-width: 1440px) {
+    .nav-top {
+        padding: 10px 0;
+    }
+}
+
+.nav-top.scrolled {
+    background: #fff;
+    box-shadow: 1px 1px 15px rgb(222, 156, 1);
+}
+
+.nav-top.scrolled .logo a img {
+    height: 60px;
+    transition: 0.2s;
+}
+
+
+.nav-top .mobile-logo {
+    position: absolute;
+    top: -30%;
+    left: 0;
+    right: 0;
+}
+
+.nav-top .mobile-logo a img {
+    margin-top: 10%;
+    margin-left: 5%;
+    height: 35px;
+    z-index: -1;
+}
+
+.nav-top .logo {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    margin-left: auto;
+    margin-right: auto;
+    z-index: -1;
+}
+
+.nav-top .logo a img {
+    height: 110px;
+    z-index: -1;
+    transition: 0.2s;
+}
+
+.nav-top .social-icons {
+    float: right;
+    position: relative;
+    z-index: 2;
+}
+
+.nav-top .social-icons a {
+    margin-left: 25px;
+}
+
+.nav-top .social-icons i {
+    font-size: 18px;
+    color: #fff;
+    margin-left: 8px;
+}
+
+.square {
+    height: auto;
+    width: 50px;
+    margin-top: 4px;
+}
+
+.nav-top .social-icons i:hover {
+    color: #000000;
+}
+
+
+.slide-menu .fa-bars {
+    font-size: 28px;
+    margin-left: 28px;
+    float: right;
+    color: darkorange;
+}
+
+.sidenav {
+    height: 100%;
+    width: 0;
+    position: fixed;
+    z-index: 999;
+    top: 0;
+    left: 0;
+    background-color: #1e1f24;
+    box-shadow: 8px 0px 10px 0px #88888830;
+    overflow-x: hidden;
+    transition: 0.5s;
+    padding-top: 70px;
+}
+
+.sidenav.hided {
+    width: 0;
+}
+
+.sidenav hr {
+    background-color: darkorange;
+}
+
+.sidenav a i {
+    padding-right: 5%;
+    width: 25px;
+    left: 0;
+}
+
+.sidenav a {
+    padding: 8px 8px 8px 32px;
+    text-decoration: none;
+    font-size: 18px;
+    font-weight: 500;
+    color: rgb(221, 242, 255);
+    display: block;
+    transition: 0.3s;
+}
+
+.social-ico a {
+    padding: 30px 10px 0px 0px;
+    text-decoration: none;
+    font-size: 18px;
+    font-weight: 500;
+    color: rgba(221, 242, 255, 0.5);
+    display: block;
+    transition: 0.3s;
+}
+
+.sidenav span {
+    margin-left: 10%;
+    font-weight: 750;
+    color: rgba(221, 242, 255, 0.5);
+    letter-spacing: 2px;
+}
+
+.sidenav img {
+    max-width: 50px;
+    position: absolute;
+    top: 8px;
+    left: 20px;
+}
+
+.sidenav a:hover,
+.sidenav .active {
+    background-color: rgba(255, 140, 0, 0.15);
+    color: darkorange;
+    font-weight: 700;
+}
+
+.sidenav .closebtn {
+    position: absolute;
+    top: 15px;
+    right: 20px;
+    font-size: 36px;
+    margin-left: 50px;
+}
+
+.slide-menu {
+    cursor: pointer;
+}
+
+nav p {
+    color: rgba(255, 255, 255, 0.71);
+    font-weight: 400;
+    font-size: 15px;
+    letter-spacing: 4px;
+    margin-bottom: 0;
+}
+
+nav span {
+    color: rgb(255, 255, 255);
+    display: block;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+nav .another {
+    margin-top: 5px;
+}
+
+@media screen and (max-height: 450px) {
+    .sidenav {
+        padding-top: 15px;
+        z-index: 9999;
+    }
+
+    .sidenav a {
+        font-size: 14px;
+    }
+}
+
+.light-font {
+    font-weight: 200;
+}
+
+.heavy-font {
+    font-size: 14px;
+}
+
+.hscrolled {
+    font-size: 14px;
+    color: #17543e;
+}
+
+.svgscrolled {
+    color: darkorange !important;
+}

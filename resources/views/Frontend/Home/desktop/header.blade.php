@@ -1,4 +1,5 @@
 <!-- Header Start -->
+
 <div class="ast_top_header">
     <div class="container">
         <div class="row">
@@ -192,7 +193,4 @@
     </div>
 </div>
 
-<script>
-    
-</script>
 <!-- Header End -->
