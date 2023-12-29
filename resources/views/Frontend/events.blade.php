@@ -63,7 +63,7 @@
                   <div class="card text-white bg-success mb-3" style="padding: 5px;">
                       <h5 class="card-header text-white">For payments please use this QR Code</h5>
                     <div class="card-body">
-                      <img src="#" alt="">
+                      <img src="images/page/qrcode.jpg" alt="">
                       <p>For confirmation please share your payment screenshot with us on the following WhatsApp number +91 70185 65737</p>
                     </div>
                   </div> <hr>
