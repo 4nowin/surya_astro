@@ -10,6 +10,7 @@
        
     <title>@yield('title')</title>
 
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="@if((new Jenssegers\Agent\Agent)->isMobile()) {{ asset('build/assets/mobile_app-v1.0.0.css') }}
             @else {{ asset('build/assets/app-v1.0.0.css') }} @endif">
 
