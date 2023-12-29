@@ -15,7 +15,7 @@
                     <li>vastu shastra</li>
                     <li>tarot card</li>
                 </ul>
-                <a class="ast_btn">make it now</a>
+                <a class="ast_btn" data-bs-toggle="modal" data-bs-target="#rashifal">make it now</a>
             </div>
         </div>
     </div>
@@ -152,7 +152,53 @@
 
 
 <!-- Form Starts Here -->
-
+<div class="modal" id="rashifal"  tabindex="-1" role="dialog">
+    <div class="modal-dialog modal-dialog-centered"" role="document">
+<div class='rashifal_form  modal-content' style="width: max-content;">
+    <div class="info">
+        <h2>Mission to Deep Space</h2>
+        <i aria-hidden="true"><img class="icon ion-ios-ionic-outline" src='https://s3-us-west-2.amazonaws.com/s.cdpn.io/38816/image-from-rawpixel-id-542207-jpeg.png'></i>
+        <p>The Future Is Here</p>
+    </div>
+    <div class="right_container">
+        <header>
+        <h1>Know Your Rashifal</h1>
+        <div class='set'>
+            <div class='name'>
+            <label for='name'>Name</label>
+            <input id='name' placeholder="Name" type='text'>
+            </div>
+            <div class='DoB'>
+            <label for='dob'>Date of Birth</label>
+            <input id='dob' placeholder="DD/MM/YY" type='text'>
+            </div>
+        </div>
+        <div class='set'>
+            <div class='gender'>
+            <label for='gender'>Gender</label>
+            <div class='radio-container'>
+                <input checked='' id='male' name='gender' type='radio' value='female'>
+                <label for='male'>Male</label>
+                <input id='female' name='gender' type='radio' value='male'>
+                <label for='female'>Female</label>
+            </div>
+            </div>
+            <div class='PoB'>
+            <label for='pob'>Place of Birth</label>
+            <input id='birthplace' placeholder="Birth Place" type='text'>
+            </div>
+        </div>  
+        </header>
+        <footer>
+          <div class='set'>
+            <button data-bs-dismiss="modal" id='back'>Cancel</button>
+            <button id='next' type="submit">Submit</button>
+          </div>
+        </footer>
+    </div>
+</div>
+</div>
+</div>
 
 
 <!--Form Ends Here -->
