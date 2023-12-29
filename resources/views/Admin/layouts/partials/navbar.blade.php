@@ -158,10 +158,24 @@
                             </a>
                             <div class="sub-menu-list">
                                 <ul>
-                                    <li class="menu-item">
-                                        <a href="{{ route('enquiry.index') }}">
+                                    <li class="menu-item sub-menu">
+                                        <a href="#">
                                             <span class="menu-title">{{ __('Enquiries')}}</span>
                                         </a>
+                                        <div class="sub-menu-list">
+                                            <ul>
+                                                <li class="menu-item">
+                                                    <a href="{{ route('enquiry.index') }}">
+                                                        <span class="menu-title">{{ __('New Enquiries')}}</span>
+                                                    </a>
+                                                </li>
+                                                <li class="menu-item">
+                                                    <a href="{{ route('enquiry.completed') }}">
+                                                        <span class="menu-title">{{ __('Completed Enquiries')}}</span>
+                                                    </a>
+                                                </li>
+                                            </ul>
+                                        </div>
                                     </li>
                                     <li class="menu-item sub-menu">
                                         <a href="#">

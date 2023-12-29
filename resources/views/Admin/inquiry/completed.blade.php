@@ -4,8 +4,8 @@
 
 <div class="d-flex">
     <div class="flex-grow-1">
-        <h2>New Enquiries</h2>
-        <p class="text-muted">New Enquiries are listed here.</p>
+        <h2>Completed Enquiries</h2>
+        <p class="text-muted">Completed Enquiries are listed here.</p>
     </div>
 </div>
 <div class="mt-2">
@@ -18,10 +18,10 @@
         <th>Name</th>
         <th>For</th>
         <th>Phone</th>
-        <th width="3%" colspan="3" class="text-center">Action</th>
+        <th width="3%" colspan="2">Action</th>
     </tr>
     @foreach ($inquiries as $key => $inquiry)
-    @if($inquiry->status === 0)
+    @if($inquiry->status === 1)
     <tr>
         <td>{{ $inquiry->id }}</td>
         <td>{{ $inquiry->name }}</td>
@@ -29,11 +29,6 @@
         <td>{{ $inquiry->phone }}</td>
         <td>
             <a class="btn btn-info btn-sm" href="{{ route('enquiry.show', $inquiry->id) }}">Show</a>
-        </td>
-        <td>
-            {!! Form::open(['method' => 'PUT','route' => ['enquiry.update', $inquiry->id],'style'=>'display:inline']) !!}
-            {!! Form::submit('Complete', ['class' => 'btn btn-info btn-sm']) !!}
-            {!! Form::close() !!}
         </td>
         <td>
             {!! Form::open(['method' => 'DELETE','route' => ['enquiry.destroy', $inquiry->id],'style'=>'display:inline']) !!}

@@ -37,6 +37,7 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+Route::post('/inquiry', [InquiryController::class, 'saveInquiry']);
 
 Route::get('/dashboard', function () {
     return view('dashboard');
@@ -71,8 +72,8 @@ Route::group([
     Route::resource('locations', LocationsController::class);
     Route::resource('coupon', CouponController::class);
 
+    Route::get('enquiry/completed',  [InquiryController::class, "completed"])->name('enquiry.completed');
     Route::resource('enquiry', InquiryController::class);
-
     //files
     Route::controller(FileManagerController::class)->group(function () {
         Route::get('files',  "index")->name("admin.files");
