@@ -1,15 +1,16 @@
 import './bootstrap.bundle.min';
+import './jquery';
 import './admin/navbar';
 
-import './datepicker.min';
+// import './datepicker.min';
 
-import axios from 'axios';
+// import axios from 'axios';
 import Crop from 'tinycrop';
 import EditorJS from '@editorjs/editorjs';
 
-window.axios = axios;
+// window.axios = axios;
 
-window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
+// window.axios.defaults.headers.common['X-Requested-With'] = 'XMLHttpRequest';
 
 try{
     window.Crop = Crop;
