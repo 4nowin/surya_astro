@@ -1,3 +1,4 @@
+@import './bootstrap.min';
 @import '../../node_modules/bootstrap-icons/font/bootstrap-icons.scss';
 
 @import '../../node_modules/@fortawesome/fontawesome-free/css/fontawesome.min.css';
@@ -6,7 +7,5 @@
 @import '../../node_modules/@fortawesome/fontawesome-free/css/brands.min.css';
 
 @import 'Frontend/style';
-@import './bootstrap.min';
 @import './owl.carousel';
-@import './datepicker.min.css';
 @import 'Frontend/Desktop/modal.css';

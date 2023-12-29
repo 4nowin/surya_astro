@@ -1,7 +1,4 @@
-import './bootstrap.bundle.min';
-import './jquery';
-import './datepicker.min';
-import './owl.carousel';
+import './bootstrap';
 import './Frontend/Desktop/custom';
 
 import Alpine from 'alpinejs';
