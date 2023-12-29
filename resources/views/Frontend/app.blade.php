@@ -242,7 +242,7 @@
                                 <input id='birth' class="form-control" name="date_of_birth" placeholder="DD/MM/YY" type='date' required>
                             </div>
                             <div class='col-6'>
-                                <label for='gender'>Gender</label>
+                                <label for='gender'>Owner Gender</label>
                                 <div class='radio-container'>
                                     <input checked='' id='female' name='gender' type='radio' value='female'>
                                     <label for='female'>Female</label>

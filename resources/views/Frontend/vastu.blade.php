@@ -15,7 +15,7 @@
                     <li>gemstones</li>
                     <li>tarot card</li>
                 </ul>
-                <a class="ast_btn">make it now</a>
+                <a class="ast_btn" data-bs-toggle="modal" data-bs-target="#vastu-chart-form">make it now</a>
             </div>
         </div>
     </div>
