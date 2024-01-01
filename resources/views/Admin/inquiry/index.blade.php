@@ -30,7 +30,16 @@
         <td>
             <a class="btn btn-info btn-sm" href="{{ route('enquiry.show', $inquiry->id) }}">Show</a>
         </td>
-        
+        <td>
+            {{ \Form::open(['method' => 'PUT','route' => ['enquiry.update', $inquiry->id],'style'=>'display:inline']) }}
+            {{ \Form::submit('Complete', ['class' => 'btn btn-info btn-sm']) }}
+            {{ \Form::close() }}
+        </td>
+        <td>
+            {{ \Form::open(['method' => 'DELETE','route' => ['enquiry.destroy', $inquiry->id],'style'=>'display:inline']) }}
+            {{ \Form::submit('Delete', ['class' => 'btn btn-danger btn-sm']) }}
+            {{ \Form::close() }}
+        </td>
     </tr>
     @endif
     @endforeach
