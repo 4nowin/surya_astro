@@ -14,16 +14,16 @@
                     <h4>Birth Journal</h4>
                     <p>Birth Journal or Kundli is the establishment of astrology. Kundli is only a pictorial portrayal of the wonderful bodies like planets and stars in the sky at a specific date and time.</p>
                     <div class="clearfix"></div>
-                    <a href="/service_single" class="ast_btn">read more</a>
+                    <a href="#" class="ast_btn" data-bs-toggle="modal" data-bs-target="#birth-chart-form">read more</a>
                 </div>
             </div>
             <div class="col-lg-4 col-md-4 col-sm-4 col-xs-12">
                 <div class="ast_service_box">
                     <img src="images/content/sv6.png" alt="Service">
                     <h4>vastu shastra</h4>
-                    <p>Vaastu Shastra is a developed branch of Indian Astrology for science of dwelling/architecture. They are the only part those are closely related to each other.</p>
+                    <p>Vastu Shastra is a developed branch of Indian Astrology for science of dwelling/architecture. They are the only part those are closely related to each other.</p>
                     <div class="clearfix"></div>
-                    <a href="/service_single" class="ast_btn">read more</a>
+                    <a href="#" class="ast_btn" data-bs-toggle="modal" data-bs-target="#vastu-chart-form">read more</a>
                 </div>
             </div>
             <div class="col-lg-4 col-md-4 col-sm-4 col-xs-12">
@@ -32,7 +32,7 @@
                     <h4>face reading</h4>
                     <p>Face reading or Physiognomy. Face reading gives you insights into your own and others' character and destiny through an understanding of what their facial features reveal.</p>
                     <div class="clearfix"></div>
-                    <a href="/service_single" class="ast_btn">read more</a>
+                    <a href="#" class="ast_btn" data-bs-toggle="modal" data-bs-target="#face-chart-form">read more</a>
                 </div>
             </div>
             <div class="col-lg-4 col-md-4 col-sm-4 col-xs-12">
@@ -41,7 +41,7 @@
                     <h4>Philosophy</h4>
                     <p>Philosophy will help to clear your doubts regarding to your Dharma, Karma philosophy of life, like drops of nector and anything regarding to sanatana (hindu dharma).</p>
                     <div class="clearfix"></div>
-                    <a href="/service_single" class="ast_btn">read more</a>
+                    <a href="#" class="ast_btn" data-bs-toggle="modal" data-bs-target="#phil-chart-form">read more</a>
                 </div>
             </div>
             <div class="col-lg-4 col-md-4 col-sm-4 col-xs-12">
@@ -50,7 +50,7 @@
                     <h4>Palmistry</h4>
                     <p>Palmistry is to judge and analyze the overall development and direction of life according to the length, thickness of fingers, the shape, color and pattern of palm.</p>
                     <div class="clearfix"></div>
-                    <a href="/service_single" class="ast_btn">read more</a>
+                    <a href="#" class="ast_btn" data-bs-toggle="modal" data-bs-target="#palm-chart-form">read more</a>
                 </div>
             </div>
             <div class="col-lg-4 col-md-4 col-sm-4 col-xs-12">
@@ -59,7 +59,7 @@
                     <h4>kundli dosh</h4>
                     <p> A Dosha in Vedic astrology means a combination of malefic planets that would not let the positive things in the horoscope to fructify. It is like a blemish on a horoscope.</p>
                     <div class="clearfix"></div>
-                    <a href="/service_single" class="ast_btn">read more</a>
+                    <a href="#" class="ast_btn" data-bs-toggle="modal" data-bs-target="#dosh-chart-form">read more</a>
                 </div>
             </div>
         </div>

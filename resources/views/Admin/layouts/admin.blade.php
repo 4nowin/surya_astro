@@ -32,10 +32,9 @@
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <!-- <link rel="stylesheet" href="{{ asset('build/assets/admin_app-v1.0.0.css') }}">
-    <script type="module" src="{{ asset('build/assets/admin_app-v1.0.0.js') }}"></script> -->
+    <link rel="stylesheet" href="{{ asset('build/assets/admin_app-v1.0.0.css') }}">
+    <script type="module" src="{{ asset('build/assets/admin_app-v1.0.0.js') }}"></script>
     <meta name="csrf-token" content="{{ csrf_token() }}" />
-    @vite(['resources/css/admin_app.scss', 'resources/js/admin_app.js'])
 
 </head>
 

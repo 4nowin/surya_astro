@@ -22,9 +22,9 @@
         <!-- <a href="/own-blog-lists">Blogs</a> -->
         <!-- <a href="/own-contact">Contact</a> -->
         <div class="d-flex justify-content-center social-ico">
-            <a href="https://www.facebook.com/myownyog"><i class="fa-brands fa-facebook hsvg" aria-hidden="true"></i></a>
-            <a href="https://www.instagram.com/own_yog/"><i class="fa-brands fa-instagram hsvg" aria-hidden="true"></i></a>
-            <a href="https://www.youtube.com/@ownyog4173"><i class="fa-brands fa-youtube hsvg" aria-hidden="true"></i></a>
+            <a href="https://www.facebook.com/navgarah"><i class="fa-brands fa-facebook hsvg" aria-hidden="true"></i></a>
+            <a href="https://www.instagram.com/navgarah"><i class="fa-brands fa-instagram hsvg" aria-hidden="true"></i></a>
+            <a href="https://www.youtube.com/@suryaastro2170"><i class="fa-brands fa-youtube hsvg" aria-hidden="true"></i></a>
         </div>
     </div>
     <!-- Nav section Start -->
