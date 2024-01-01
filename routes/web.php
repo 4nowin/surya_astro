@@ -87,6 +87,5 @@ Route::group([
     Route::post('settings/inline-edit', [SettingsController::class, "inlineEdit"]);
 });
 
-Route::resource('/know-{id}', WebController::class);
 
 require __DIR__.'/auth.php';
