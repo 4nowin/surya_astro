@@ -163,6 +163,7 @@
                             <li><a href="/">home</a>
                                 <ul class="submenu">
                                     <li><a href="/">home</a></li>
+                                    <li><a href="/know-kundali">Kundali</a></li>
                                     <li><a href="/know-horoscope">horoscope</a></li>
                                     <li><a href="/know-palmistry">palmistry</a></li>
                                     <li><a href="/know-vastu">vastu shastra</a></li>

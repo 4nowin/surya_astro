@@ -26,6 +26,7 @@
     display: grid;
     grid-template-areas: "." ".";
     width: 500px;
+    color: #fff;
 }
 .left_container h1{
     color: rgba(0, 0, 0, 0.8);
@@ -154,6 +155,4 @@ padding: 40px;
     background: #171A2B;
     color: #fff;
   }
-  
-
   

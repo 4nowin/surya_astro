@@ -189,7 +189,7 @@
                         </div>
                         <div class='row mt-2'> 
                             <div class='col-6'>
-                            <label for="country">Country:</label>
+                            <label class="country" for="country">Country:</label>
                                 <select name="country" id="country" name="country" class="form-select" aria-label="Default select example">
                                   <option value="india" selected>India</option>
                                   <option value="britain">Great Britain</option>
@@ -198,23 +198,14 @@
                                 </select>
                             </div>
                             <div class='col-6'>
-                                <label for='pob'>House Situated At:</label>
+                                <label class="pob" for='pob'>House Situated At:</label>
                                 <input type="text" class="form-control" name="place_of_birth" placeholder="House Place" aria-label="place_of_birth" required>
                             </div>
                         </div>
                         <div class='row mt-2'>
-                            <div class='col-6'>
-                                <label for='dob'>House build on</label>
+                            <div class='col-12'>
+                                <label class="dob" for='dob'>House build on</label>
                                 <input id='birth' class="form-control" name="date_of_birth" placeholder="DD/MM/YY" type='date' required>
-                            </div>
-                            <div class='col-6'>
-                                <label for='gender'>Owner Gender</label>
-                                <div class='radio-container'>
-                                    <input checked='' id='female' name='gender' type='radio' value='female'>
-                                    <label for='female'>Female</label>
-                                    <input id='male' name='gender' type='radio' value='male'>
-                                    <label for='male'>Male</label>
-                                </div>
                             </div>
                         </div>
                         </div>

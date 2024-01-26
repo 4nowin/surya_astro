@@ -55,6 +55,10 @@ class WebController extends Controller
             return view('Frontend/team_single', compact('id'));
         };
         
+       if ($id == 'kundali'){
+        return view('Frontend/kundali', compact('id'));
+    };
+    
        if ($id == 'horoscope'){
             return view('Frontend/horoscopes', compact('id'));
         };
