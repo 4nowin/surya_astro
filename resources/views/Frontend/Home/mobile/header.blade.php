@@ -2,8 +2,9 @@
 <div id="nav-header" class="nav-top">
     <div id="mySidenav" class="sidenav">
         <img src="images/header/fb.png" alt="logo">
-        <a href="javascript:void(0)" class="closebtn text-darkorange" style="color: darkorange" id="closebtn">&times;</a>
+        <a href="javascript:void(0)" class="closebtn text-darkorange" style="color: darkorange; position:absolute; top:-5px;" id="closebtn">&times;</a>
         <a class="{{ Request::is('/') ? 'active' : '' }}" href="/"><i class="far fa-snowflake"></i> &nbsp;Home</a>
+        <a class="{{ Request::is('know-kundali') ? 'active' : '' }}" href="/know-kundali"><i class="far fa-calendar-alt"></i> &nbsp;Kundali</a>
         <a class="{{ Request::is('know-horoscope') ? 'active' : '' }}" href="/know-horoscope"><i class="fas fa-lightbulb"></i> &nbsp;Horoscope</a>
         <!-- <a href="/own-online-classes">Online Classes</a> -->
         <!-- <a class="{{ Request::is('own-schedule') ? 'active' : '' }}" href="/own-schedule"><i class="far fa-calendar-alt"></i> &nbsp;Schedule</a> -->
@@ -33,22 +34,23 @@
         <div class="container">
             <!--Row Start-->
             <div class="">
-                <div class="col-lg-2 col-md-2 col-5 align-self-center mobile-logo float-left">
+                <div class="mobile-logo d-flex justify-content-between align-items-center">
                     <a href="{{ url('/') }}"><img src="images/header/fb.png" alt="logo"></a>
-                </div>
-                <div class="align-self-center float-right">
+                    <span class="svgscrolled" style="color:white; font-family: 'Philosopher';">{{$id}}</span>
                     <div class="social-icons square">
                         <!-- Page Content -->
                         <div id="page-content-wrapper">
                             <span id="openbtn" class="slide-menu" style="font-size:130px"><i class="fa fa-bars hsvg" aria-hidden="true"></i></span>
                         </div>
                     </div>
-                    <!-- <div class="social-icons another">
+                </div>
+                <!--<div class="align-self-center float-right">
+                     <div class="social-icons another">
                         <a href="https://www.facebook.com/myownyog"><i class="fa-brands fa-facebook hsvg" aria-hidden="true" ></i></a>
                         <a href="https://www.instagram.com/own_yog/"><i class="fa-brands fa-instagram hsvg" aria-hidden="true"></i></a>
                         <a href="https://www.youtube.com/@ownyog4173"><i class="fa-brands fa-youtube hsvg" aria-hidden="true"></i></a>
-                    </div> -->
-                </div>
+                    </div> 
+                </div>-->
             </div>
             <!--Row Ended-->
         </div>

@@ -497,17 +497,17 @@
                                 </select>
                             </div>
                             <div class='col-6'>
-                                <label for='pob'>House Situated At:</label>
-                                <input type="text" class="form-control" name="place_of_birth" placeholder="House Place" aria-label="place_of_birth" required>
+                                <label for='pob'>Birth Place:</label>
+                                <input type="text" class="form-control" name="place_of_birth" placeholder="Birth Place" aria-label="place_of_birth" required>
                             </div>
                         </div>
                         <div class='row mt-2'>
                             <div class='col-6'>
-                                <label for='dob'>House build on</label>
-                                <input id='birth' class="form-control" name="date_of_birth" placeholder="DD/MM/YY" type='date' required>
+                                <label for='dob'>Date of Birth:</label>
+                                <input id='birth' class="form-control" name="date_of_birth" placeholder="DD/MM/YY" type='datetime-local' required>
                             </div>
                             <div class='col-6'>
-                                <label for='gender'>Owner Gender</label>
+                                <label for='gender'>Gender</label>
                                 <div class='radio-container'>
                                     <input checked='' id='female' name='gender' type='radio' value='female'>
                                     <label for='female'>Female</label>

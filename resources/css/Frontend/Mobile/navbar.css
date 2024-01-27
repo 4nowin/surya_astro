@@ -11,7 +11,7 @@
 
 @media (max-width: 1440px) {
     .nav-top {
-        padding: 10px 0;
+        padding: 20px 0;
     }
 }
 
@@ -28,7 +28,7 @@
 
 .nav-top .mobile-logo {
     position: absolute;
-    top: -30%;
+    top: 0;
     left: 0;
     right: 0;
 }
@@ -36,6 +36,7 @@
 .nav-top .mobile-logo a img {
     margin-top: 10%;
     margin-left: 5%;
+    padding-right: 5%;
     height: 35px;
     z-index: -1;
 }
@@ -75,7 +76,7 @@
 .square {
     height: auto;
     width: 50px;
-    margin-top: 4px;
+    margin-right: 3%;
 }
 
 .nav-top .social-icons i:hover {

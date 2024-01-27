@@ -23,7 +23,7 @@ class InquiryController extends Controller
             "message" => $request->message,
         ]);
 
-        return redirect()->back()->with('inquiry-success', 'Yay, Your Query has been submitted you will be contacted soon');
+        return redirect()->back()->with('message', 'Yay, Your Query has been submitted you will be contacted soon');
     }
 
     public function index(Request $request)

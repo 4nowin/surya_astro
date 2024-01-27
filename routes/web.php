@@ -34,7 +34,7 @@ use App\Http\Controllers\Admin\UsersController;
 */
 
 Route::get('/', function () {
-    return view('welcome');
+    return view('welcome')->with( ['id' => "Navgarah"] );
 });
 
 Route::post('/inquiry', [InquiryController::class, 'saveInquiry']);

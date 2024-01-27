@@ -3,19 +3,75 @@
 @section('title', 'Horoscope')
 
 @section('content')
-    
+
 <!--Slider Start-->
 <div class="ast_slider_wrapper style_2 index_horoscope">
     <div class="ast_banner_text">
         <div class="container">
             <div class="ast_bannertext_wrapper">
-                <h1>There shall be signs in the Sun, the Moon, and the Stars</h1>
+                <!--Form Start-->
+                <div class="ast_search_box mobile-form">
+                    @if (session()->has('message'))
+                    <div x-data="{ show: true }" x-show.transition.duration.1000ms="show" x-init="setTimeout(() => show = false, 5000)" class=" fixed top-0 right-0 shadow overflow-hidden border-b border-green-500 rounded-l-lg bg-success text-white py-2 px-5 my-4">
+                        {{ session('message') }}
+                    </div>
+                    @endif
+                    <h2>Get Your Horoscope</h2>
+                    <form method="POST" action="/inquiry">
+                        @csrf
+                        <input type="text" name="for" value="Horoscope" hidden>
+                        <div class="container">
+                            <div class='row text-start'>
+                                <div class="col-12">
+                                    <input type="text" name="name" class="form-control" placeholder="Name" aria-label="Name" required>
+                                </div>
+                            </div>
+                            <div class='row text-start'>
+                                <div class="col-6">
+                                    <input type="text" name="phone" class="form-control" placeholder="Phone" aria-label="Phone" required>
+                                </div>
+                                <div class='col-6'>
+                                    <input type="email" name="email" class="form-control" placeholder="Email" aria-label="Email">
+                                </div>
+                            </div>
+                            <div class='row text-start'>
+                                <div class='col-12'>
+                                    <label for="type" style="color:black">Frequency:</label>
+                                    <select name="country" id="country" name="type" class="form-select" aria-label="Default select example">
+                                        <option value="daily" selected>Daily @ ₹11/- </option>
+                                        <option value="weekly">Weekly @ ₹51/-</option>
+                                        <option value="monthly">Monthly @ ₹251/-</option>
+                                        <option value="yearly">Yearly @ ₹2551/-</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class='row text-start mb-2'>
+                                <div class='col-xs-12 col-sm-12 col-md-6 col-lg-6'>
+                                    <label for='dob' style="color:black">Horoscope for</label>
+                                    <input id='birth' class="form-control" name="date_of_birth" placeholder="DD/MM/YY" type='date' required>
+                                </div>
+                                <div class='col-xs-12 col-sm-12 col-md-6 col-lg-6'>
+                                    <label for='gender' style="color:black">Gender: &nbsp;&nbsp;</label>
+                                    <div class='radio-container-form'>
+                                        <input checked='' id='female' name='gender' type='radio' value='female'>
+                                        <label for='female'>Female</label>
+                                        <input id='male' name='gender' type='radio' value='male'>
+                                        <label for='male'>Male</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="submit" class="ast_btn">Get now</button>
+                    </form>
+                </div>
+                <!--Form End-->
+                <!-- <h1>There shall be signs in the Sun, the Moon, and the Stars</h1>
                 <ul class="ast_toppadder40 ast_bottompadder50">
                     <li>horoscopes</li>
                     <li>gemstones</li>
                     <li>numerology</li>
-                </ul>
-                <a class="ast_btn" data-bs-toggle="modal" data-bs-target="#horoscope-chart-form">make it now</a>
+                </ul>-->
+                <!-- <a class="ast_btn" data-bs-toggle="modal" data-bs-target="#horoscope-chart-form">make it now</a>  -->
             </div>
         </div>
     </div>
@@ -32,8 +88,8 @@
                         <div class="card a" id="second"><img src="images/page/b350.jpg" alt="" class="img-responsive"></div>
 
                         <div class="btn-wrap">
-                          <a href="javascript:void(0);" class="btn focus" id="one"></a>
-                          <a href="javascript:void(0);" class="btn" id="two"></a>
+                            <a href="javascript:void(0);" class="btn focus" id="one"></a>
+                            <a href="javascript:void(0);" class="btn" id="two"></a>
                         </div>
                     </div>
                 </div>
@@ -56,10 +112,10 @@
             <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
                 <div class="ast_horoscope_box">
                     <a href="/horoscopes_single">
-                    <span><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="31.945px" height="31.944px" viewBox="0 0 31.945 31.944" style="enable-background:new 0 0 31.945 31.944;" xml:space="preserve">
-    <g>
-        <g>
-            <path d="M28.819,28.787c0,0,0.504-1.823,0.307-2.479c-0.158-0.524-1.574-3.722-2.414-5.771c-0.254-0.704-0.445-1.321-0.451-1.643
+                        <span><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="31.945px" height="31.944px" viewBox="0 0 31.945 31.944" style="enable-background:new 0 0 31.945 31.944;" xml:space="preserve">
+                                <g>
+                                    <g>
+                                        <path d="M28.819,28.787c0,0,0.504-1.823,0.307-2.479c-0.158-0.524-1.574-3.722-2.414-5.771c-0.254-0.704-0.445-1.321-0.451-1.643
             c-0.02-1.018,1.313-3.609,1.017-5.34c-0.3-1.729-3.4-3.997-2.982-4.354c0.418-0.358,4.318-0.183,4.623-0.597
             c0.307-0.414,0.836-0.896,0.479-1.521c-0.357-0.625-3.82-2.269-4-2.447c-0.179-0.179-0.447-3.28-2.535-2.981
             c0.655,4.146-0.148,5.667-3.699,6.979c-0.507,0.509-0.363,2.429-0.135,3.287c0.835,4.598-5.76,2.563-7.844,2.594
@@ -73,23 +129,23 @@
             c-0.221-0.534-0.396-3.828-0.396-3.828l1.812-3.327c0,0,2.8,2.846,3.195,3.593c0.396,0.746,0.209,2.756,0.209,2.756
             s-0.373,0.438-0.481,0.725c0.271,0.436,0.955,0.957,1.557,1.561c0.791-0.177,0.849-1.212,0.66-1.802
             C29.115,29.166,28.819,28.787,28.819,28.787z" />
-            <path d="M18.631,6.661c2.256-1.216,0.662-3.793,0.186-3.495c0.259,1.016,0.117,2.625-1.371,2.525
+                                        <path d="M18.631,6.661c2.256-1.216,0.662-3.793,0.186-3.495c0.259,1.016,0.117,2.625-1.371,2.525
             c-1.492-0.101-1.542-3.072,0.943-3.729c2.484-0.655,4.543,4.127-0.407,5.737c3.241,0.239,4.933-1.253,4.595-5.171
             s-8.513-3.122-8.651,1.293C13.784,8.236,17.697,7.079,18.631,6.661z" />
-        </g>
-    </g>
-</svg></span>
-                    <h4>Aries (Mesh)</h4>
-                    <p>First astrological sign, from first 30 degrees of celestial longitude (0°≤ λ <30°).</p>
+                                    </g>
+                                </g>
+                            </svg></span>
+                        <h4>Aries (Mesh)</h4>
+                        <p>First astrological sign, from first 30 degrees of celestial longitude (0°≤ λ <30°).< /p>
                     </a>
                 </div>
             </div>
             <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
                 <div class="ast_horoscope_box">
                     <a href="/horoscopes_single">
-                    <span><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="31.994px" height="31.994px" viewBox="0 0 31.994 31.994" style="enable-background:new 0 0 31.994 31.994;" xml:space="preserve">
-    <g>
-        <path d="M12.48,11.539c-0.609-0.554-3.646-3.475-6.007-3.99C5.746,5.79,4.888,5.747,4.888,5.747s1.373-3.26-4.032-3.089
+                        <span><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="31.994px" height="31.994px" viewBox="0 0 31.994 31.994" style="enable-background:new 0 0 31.994 31.994;" xml:space="preserve">
+                                <g>
+                                    <path d="M12.48,11.539c-0.609-0.554-3.646-3.475-6.007-3.99C5.746,5.79,4.888,5.747,4.888,5.747s1.373-3.26-4.032-3.089
         c3.369,1.634,2.697,2.041,2.23,3.175C1.162,6.34,2.028,8.872,1.626,9.351C1.226,9.83-0.26,10.338,0.04,11.238
         c0.301,0.9,3.432,1.244,3.947,1.459c1.973,0.771,0.771,3.99,1.415,5.189c0.644,1.201,0.901,3.99,0.901,3.99
         s-0.688,2.147-0.761,2.794c-0.131,0.854,0.008,1.441-0.1,2.042c-0.417,0.499-0.766,1.268-0.766,1.268l1.969,0.031
@@ -102,24 +158,24 @@
         s-0.104-3.712-2.146-5.878c0.856-2.702-0.474-7.335-0.474-7.335s1.674,0.814,1.459,1.501c-0.215,1.89,1.287,1.401,1.158,3.306
         c-0.301,1.544,1.416,2.102,2.146,2.571c0-0.686-0.301-1.973-1.315-2.443c0.157-2.188-1.13-2.745-1.087-3.477
         c0.13-3.604-2.002-2.814-3.174-3.132c-1.066-0.729-10.248-0.215-10.248-0.215S13.521,12.052,12.48,11.539" />
-    </g>
-</svg></span>
-                    <h4>Taurus (Vrushabh)</h4>
-                    <p>The second astrological sign. It spans from 30° to 60° of the zodiac.</p>
+                                </g>
+                            </svg></span>
+                        <h4>Taurus (Vrushabh)</h4>
+                        <p>The second astrological sign. It spans from 30° to 60° of the zodiac.</p>
                     </a>
                 </div>
             </div>
             <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
                 <div class="ast_horoscope_box">
                     <a href="/horoscopes_single">
-                    <span><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="32px" height="32px" viewBox="0 0 32 32" style="enable-background:new 0 0 32 32;" xml:space="preserve">
-    <g>
-        <g>
-            <path d="M24.545,12.646l-2.729-1.035c0,0-5.42,8.021-5.629,10.269c-0.208,2.248,11.586,4.062,13.908,1.3
+                        <span><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="32px" height="32px" viewBox="0 0 32 32" style="enable-background:new 0 0 32 32;" xml:space="preserve">
+                                <g>
+                                    <g>
+                                        <path d="M24.545,12.646l-2.729-1.035c0,0-5.42,8.021-5.629,10.269c-0.208,2.248,11.586,4.062,13.908,1.3
             c0.926-1.668-2.635-10.63-2.635-10.63L24.545,12.646z" />
-            <polygon points="19.461,24.833 21.12,30.467 21.863,30.591 22.73,25.377      " />
-            <polygon points="22.492,30.697 23.236,30.821 26.631,26.027 23.359,25.483        " />
-            <path d="M21.854,10.637c0,0,0.92,0.775,2.672,1.12c0.007,0.001,0.01,0.003,0.014,0.004c0.014,0.003,0.025,0.005,0.041,0.007
+                                        <polygon points="19.461,24.833 21.12,30.467 21.863,30.591 22.73,25.377      " />
+                                        <polygon points="22.492,30.697 23.236,30.821 26.631,26.027 23.359,25.483        " />
+                                        <path d="M21.854,10.637c0,0,0.92,0.775,2.672,1.12c0.007,0.001,0.01,0.003,0.014,0.004c0.014,0.003,0.025,0.005,0.041,0.007
             c0.061,0.013,0.121,0.021,0.184,0.031c0.062,0.01,0.12,0.021,0.182,0.029c0.015,0.002,0.027,0.005,0.041,0.007
             c0.004,0.001,0.009-0.001,0.013,0c1.771,0.241,2.892-0.195,2.892-0.195S29.34,14.438,32,11.731
             c-2.589-0.045-2.177-0.859-1.361-1.441c0.812-0.579,3.562-9.901-4.296-7.997c-6.819-4.346-7.233,5.365-6.653,6.176
@@ -127,11 +183,11 @@
             C26.691,6.196,27.15,5.918,27.646,6c0.496,0.083,0.84,0.494,0.77,0.92c-0.07,0.426-0.529,0.703-1.025,0.621
             C26.895,7.459,26.551,7.047,26.621,6.622z M22.882,6c0.071-0.426,0.529-0.704,1.025-0.621c0.495,0.082,0.84,0.493,0.77,0.92
             c-0.071,0.425-0.53,0.703-1.024,0.62C23.154,6.836,22.812,6.425,22.882,6z" />
-            <path d="M7.279,12.663l-2.912-0.18c0,0-2.795,9.269-2.326,11.478C2.51,26.169,14.31,24.4,15.706,21.073
+                                        <path d="M7.279,12.663l-2.912-0.18c0,0-2.795,9.269-2.326,11.478C2.51,26.169,14.31,24.4,15.706,21.073
             c0.388-1.868-5.672-9.369-5.672-9.369L7.279,12.663z" />
-            <polygon points="6.043,25.811 9.3,30.699 10.048,30.595 9.328,25.361         " />
-            <polygon points="10.679,30.508 11.427,30.407 13.244,24.822 9.959,25.273         " />
-            <path d="M4.113,11.544c0,0,1.108,0.468,2.884,0.275c0.005,0,0.009,0.001,0.013,0.001c0.014-0.001,0.027-0.004,0.041-0.007
+                                        <polygon points="6.043,25.811 9.3,30.699 10.048,30.595 9.328,25.361         " />
+                                        <polygon points="10.679,30.508 11.427,30.407 13.244,24.822 9.959,25.273         " />
+                                        <path d="M4.113,11.544c0,0,1.108,0.468,2.884,0.275c0.005,0,0.009,0.001,0.013,0.001c0.014-0.001,0.027-0.004,0.041-0.007
             c0.06-0.007,0.121-0.016,0.183-0.023c0.062-0.007,0.123-0.016,0.183-0.025c0.014-0.002,0.027-0.004,0.041-0.006
             c0.004,0,0.008-0.003,0.012-0.004c1.762-0.295,2.703-1.044,2.703-1.044s2.218,2.239,3.954-1.135
             c-2.484,0.727-2.334-0.173-1.729-0.973C13,7.81,12.86-1.909,5.921,2.244c-7.803-2.125-5.313,7.271-4.52,7.873
@@ -139,21 +195,21 @@
             C9.334,6.474,8.978,6.876,8.48,6.944S7.531,6.722,7.473,6.295C7.414,5.867,7.77,5.466,8.268,5.396z M4.513,5.913
             C5.01,5.845,5.461,6.136,5.52,6.563C5.579,6.992,5.223,7.393,4.726,7.46c-0.499,0.07-0.95-0.221-1.009-0.649
             C3.658,6.384,4.014,5.981,4.513,5.913z" />
-            <polygon points="18.285,16.323 21.464,11.61 16.059,15.582 10.489,11.523 13.785,16.156 16.012,17.21      " />
-        </g>
-    </g>
-</svg></span>
-                    <h4>Gemini (Mithun)</h4>
-                    <p>The third astrological sign in the zodiac, originating from the constellation of Gemini.</p>
+                                        <polygon points="18.285,16.323 21.464,11.61 16.059,15.582 10.489,11.523 13.785,16.156 16.012,17.21      " />
+                                    </g>
+                                </g>
+                            </svg></span>
+                        <h4>Gemini (Mithun)</h4>
+                        <p>The third astrological sign in the zodiac, originating from the constellation of Gemini.</p>
                     </a>
                 </div>
             </div>
             <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
                 <div class="ast_horoscope_box">
                     <a href="/horoscopes_single">
-                    <span><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="32px" height="32px" viewBox="0 0 32 32" style="enable-background:new 0 0 32 32;" xml:space="preserve">
-    <g>
-        <path d="M32,14.824c-3.197,5.81-6.949,5.456-6.949,5.456s7.333-3.475,5.309-9.536c-0.77,4.613-4.938,7.245-4.938,7.245
+                        <span><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="32px" height="32px" viewBox="0 0 32 32" style="enable-background:new 0 0 32 32;" xml:space="preserve">
+                                <g>
+                                    <path d="M32,14.824c-3.197,5.81-6.949,5.456-6.949,5.456s7.333-3.475,5.309-9.536c-0.77,4.613-4.938,7.245-4.938,7.245
         s0.014-0.508,0.076-0.914s2.406-4.344,2.719-5.156c0.312-0.812,1.566-4.368,0.146-4.679c0.664-4.612-2.174-6.165-2.174-6.165
         s1.242,3.771,0.178,3.946c-1.064,0.179-0.844-0.31-2.705-2.351c-0.889,0.312,1.375,3.814,1.375,3.814s-1.51,2.307,0.62,6.432
         c-0.755-0.621-1.134-0.178-1.604-0.026c-0.47,0.15-0.658,0.292-1.322,0.426c-0.666,0.134-3.549-1.642-3.549-1.642l0.898-1.212
@@ -172,19 +228,19 @@
         c0.443,0.934,0.443,4.037,0.443,4.037s1.641-3.018,0.932-4.304s-2.795-2.927-2.795-2.927s5.899,0.222,7.451,1.286
         c1.553,1.062,1.952,2.972,1.952,2.972s0.399-2.484-1.464-3.814c-1.862-1.33-5.278-1.463-5.278-1.463s3.992-0.666,6.697-2.24
         C31.867,18.86,31.863,16.492,32,14.824z" />
-    </g>
-</svg></span>
-                    <h4>Cancer (Karka)</h4>
-                    <p>The fourth astrological sign, originating from the constellation of Cancer.</p>
+                                </g>
+                            </svg></span>
+                        <h4>Cancer (Karka)</h4>
+                        <p>The fourth astrological sign, originating from the constellation of Cancer.</p>
                     </a>
                 </div>
             </div>
             <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
                 <div class="ast_horoscope_box">
                     <a href="/horoscopes_single">
-                    <span><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="31.611px" height="31.611px" viewBox="0 0 31.611 31.611" style="enable-background:new 0 0 31.611 31.611;" xml:space="preserve">
-    <g>
-        <path d="M16.207,12.926c-1.268,2.979,5.197,3.232,8.113,4.69s4.247,4.501,4.942,4.501c3.613-4.818-2.026-11.41-2.026-11.41
+                        <span><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="31.611px" height="31.611px" viewBox="0 0 31.611 31.611" style="enable-background:new 0 0 31.611 31.611;" xml:space="preserve">
+                                <g>
+                                    <path d="M16.207,12.926c-1.268,2.979,5.197,3.232,8.113,4.69s4.247,4.501,4.942,4.501c3.613-4.818-2.026-11.41-2.026-11.41
         s-2.154-0.634-2.601-2.726c-0.443-2.092,1.521-5.198,1.204-3.613c-0.314,1.584,1.966,2.409,2.221,3.486
         c0.253,1.077-0.063,2.853-0.063,2.853s6.148,3.74,2.346,12.551c1.458,5.896-1.772,5.896-1.772,5.896s1.076,2.092-1.966,2.092
         c-3.043,0-4.816,0-7.543,0c-2.728,0-0.763-2.282,0.441-2.282s2.185,0.038,2.662,0c-0.159,0.011-3.655-0.271-2.911-2.622
@@ -192,19 +248,19 @@
         c0.344-2.25,3.438-0.094,3.722-4.375c0.19-2.471,1.584-4.311,1.584-4.311s-3.866-2.6-2.598-10.078
         c-0.438,0.036-1.648,0.253-2.029-0.508c-0.38-0.76,0-1.647,0-1.647s-1.615-2.189-0.918-3.457c0.696-1.269,3.555-1.644,4.886-1.771
         c0.542-5.167,2.825-5.079,6.375-3.557C17.293,0.212,18.795,9.217,16.207,12.926z" />
-    </g>
-</svg></span>
-                    <h4>Leo (Sinh)</h4>
-                    <p>the 5th astrological sign of the zodiac. It corresponds to the constellation Leo and comes after Cancer and before Virgo.</p>
+                                </g>
+                            </svg></span>
+                        <h4>Leo (Sinh)</h4>
+                        <p>the 5th astrological sign of the zodiac. It corresponds to the constellation Leo and comes after Cancer and before Virgo.</p>
                     </a>
                 </div>
             </div>
             <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
                 <div class="ast_horoscope_box">
                     <a href="/horoscopes_single">
-                    <span><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="32px" height="32px" viewBox="0 0 32 32" style="enable-background:new 0 0 32 32;" xml:space="preserve">
-    <g>
-        <path d="M31.078,11.713c0,0,0.551-0.153,0.514-0.402c-0.238,0.148-0.805-0.334-0.805-0.334s-0.277-1.596-0.298-2.188
+                        <span><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="32px" height="32px" viewBox="0 0 32 32" style="enable-background:new 0 0 32 32;" xml:space="preserve">
+                                <g>
+                                    <path d="M31.078,11.713c0,0,0.551-0.153,0.514-0.402c-0.238,0.148-0.805-0.334-0.805-0.334s-0.277-1.596-0.298-2.188
         c-0.02-0.593-0.077-1.162-0.077-1.162s0.336,0.393,0.768,0.012c-0.848-0.415-0.795-0.975-0.703-1.335
         c0.092-0.362,0.764-2.917-0.635-4.201c-0.92-0.799-1.43-0.082-1.43-0.082s-0.136-0.237-0.306-0.224
         c-0.17,0.01-0.293,0.193-0.293,0.193s-0.097-0.295-0.25-0.253c-0.151,0.04-0.192,0.186-0.192,0.186s-0.168-0.89-2.025-1.671
@@ -220,47 +276,47 @@
         c-0.08,0.92-2.829,1.183-4.908,1.023c-1.632-0.123-5.608-3.907-7.6-5.441c1.615-0.438,7.051-1.137,8.319-1.186
         c1.373-0.055,4.415-3.418,5.309-3.141C18.987,15.827,16.328,16.943,17.354,18.996z M26.039,11.121c0-0.784,0.248-1.541,1.209-1.567
         c0.377-0.082,0.565,1.216,0.817,2.458C27.188,11.51,26.173,11.165,26.039,11.121z" />
-    </g>
-</svg></span>
-                    <h4>Virgo (Kanya)</h4>
-                    <p>the 6th astrological sign. It spans the 150–180th degree of the zodiac. the Sun transits this area on between Aug-23 & Sept-22.</p>
+                                </g>
+                            </svg></span>
+                        <h4>Virgo (Kanya)</h4>
+                        <p>the 6th astrological sign. It spans the 150–180th degree of the zodiac. the Sun transits this area on between Aug-23 & Sept-22.</p>
                     </a>
                 </div>
             </div>
             <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
                 <div class="ast_horoscope_box">
                     <a href="/horoscopes_single">
-                    <span><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="30.773px" height="30.773px" viewBox="0 0 30.773 30.773" style="enable-background:new 0 0 30.773 30.773;" xml:space="preserve">
-    <g>
-        <g>
-            <path d="M18.46,11.25c0-1.604-1.3-2.904-2.905-2.904c-1.604,0-2.905,1.301-2.905,2.904c0,1.441,1.051,2.634,2.426,2.862
+                        <span><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="30.773px" height="30.773px" viewBox="0 0 30.773 30.773" style="enable-background:new 0 0 30.773 30.773;" xml:space="preserve">
+                                <g>
+                                    <g>
+                                        <path d="M18.46,11.25c0-1.604-1.3-2.904-2.905-2.904c-1.604,0-2.905,1.301-2.905,2.904c0,1.441,1.051,2.634,2.426,2.862
             l-3.523,11.441h6.231L15.53,14.155c0.009,0,0.018,0.001,0.025,0.001C17.16,14.156,18.46,12.855,18.46,11.25z" />
-            <path d="M10.343,19.926l-4.383-5.26c-0.074-0.088-0.186-0.14-0.301-0.133c-0.117,0.003-0.224,0.061-0.291,0.156l-3.554,4.963
+                                        <path d="M10.343,19.926l-4.383-5.26c-0.074-0.088-0.186-0.14-0.301-0.133c-0.117,0.003-0.224,0.061-0.291,0.156l-3.554,4.963
             c-0.051-0.021-0.477,4.356,3.881,4.356c4.358,0,4.756-3.933,4.722-3.923C10.404,20.031,10.382,19.973,10.343,19.926z
              M6.102,20.777c-0.9,0-2.557-0.521-3.553-0.863l3.146-4.395l3.945,4.735C8.644,20.462,6.999,20.777,6.102,20.777z" />
-            <path d="M24.279,11.794c-1.354-0.858-3.838-4.394-6.895-6.004c-0.474-0.332-1.147-0.57-1.897-0.57
+                                        <path d="M24.279,11.794c-1.354-0.858-3.838-4.394-6.895-6.004c-0.474-0.332-1.147-0.57-1.897-0.57
             c-0.039,0-0.077,0.004-0.116,0.005c-0.04-0.001-0.079-0.005-0.119-0.005c-0.75,0-1.423,0.238-1.897,0.57
             c-3.057,1.611-5.833,5.542-7.021,6.23s-5.937,0.125-6.281-2.43c-0.469,2.492,2.127,5.422,7.281,4.157
             c4.847-1.189,4.75-6.165,8.292-6.165s2.932,4.976,7.776,6.165c5.154,1.265,7.467-2.272,7.367-4.111
             C29.21,11.792,25.636,12.653,24.279,11.794z" />
-            <path d="M25.374,14.689c-0.067-0.095-0.175-0.152-0.291-0.156c-0.117-0.007-0.229,0.046-0.301,0.134l-4.385,5.26
+                                        <path d="M25.374,14.689c-0.067-0.095-0.175-0.152-0.291-0.156c-0.117-0.007-0.229,0.046-0.301,0.134l-4.385,5.26
             c-0.04,0.047-0.061,0.104-0.072,0.159c-0.034-0.009,0.362,3.923,4.721,3.923c4.355,0,3.932-4.377,3.881-4.355L25.374,14.689z
              M24.64,20.777c-0.896,0-2.542-0.313-3.539-0.521l3.945-4.735l3.146,4.394C27.196,20.255,25.541,20.777,24.64,20.777z" />
-        </g>
-    </g>
-</svg></span>
-                    <h4>Libra (Tula)</h4>
-                    <p>the 7th astrological sign. It spans 180°–210° celestial longitude. The Sun transits this sign on between Sept. 23 and Oct. 22.</p>
+                                    </g>
+                                </g>
+                            </svg></span>
+                        <h4>Libra (Tula)</h4>
+                        <p>the 7th astrological sign. It spans 180°–210° celestial longitude. The Sun transits this sign on between Sept. 23 and Oct. 22.</p>
                     </a>
                 </div>
             </div>
             <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
                 <div class="ast_horoscope_box">
                     <a href="/horoscopes_single">
-                    <span><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="32px" height="32px" viewBox="0 0 32 32" style="enable-background:new 0 0 32 32;" xml:space="preserve">
-    <g>
-        <g>
-            <path d="M20.83,14.079c-1.882-1.596-4.746-0.047-5.761,0.629c-0.845-0.749-2.817-1.803-4.253-0.457
+                        <span><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="32px" height="32px" viewBox="0 0 32 32" style="enable-background:new 0 0 32 32;" xml:space="preserve">
+                                <g>
+                                    <g>
+                                        <path d="M20.83,14.079c-1.882-1.596-4.746-0.047-5.761,0.629c-0.845-0.749-2.817-1.803-4.253-0.457
             c-0.09,0.085-0.136,0.199-0.136,0.313c0,0.105,0.038,0.211,0.117,0.294c0.162,0.175,0.435,0.183,0.608,0.02
             c1.034-0.969,2.493,0.01,2.944,0.356c-0.402,0.317-0.794,0.666-1.174,1.04c-0.831-0.594-2.507-1.237-3.848,0.021
             c-0.09,0.085-0.136,0.199-0.136,0.312c0,0.105,0.038,0.211,0.117,0.295c0.163,0.176,0.435,0.184,0.608,0.021
@@ -278,36 +334,36 @@
             c0.373-0.38,0.722-0.771,1.039-1.176c0.348,0.452,1.326,1.911,0.355,2.944c-0.162,0.174-0.152,0.446,0.021,0.608
             c0.082,0.078,0.188,0.116,0.294,0.116c0.114,0,0.229-0.047,0.312-0.138c1.347-1.437,0.291-3.407-0.456-4.252
             C20.925,19.047,22.712,15.674,20.83,14.079z" />
-            <path d="M29.323,5.78c-1.183,0.85-1.027,6.038-1.027,6.038s-0.933-1.693,0.018-5.213c0.016-0.03,0.035-0.055,0.053-0.085
+                                        <path d="M29.323,5.78c-1.183,0.85-1.027,6.038-1.027,6.038s-0.933-1.693,0.018-5.213c0.016-0.03,0.035-0.055,0.053-0.085
             c-0.014,0.003-0.023,0.004-0.036,0.008c0.001-0.003,0.001-0.004,0.001-0.006c-0.005,0.002-0.01,0.006-0.014,0.009
             c-3.545,0.963-5.248,0.023-5.248,0.023s5.188,0.156,6.037-1.027c-5.692-5.289-12.064-1.403-13.506,0.326
             c-2.179,2.305-2.031,6.406-0.167,8.226c0.791-0.601,1.667-1.094,2.527-1.04c0.734-0.133-2.958-0.932-2.167-4.895l5.954,0.926
             c0,0,2.554,0.491,4.646-0.6c-1.107,2.095-0.611,4.669-0.611,4.669l0.925,5.953c-3.963,0.793-4.56-2.7-4.691-1.967
             c0.053,0.858-0.432,1.647-1.031,2.438c1.819,1.863,5.711,1.9,8.016-0.277C30.728,17.844,34.611,11.472,29.323,5.78z" />
-            <path d="M6.542,25.482c-0.986-0.377-3.245,2.224-2.546,2.762c0.699,0.538,4.202,0.808,4.59,0.125
+                                        <path d="M6.542,25.482c-0.986-0.377-3.245,2.224-2.546,2.762c0.699,0.538,4.202,0.808,4.59,0.125
             C8.973,27.687,7.223,25.698,6.542,25.482z" />
-            <path d="M4.791,25.445c0,0-1.028-2.616-1.673-2.938s-2.151,0.107-2.689,0.682c-0.538,0.574,2.082,4.529,2.976,4.143
+                                        <path d="M4.791,25.445c0,0-1.028-2.616-1.673-2.938s-2.151,0.107-2.689,0.682c-0.538,0.574,2.082,4.529,2.976,4.143
             C4.298,26.939,4.791,25.445,4.791,25.445z" />
-            <path d="M2.848,21.914c0.125-0.145,0.036-1.954,0-2.295c-0.036-0.342-2.296-0.502-2.493-0.322
+                                        <path d="M2.848,21.914c0.125-0.145,0.036-1.954,0-2.295c-0.036-0.342-2.296-0.502-2.493-0.322
             c-0.197,0.179-0.627,2.987-0.107,3.099C0.769,22.505,2.723,22.057,2.848,21.914z" />
-            <path d="M2.812,19.1c0.233-0.106,0.448-2.205,0.591-2.438s-1.11-0.9-1.522-0.811c-0.413,0.09-1.616,2.423-1.293,2.71
+                                        <path d="M2.812,19.1c0.233-0.106,0.448-2.205,0.591-2.438s-1.11-0.9-1.522-0.811c-0.413,0.09-1.616,2.423-1.293,2.71
             C0.912,18.848,2.579,19.207,2.812,19.1z" />
-            <path d="M3.708,16.248c3.389-1.775,2.761-4.5,2.761-4.5s-0.179-1.004,0.394-1.721C6.504,9.471,4.98,10.708,4.98,10.708
+                                        <path d="M3.708,16.248c3.389-1.775,2.761-4.5,2.761-4.5s-0.179-1.004,0.394-1.721C6.504,9.471,4.98,10.708,4.98,10.708
             s-3.514,0.466-2.635,4.625C2.597,15.782,3.35,16.176,3.708,16.248z" />
-        </g>
-    </g>
-</svg></span>
-                    <h4>Scorpio (Vrushchik)</h4>
-                    <p>the eighth astrological sign in the Zodiac, originating from the constellation of Scorpius. It spans 210°–240° ecliptic longitude.</p>
+                                    </g>
+                                </g>
+                            </svg></span>
+                        <h4>Scorpio (Vrushchik)</h4>
+                        <p>the eighth astrological sign in the Zodiac, originating from the constellation of Scorpius. It spans 210°–240° ecliptic longitude.</p>
                     </a>
                 </div>
             </div>
             <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
                 <div class="ast_horoscope_box">
                     <a href="/horoscopes_single">
-                    <span><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="32px" height="32px" viewBox="0 0 32 32" style="enable-background:new 0 0 32 32;" xml:space="preserve">
-    <g>
-        <path d="M27.425,5.235l0.242,0.551l-2.558,1.118c-0.229-0.932,0.61-1.225-0.244-3.001c-0.94-1.96-4.292-0.58-5.604-3.903
+                        <span><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="32px" height="32px" viewBox="0 0 32 32" style="enable-background:new 0 0 32 32;" xml:space="preserve">
+                                <g>
+                                    <path d="M27.425,5.235l0.242,0.551l-2.558,1.118c-0.229-0.932,0.61-1.225-0.244-3.001c-0.94-1.96-4.292-0.58-5.604-3.903
         c-0.006,0.033-0.01,0.06-0.016,0.091l-0.02-0.075l-1.149,4.271l-0.729,0.147l-0.043-0.666l-0.585,0.699l-0.442-0.653l-0.367,0.839
         l-0.787-0.666l0.259,0.919l-0.992-0.047l0.56,0.547c0,0-0.956,0.268-1.004,0.28c-0.048,0.014,0.621,0.453,0.621,0.453L13.92,6.672
         L14.55,6.9l-0.785,0.623l0.905,0.202l-0.471,0.693l0.673,0.022l0.01,0.97l0.857-0.513c0.312,0.261,0.618,0.408,0.574,0.535
@@ -332,19 +388,19 @@
         c-0.015-0.127,0.067-0.214,0.088-0.252c0.019-0.038-0.019-0.369-0.479-0.779L19.317,1.799z M26.19,10.355
         c0.583,1.331-1.864,3.238-0.936,5.019l-5.076-2.79c0.074-1.164,0.344-2.202,0.896-2.472c1.343-0.653,2.567-1.71,3.354-1.491
         c0.104-0.015,0.19-0.052,0.268-0.105C25.181,9.056,25.677,9.182,26.19,10.355z" />
-    </g>
-</svg></span>
-                    <h4>Sagittarius (Dhanu)</h4>
-                    <p>the ninth astrological sign, which is associated with the constellation Sagittarius and spans 240–270th degrees of the zodiac.</p>
+                                </g>
+                            </svg></span>
+                        <h4>Sagittarius (Dhanu)</h4>
+                        <p>the ninth astrological sign, which is associated with the constellation Sagittarius and spans 240–270th degrees of the zodiac.</p>
                     </a>
                 </div>
             </div>
             <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
                 <div class="ast_horoscope_box">
                     <a href="/horoscopes_single">
-                    <span><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="32px" height="32px" viewBox="0 0 32 32" style="enable-background:new 0 0 32 32;" xml:space="preserve">
-    <g>
-        <path d="M29.452,9.632c0.438-1.48,1.816-3.787-1.402-7.639c-3.223-3.854-10.914-1.851-7.854,3.702
+                        <span><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="32px" height="32px" viewBox="0 0 32 32" style="enable-background:new 0 0 32 32;" xml:space="preserve">
+                                <g>
+                                    <path d="M29.452,9.632c0.438-1.48,1.816-3.787-1.402-7.639c-3.223-3.854-10.914-1.851-7.854,3.702
         c0.506-3.938,4.119-3.55,6.139-1.127c0.758,1.012,0.189,2.641,0.189,2.641s-3.668-0.841-3.803,3.903
         c-0.055,1.021-1.342,2.568-1.449,2.645c-2.285,1.601-8.079-0.322-13.439,0.059c-4.776,0.051-6.986,2.719-5.996,5.945
         c0.619,0.288,0.924-2.422,1.245-2.285c0.322,0.135-0.559,1.65-0.381,2.285c0.178,0.637,0.838,2.635,0.584,3.455
@@ -358,20 +414,20 @@
         c0.75-0.167,0.805-1.148,0.625-1.708c-0.178-0.559-0.457-0.917-0.457-0.917s0.479-1.729,0.291-2.354
         c-0.188-0.625-2.271-5.271-2.771-6.707c-0.5-1.438,2.398-6.229,2.398-6.229s3.988,2.211,5.062,1.202
         C31.551,14.284,29.015,11.113,29.452,9.632z" />
-    </g>
-</svg></span>
-                    <h4>Capricorn (Makar)</h4>
-                    <p>the 10th astrological sign, originating from the constellation of Capricornus. It spans the 270–300th degree of the zodiac.</p>
+                                </g>
+                            </svg></span>
+                        <h4>Capricorn (Makar)</h4>
+                        <p>the 10th astrological sign, originating from the constellation of Capricornus. It spans the 270–300th degree of the zodiac.</p>
                     </a>
                 </div>
             </div>
             <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
                 <div class="ast_horoscope_box">
                     <a href="/horoscopes_single">
-                    <span><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="31.895px" height="31.895px" viewBox="0 0 31.895 31.895" style="enable-background:new 0 0 31.895 31.895;" xml:space="preserve">
-    <g>
-        <g>
-            <path d="M30.576,6.925c-1.229-1.228-6.105-5.692-7.167-6.754c-0.77-0.769-0.053,1.237,0.401,2.403
+                        <span><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="31.895px" height="31.895px" viewBox="0 0 31.895 31.895" style="enable-background:new 0 0 31.895 31.895;" xml:space="preserve">
+                                <g>
+                                    <g>
+                                        <path d="M30.576,6.925c-1.229-1.228-6.105-5.692-7.167-6.754c-0.77-0.769-0.053,1.237,0.401,2.403
             c-2.88-1.02-6.406,0.006-8.666,2.775c-0.647,0.794-1.018,1.732-1.2,2.717c-0.213-0.952-0.475-1.984-0.612-2.332
             c-0.203-0.512-0.852-0.224-0.606,0.255c0.246,0.478,0.748,5.524,0.45,5.228c-1.857-0.669-1.802,1.165-0.947,2.688
             c0.242,0.431,0.697,0.984,1.252,1.571c-1.536,2.441-11.317,5.331-12.138,9.093c-0.821,3.763,3.055,5.013,8.992,4.532
@@ -382,25 +438,25 @@
             c1.301,0.669,2.242,0.22,1.866-1.345c2.562-0.521,4.397,0.326,4.789,0.242c0.208-0.061,0.392-0.174,0.354-0.524
             c-0.076-0.23-1.223-0.424-2.319-0.569c1.317-0.448,2.567-1.305,3.619-2.594c2.02-2.476,2.463-5.659,1.409-8.176
             C28.517,6.55,31.164,7.585,30.576,6.925z" />
-            <path d="M16.648,19.425c0,0-2.394-0.342-3.807,1.376c-1.413,1.72,0.482,3.216,1.561,3.513c1.077,0.297,3.554,0.463,3.683-1.246
+                                        <path d="M16.648,19.425c0,0-2.394-0.342-3.807,1.376c-1.413,1.72,0.482,3.216,1.561,3.513c1.077,0.297,3.554,0.463,3.683-1.246
             c0.111-1.505-2.156-1.176-2.938-1.206C13.102,21.712,16.648,19.425,16.648,19.425z" />
-            <path d="M17.283,20.546c-0.644-0.047,0.473-0.765,0.473-0.765s-0.752-0.107-1.194,0.432c-0.445,0.54,0.149,1.012,0.489,1.104
+                                        <path d="M17.283,20.546c-0.644-0.047,0.473-0.765,0.473-0.765s-0.752-0.107-1.194,0.432c-0.445,0.54,0.149,1.012,0.489,1.104
             c0.338,0.094,1.115,0.146,1.156-0.393C18.241,20.452,17.529,20.556,17.283,20.546z" />
-        </g>
-    </g>
-</svg></span>
-                    <h4>Aquarius (Kumbha)</h4>
-                    <p>The 11th astrological sign, originating from the constellation Aquarius. The Sun is in the Aquarius sign between Jan 21 & Feb 20.</p>
+                                    </g>
+                                </g>
+                            </svg></span>
+                        <h4>Aquarius (Kumbha)</h4>
+                        <p>The 11th astrological sign, originating from the constellation Aquarius. The Sun is in the Aquarius sign between Jan 21 & Feb 20.</p>
                     </a>
                 </div>
             </div>
             <div class="col-lg-3 col-md-3 col-sm-6 col-xs-12">
                 <div class="ast_horoscope_box">
                     <a href="/horoscopes_single">
-                    <span><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="31.998px" height="31.998px" viewBox="0 0 31.998 31.998" style="enable-background:new 0 0 31.998 31.998;" xml:space="preserve">
-    <g>
-        <g>
-            <path d="M29.276,10.111c-0.166-0.34-0.257-0.528-0.257-0.528s2.528,0.58,2.818-0.249c-4.354-4.812-7.685-2.753-8.46-3.318
+                        <span><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" width="31.998px" height="31.998px" viewBox="0 0 31.998 31.998" style="enable-background:new 0 0 31.998 31.998;" xml:space="preserve">
+                                <g>
+                                    <g>
+                                        <path d="M29.276,10.111c-0.166-0.34-0.257-0.528-0.257-0.528s2.528,0.58,2.818-0.249c-4.354-4.812-7.685-2.753-8.46-3.318
             c-2.446-2.364-6.346-1.41-6.803,0c-0.455,1.41,2.592,3.859,2.695,5.392c0.104,1.533,0.83,5.987,3.15,5.255
             c0.354-0.623,0-3.098,0.498-2.476s2.156,5.018-1.283,6.966c-2.406,0.953-3.07-1.778-7.198-1.45
             c2.552,1.993,3.547,3.938,3.547,3.938s-0.02,1.06-1.244,5.103c2.9-1.023,3.305-3.111,4.35-3.729
@@ -408,7 +464,7 @@
             C32.991,12.885,30.522,10.805,29.276,10.111z M20.909,5.996c-0.663-0.312-0.539-0.638-0.436-0.824
             c0.104-0.187,1.36,0.425,1.443,0.653S21.573,6.306,20.909,5.996z M30.61,17.832c-0.94,3.482-3.127,5.031-4.795,5.718
             c-0.447,0.185-0.887,0.312-1.313,0.408c4.647-2.456,6.368-8.758,5.715-11.679C30.913,13.329,31.37,15.048,30.61,17.832z" />
-            <path d="M9.575,15.334c-0.35,0.623,0,3.099-0.497,2.478c-0.498-0.623-2.157-5.02,1.285-6.969c2.406-0.954,3.069,1.779,7.198,1.451
+                                        <path d="M9.575,15.334c-0.35,0.623,0,3.099-0.497,2.478c-0.498-0.623-2.157-5.02,1.285-6.969c2.406-0.954,3.069,1.779,7.198,1.451
             c-2.554-1.995-3.547-3.94-3.547-3.94s0.017-1.058,1.244-5.101c-2.9,1.023-3.306,3.111-4.35,3.728
             c-0.393-0.104-0.895-0.17-1.488-0.17c-1.055,0-2.352,0.198-3.615,0.717c-1.875,0.77-4.33,2.501-5.377,6.378
             c-1.42,5.207,1.049,7.287,2.294,7.979c0.167,0.343,0.258,0.528,0.258,0.528s-2.529-0.58-2.82,0.249
@@ -416,11 +472,11 @@
             C12.623,19.058,11.897,14.604,9.575,15.334z M1.78,19.718c-0.695-1.05-1.152-2.771-0.395-5.553
             c0.943-3.484,3.13-5.032,4.796-5.718C6.63,8.263,7.07,8.137,7.496,8.04C2.849,10.496,1.127,16.797,1.78,19.718z M11.523,26.824
             c-0.104,0.188-1.36-0.424-1.443-0.651s0.345-0.481,1.009-0.171C11.752,26.314,11.628,26.639,11.523,26.824z" />
-        </g>
-    </g>
-</svg></span>
-                    <h4>Pisces (Meen)</h4>
-                    <p>the 12th astrological sign. It spans 330° to 360° of celestial longitude. The sun transits this area between February 19 and March 20.</p>
+                                    </g>
+                                </g>
+                            </svg></span>
+                        <h4>Pisces (Meen)</h4>
+                        <p>the 12th astrological sign. It spans 330° to 360° of celestial longitude. The sun transits this area between February 19 and March 20.</p>
                     </a>
                 </div>
             </div>
@@ -473,91 +529,91 @@
                 </div>
             </div>
             <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
-            <div class="ast_service_slider">
-                <div class="owl-carousel owl-theme">
-                    <div class="item">
-                        <div class="ast_service_box">
-                            <img src="images/content/sv5.png" alt="Service">
-                            <h4>Birth Journal</h4>
-                            <p>Birth Journal or Kundli in astrology is only a pictorial portrayal of the wonderful bodies like planets and stars in the sky at a specific date and time.</p>
-                            <div class="clearfix"></div>
-                            <a href="#" class="ast_btn" data-bs-toggle="modal" data-bs-target="#birth-chart-form">read more</a>
+                <div class="ast_service_slider">
+                    <div class="owl-carousel owl-theme">
+                        <div class="item">
+                            <div class="ast_service_box">
+                                <img src="images/content/sv5.png" alt="Service">
+                                <h4>Birth Journal</h4>
+                                <p>Birth Journal or Kundli in astrology is only a pictorial portrayal of the wonderful bodies like planets and stars in the sky at a specific date and time.</p>
+                                <div class="clearfix"></div>
+                                <a href="#" class="ast_btn" data-bs-toggle="modal" data-bs-target="#birth-chart-form">read more</a>
+                            </div>
                         </div>
-                    </div>
-                    <div class="item">
-                        <div class="ast_service_box">
-                            <img src="images/content/sv6.png" alt="Service">
-                            <h4>vastu shastra</h4>
-                            <p>Vastu Shastra is a developed branch of Indian Astrology for science of dwelling/architecture. They are the only part those are closely related to each other.</p>
-                            <div class="clearfix"></div>
-                            <a href="#" class="ast_btn" data-bs-toggle="modal" data-bs-target="#vastu-chart-form">read more</a>
+                        <div class="item">
+                            <div class="ast_service_box">
+                                <img src="images/content/sv6.png" alt="Service">
+                                <h4>vastu shastra</h4>
+                                <p>Vastu Shastra is a developed branch of Indian Astrology for science of dwelling/architecture. They are the only part those are closely related to each other.</p>
+                                <div class="clearfix"></div>
+                                <a href="#" class="ast_btn" data-bs-toggle="modal" data-bs-target="#vastu-chart-form">read more</a>
+                            </div>
                         </div>
-                    </div>
-                    <div class="item">
-                        <div class="ast_service_box">
-                            <img src="images/content/sv4.png" alt="Service">
-                            <h4>face reading</h4>
-                            <p>Face reading or Physiognomy. Face reading gives you insights into your own and others' character and destiny through an understanding of what their facial features reveal.</p>
-                            <div class="clearfix"></div>
-                            <a href="#" class="ast_btn" data-bs-toggle="modal" data-bs-target="#face-chart-form">read more</a>
+                        <div class="item">
+                            <div class="ast_service_box">
+                                <img src="images/content/sv4.png" alt="Service">
+                                <h4>face reading</h4>
+                                <p>Face reading or Physiognomy. Face reading gives you insights into your own and others' character and destiny through an understanding of what their facial features reveal.</p>
+                                <div class="clearfix"></div>
+                                <a href="#" class="ast_btn" data-bs-toggle="modal" data-bs-target="#face-chart-form">read more</a>
+                            </div>
                         </div>
-                    </div>
-                    <div class="item">
-                        <div class="ast_service_box">
-                            <img src="images/content/sv3.png" alt="Service">
-                            <h4>Philosophy</h4>
-                            <p>Philosophy will help to clear your doubts regarding to your Dharma, Karma philosophy of life, like drops of nector and anything regarding to sanatana (hindu dharma).</p>
-                            <div class="clearfix"></div>
-                            <a href="#" class="ast_btn" data-bs-toggle="modal" data-bs-target="#phil-chart-form">read more</a>
+                        <div class="item">
+                            <div class="ast_service_box">
+                                <img src="images/content/sv3.png" alt="Service">
+                                <h4>Philosophy</h4>
+                                <p>Philosophy will help to clear your doubts regarding to your Dharma, Karma philosophy of life, like drops of nector and anything regarding to sanatana (hindu dharma).</p>
+                                <div class="clearfix"></div>
+                                <a href="#" class="ast_btn" data-bs-toggle="modal" data-bs-target="#phil-chart-form">read more</a>
+                            </div>
                         </div>
-                    </div>
-                    <div class="item">
-                        <div class="ast_service_box">
-                            <img src="images/content/sv2.png" alt="Service">
-                            <h4>Palmistry</h4>
-                            <p>Palmistry is to judge and analyze the overall development and direction of life according to the length, thickness of fingers, the shape, color and pattern of palm.</p>
-                            <div class="clearfix"></div>
-                            <a href="#" class="ast_btn" data-bs-toggle="modal" data-bs-target="#palm-chart-form">read more</a>
+                        <div class="item">
+                            <div class="ast_service_box">
+                                <img src="images/content/sv2.png" alt="Service">
+                                <h4>Palmistry</h4>
+                                <p>Palmistry is to judge and analyze the overall development and direction of life according to the length, thickness of fingers, the shape, color and pattern of palm.</p>
+                                <div class="clearfix"></div>
+                                <a href="#" class="ast_btn" data-bs-toggle="modal" data-bs-target="#palm-chart-form">read more</a>
+                            </div>
                         </div>
-                    </div>
-                    <div class="item">
-                        <div class="ast_service_box">
-                            <img src="images/content/sv1.png" alt="Service">
-                            <h4>kundli dosh</h4>
-                            <p>A Dosha in Vedic astrology means a combination of malefic planets that would not let the positive things in the horoscope to fructify. It is like a blemish on a horoscope.</p>
-                            <div class="clearfix"></div>
-                            <a href="#" class="ast_btn" data-bs-toggle="modal" data-bs-target="#dosh-chart-form">read more</a>
+                        <div class="item">
+                            <div class="ast_service_box">
+                                <img src="images/content/sv1.png" alt="Service">
+                                <h4>kundli dosh</h4>
+                                <p>A Dosha in Vedic astrology means a combination of malefic planets that would not let the positive things in the horoscope to fructify. It is like a blemish on a horoscope.</p>
+                                <div class="clearfix"></div>
+                                <a href="#" class="ast_btn" data-bs-toggle="modal" data-bs-target="#dosh-chart-form">read more</a>
+                            </div>
                         </div>
-                    </div>
-                    <div class="item">
-                        <div class="ast_service_box">
-                            <img src="images/content/sv7.png" alt="Service">
-                            <h4>year analysis</h4>
-                            <p>Get to know your year analysis report for the current year which may give you a detailed report for the year and how can you make it more.</p>
-                            <div class="clearfix"></div>
-                            <a href="#" class="ast_btn" data-bs-toggle="modal" data-bs-target="#year-chart-form">read more</a>
+                        <div class="item">
+                            <div class="ast_service_box">
+                                <img src="images/content/sv7.png" alt="Service">
+                                <h4>year analysis</h4>
+                                <p>Get to know your year analysis report for the current year which may give you a detailed report for the year and how can you make it more.</p>
+                                <div class="clearfix"></div>
+                                <a href="#" class="ast_btn" data-bs-toggle="modal" data-bs-target="#year-chart-form">read more</a>
+                            </div>
                         </div>
-                    </div>
-                    <div class="item">
-                        <div class="ast_service_box">
-                            <img src="images/content/sv8.png" alt="Service">
-                            <h4>matrimony</h4>
-                            <p>Learn the compatibility between zodiac signs and all about relationships for Sun signs in love with The AstroTwins' love matcher horoscopes.</p>
-                            <div class="clearfix"></div>
-                            <a href="#" class="ast_btn" data-bs-toggle="modal" data-bs-target="#matri-chart-form">read more</a>
+                        <div class="item">
+                            <div class="ast_service_box">
+                                <img src="images/content/sv8.png" alt="Service">
+                                <h4>matrimony</h4>
+                                <p>Learn the compatibility between zodiac signs and all about relationships for Sun signs in love with The AstroTwins' love matcher horoscopes.</p>
+                                <div class="clearfix"></div>
+                                <a href="#" class="ast_btn" data-bs-toggle="modal" data-bs-target="#matri-chart-form">read more</a>
+                            </div>
                         </div>
-                    </div>
-                    <div class="item">
-                        <div class="ast_service_box">
-                            <img src="images/content/sv9.png" alt="Service">
-                            <h4>paid services</h4>
-                            <p>Ask any specific question with respect to your need and your vision that may be affecting your life in any manner which can be a guide to your life.</p>
-                            <div class="clearfix"></div>
-                            <a href="#" class="ast_btn" data-bs-toggle="modal" data-bs-target="#paid-chart-form">read more</a>
+                        <div class="item">
+                            <div class="ast_service_box">
+                                <img src="images/content/sv9.png" alt="Service">
+                                <h4>paid services</h4>
+                                <p>Ask any specific question with respect to your need and your vision that may be affecting your life in any manner which can be a guide to your life.</p>
+                                <div class="clearfix"></div>
+                                <a href="#" class="ast_btn" data-bs-toggle="modal" data-bs-target="#paid-chart-form">read more</a>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
             </div>
         </div>
     </div>
@@ -567,4 +623,3 @@
 
 
 @endsection
-

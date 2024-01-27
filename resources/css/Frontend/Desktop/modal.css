@@ -103,6 +103,56 @@ padding: 40px;
     color: #fff;
     border: 1px solid rgba(0, 0, 0, 0.1);
 }
+
+
+
+
+
+
+
+.radio-container-form {
+  background: #868686;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+  display: inline-block;
+  padding: 5px;
+}
+
+.radio-container-form label {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  display: inline-block;
+  height: 26px;
+  line-height: 26px;
+  margin: 0;
+  padding: 0;
+  text-align: center;
+  transition: 0.2s all ease-in-out;
+  width: 80px;
+}
+
+.radio-container-form input[type=radio] {
+  display: none;
+}
+
+.radio-container-form input[type=radio]:checked + label {
+  background: #1e1f24;
+  color: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.ques_container{
+  margin:5px 0;
+  padding:3px;
+}
+
+textarea
+{
+  width:100%;
+}
+
+
 .right_container .question_container {
     display: flex;
     justify-content: space-between;
