@@ -27,13 +27,17 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/OwlCarousel2/2.3.4/assets/owl.theme.default.min.css" integrity="sha512-sMXtMNL1zRzolHYKEujM2AqCLUR9F2C4/05cdbxjjLSRvMQIciEPCQZo++nk7go3BtSuK9kfa/s+a4f4i5pLkw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js"></script>
-    <link rel="stylesheet" href="@if((new Jenssegers\Agent\Agent)->isMobile()) {{ asset('build/assets/mobile_app-v1.0.1.css') }}
+    <!-- <link rel="stylesheet" href="@if((new Jenssegers\Agent\Agent)->isMobile()) {{ asset('build/assets/mobile_app-v1.0.1.css') }}
             @else {{ asset('build/assets/app-v1.0.1.css') }} @endif">
 
     <script type="module" src="@if((new Jenssegers\Agent\Agent)->isMobile()) {{ asset('build/assets/mobile_app-v1.0.1.js') }}
-            @else {{ asset('build/assets/app-v1.0.1.js') }}@endif"></script>
+            @else {{ asset('build/assets/app-v1.0.1.js') }}@endif"></script> -->
 
-  
+    @if((new Jenssegers\Agent\Agent)->isMobile())
+    @vite(['resources/css/mobile_app.scss', 'resources/js/mobile_app.js'])
+    @else
+    @vite(['resources/css/app.scss', 'resources/js/app.js'])
+    @endif
 
 </head>
 
