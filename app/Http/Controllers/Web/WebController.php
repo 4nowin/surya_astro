@@ -46,6 +46,18 @@ class WebController extends Controller
        if ($id == 'privacy'){
             return view('Frontend/privacy', compact('id'));
         };
+
+        if ($id == 'cancellation'){
+            return view('Frontend/cancellation', compact('id'));
+        };
+
+        if ($id == 'shipping'){
+            return view('Frontend/shipping', compact('id'));
+        };
+
+        if ($id == 'terms'){
+            return view('Frontend/terms', compact('id'));
+        };
         
        if ($id == 'our_team'){
             return view('Frontend/our_team', compact('id'));

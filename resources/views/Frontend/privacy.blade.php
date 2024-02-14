@@ -18,7 +18,7 @@
                 <ul class="breadcrumb">
                     <li><a href="/">home</a></li>
                     <li>//</li>
-                    <li><a href="/privacy_policy">privacy & policy</a></li>
+                    <li><a href="#">privacy & policy</a></li>
                 </ul>
             </div>
         </div>

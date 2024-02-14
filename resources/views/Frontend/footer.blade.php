@@ -34,11 +34,11 @@
                     <h4 class="widget-title">our services</h4>
                     <div class="ast_servicelink">
                         <ul>
-                            <li><a href="/horoscope">Horoscopes</a></li>
+                            <li><a href="/know-horoscope">Horoscopes</a></li>
                             <!-- <li><a href="/gemstone">Gemstones</a></li>
                             <li><a href="/numerology">Numerology</a></li> -->
-                            <li><a href="/tarot">Tarot Cards</a></li>
-                            <li><a href="/palmistry">Palmistry</a></li>
+                            <!-- <li><a href="/know-tarot">Tarot Cards</a></li> -->
+                            <li><a href="/know-palmistry">Palmistry</a></li>
                         </ul>
                     </div>              
                 </div>          
@@ -48,11 +48,12 @@
                     <h4 class="widget-title">quick links</h4>
                     <div class="ast_sociallink">
                         <ul>
-                            <li><a href="/about">About</a></li>
-                            <li><a href="/blog">Blog</a></li>
-                            <li><a href="/our_team">Astrologers</a></li>
-                            <li><a href="/privacy">Privacy Policy</a></li>
-                            <li><a href="/contact">Contact Us</a></li>
+                            <li><a href="/know-about">About</a></li>
+                            <li><a href="/know-cancellation">Cancellation and Refund</a></li>
+                            <li><a href="/know-shipping">Shipping and Delivery</a></li>
+                            <li><a href="/know-terms">Terms & Conditions</a></li>
+                            <li><a href="/know-privacy">Privacy Policy</a></li>
+                            <li><a href="/know-contact">Contact Us</a></li>
                         </ul>
                     </div>              
                 </div>          
