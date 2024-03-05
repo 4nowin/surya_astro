@@ -4,6 +4,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Web\WebController;
 use App\Http\Controllers\Web\InquiryController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\RazorpayController;
 use App\Http\Controllers\Admin\AdminsController;
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\BannerController;
@@ -37,6 +38,10 @@ Route::get('/', function () {
     return view('welcome')->with( ['id' => "Navgarah"] );
 });
 
+Route::get('/pay_online', function () {
+    return view('Frontend/pay_online')->with( ['id' => "Pay Online"] );
+});
+
 Route::post('/inquiry', [InquiryController::class, 'saveInquiry']);
 
 Route::get('/dashboard', function () {
@@ -55,6 +60,13 @@ Route::get("/admin/login", function () {
 
 Route::post("/admin/login", [App\Http\Controllers\Admin\AuthController::class, 'login']);
 
+//payment related routes
+Route::group(['prefix' => "/payment"], function () {
+    Route::post('/razorpay/checkout', [RazorpayController::class, 'checkout'])->name("payment:razorpay:checkout");
+    Route::post('/razorpay/complete', [RazorpayController::class, 'complete'])->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class])->name("payment:razorpay:complete");
+    Route::post('/razorpay/webhook', [RazorpayController::class, 'webhook'])->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class])->name("payment:razorpay:webhook");
+});
+
 Route::group([
     'middleware' => ['auth:admin'],
     'prefix' => "/admin"
@@ -63,6 +75,7 @@ Route::group([
     Route::resource('roles', RolesController::class);
     Route::resource('users', UsersController::class);
     Route::resource('admins', AdminsController::class);
+    Route::post('/auth/check-user-discount', [RazorpayController::class, 'checkUserDiscount']);
     Route::resource('permissions', PermissionsController::class);
     Route::resource('guru', GuruController::class);
     Route::resource('cancellation', CancellationPolicyController::class);

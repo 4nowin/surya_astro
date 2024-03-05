@@ -2,7 +2,7 @@
 
 @section('content')
 <div class="bg-light p-4 rounded">
-    <h1>{{ ucfirst($inquiry->name) }}'s Enquiry</h1>
+    <h5><b>{{ ucfirst($inquiry->name) }}'s</b> Enquiry for <kbd>{{ $inquiry->for }}</kbd></h5>
     <div class="lead">
 
     </div>
@@ -26,34 +26,59 @@
                 <td>Phone</td>
                 <td>{{ $inquiry->phone }}</td>
             </tr>
+            @if($inquiry->gender)
             <tr>
                 <td>Gender</td>
                 <td>{{ $inquiry->gender }}</td>
             </tr>
+            @endif
+            
+            @if($inquiry->country)
             <tr>
                 <td>Country</td>
                 <td>{{ $inquiry->country }}</td>
             </tr>
+            @endif
+
             <tr>
                 <td>For</td>
                 <td>{{ $inquiry->for }}</td>
             </tr>
+            @if($inquiry->frequency)
             <tr>
-                <td>Date Of Birth</td>
+                <td>Frequency</td>
+                <td>{{ $inquiry->frequency }}</td>
+            </tr>
+            @endif
+ 
+            @if($inquiry->date_of_birth)
+            <tr>
+                <td>@if($inquiry->for == "Vastu") House build on @else Date Of Birth @endif</td>
                 <td>{{ $inquiry->date_of_birth }}</td>
             </tr>
+            @endif
+
+            @if($inquiry->place_of_birth)
             <tr>
-                <td>Place of Birth</td>
+                <td>@if($inquiry->for == "Vastu") House Situated At @else Place of Birth @endif</td>
                 <td>{{ $inquiry->place_of_birth }}</td>
             </tr>
+            @endif
+
             <tr>
-                <td>Status</td>
-                <td>{{ $inquiry->status }}</td>
+                <td>Payment Status</td>
+                <td><kbd class="@if($inquiry->payment_status == 'SUCCESS') bg-success @else bg-danger @endif">{{ $inquiry->payment_status }}</kbd></td>
             </tr>
+            <tr>
+                <td>Paid</td>
+                <td>{{ $inquiry->amount }}</td>
+            </tr>
+            @if($inquiry->message)
             <tr>
                 <td>Message</td>
                 <td>{{ $inquiry->message }}</td>
             </tr>
+            @endif
 
 
         </table>

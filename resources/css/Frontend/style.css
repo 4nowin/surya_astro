@@ -2185,6 +2185,20 @@ input:focus, textarea:focus, select:focus, button:focus {
 }
 /*---------- Footer Wrapper css end -------*/
 /*----Breadcrumb Start-----------*/
+.payment_pagetitle{
+	float: left;
+	width: 100%;
+	background-color: #272727;
+	position:relative;
+	background-attachment:fixed;
+	background-size: cover;
+	color:#ffffff;
+	padding:10em 0em 1em 0em;
+	background-image: url(../images/page/1920.jpg);
+    background-position: center center;
+	background-repeat: no-repeat;
+	text-align:center;
+	}
 .ast_pagetitle{
 	float: left;
 	width: 100%;

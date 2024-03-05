@@ -20,6 +20,7 @@
                     <form method="POST" action="/inquiry">
                         @csrf
                         <input type="text" name="for" value="Horoscope" hidden>
+                        <input type="text" name="amount" value="11" hidden>
                         <div class="container">
                             <div class='row text-start'>
                                 <div class="col-12">
@@ -28,7 +29,7 @@
                             </div>
                             <div class='row text-start'>
                                 <div class="col-6">
-                                    <input type="text" name="phone" class="form-control" placeholder="Phone" aria-label="Phone" required>
+                                    <input type="number" name="phone" class="form-control" placeholder="Phone" aria-label="Phone" required>
                                 </div>
                                 <div class='col-6'>
                                     <input type="email" name="email" class="form-control" placeholder="Email" aria-label="Email">
@@ -37,7 +38,7 @@
                             <div class='row text-start'>
                                 <div class='col-12'>
                                     <label for="type" style="color:black">Frequency:</label>
-                                    <select name="country" id="country" name="type" class="form-select" aria-label="Default select example">
+                                    <select name="frequency" id="country" name="type" class="form-select" aria-label="Default select example">
                                         <option value="daily" selected>Daily @ ₹11/- </option>
                                         <option value="weekly">Weekly @ ₹51/-</option>
                                         <option value="monthly">Monthly @ ₹251/-</option>

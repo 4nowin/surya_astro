@@ -18,8 +18,12 @@ class Inquiry extends Model
         "country",
         "date_of_birth",
         "place_of_birth",
+        "frequency",
+        "amount",
         "for",
+        "status",
         "type",
+        "payment_status",
         "message",
     ];
 }

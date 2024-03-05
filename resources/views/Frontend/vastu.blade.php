@@ -20,6 +20,7 @@
                     <form method="POST" action="/inquiry">
                         @csrf
                         <input type="text" name="for" value="Vastu" hidden>
+                        <input type="text" name="amount" value="101" hidden>
                         <div class="container">
                             <div class='row'>
                                 <div class="col-12">
@@ -28,7 +29,7 @@
                             </div>
                             <div class='row'>
                                 <div class="col-6">
-                                    <input type="text" name="phone" class="form-control" placeholder="Phone" aria-label="Phone" required>
+                                    <input type="number" name="phone" class="form-control" placeholder="Phone" aria-label="Phone" required>
                                 </div>
                                 <div class='col-6'>
                                     <input type="email" name="email" class="form-control" placeholder="Email" aria-label="Email">
@@ -56,7 +57,7 @@
                                 </div>
                             </div>
                         </div>
-                        <button type="submit" class="ast_btn">Get now</button>
+                        <button type="submit" class="ast_btn">Get now @ ₹101</button>
                     </form>
                 </div>
                 <!-- <h1>Vastu for the house is important than geography.</h1>

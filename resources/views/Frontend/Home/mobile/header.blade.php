@@ -12,6 +12,7 @@
         <a class="{{ Request::is('know-vastu') ? 'active' : '' }}" href="/know-vastu"><i class="fa-solid fa-couch"></i> &nbsp;Vastu Shastra</a>
         <br />
         <span>MORE</span> 
+        <a class="{{ Request::is('know-events') ? 'active' : '' }}" href="/pay_online"><i class="fas fa-swatchbook"></i> &nbsp;Pay Online</a>
         <a class="{{ Request::is('know-events') ? 'active' : '' }}" href="/know-events"><i class="fas fa-swatchbook"></i> &nbsp;Events</a>
         <a class="{{ Request::is('know-services') ? 'active' : '' }}" href="/know-services"><i class="fa-solid fa-tachograph-digital"></i> &nbsp;Services</a>
         <!-- <a class="{{ Request::is('know-portfolio') ? 'active' : '' }}" href="/know-portfolio"><i class="fa-brands fa-megaport"></i> &nbsp;Portfolio</a> -->
@@ -36,7 +37,6 @@
             <div class="">
                 <div class="mobile-logo d-flex justify-content-between align-items-center">
                     <a href="{{ url('/') }}"><img src="images/header/fb.png" alt="logo"></a>
-                    <span class="svgscrolled" style="color:white; font-family: 'Philosopher';">{{$id}}</span>
                     <div class="social-icons square">
                         <!-- Page Content -->
                         <div id="page-content-wrapper">

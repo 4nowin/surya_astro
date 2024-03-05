@@ -183,6 +183,7 @@
                                     <li><a href="/know-faq">FAQ</a></li>
                                 </ul>
                             </li>
+                            <li><a href="/pay_online">Pay Online</a></li>
                             <li><a href="/know-contact">contact</a></li>
                         </ul>
                     </div>

@@ -19,6 +19,7 @@
                     <form method="POST" action="/inquiry">
                         @csrf
                         <input type="text" name="for" value="Palmistry" hidden>
+                        <input type="text" name="amount" value="51" hidden>
                         <div class="container">
                             <div class='row text-start'>
                                 <div class="col-12">
@@ -27,7 +28,7 @@
                             </div>
                             <div class='row text-start'>
                                 <div class="col-6">
-                                    <input type="text" name="phone" class="form-control" placeholder="Phone" aria-label="Phone" required>
+                                    <input type="number" name="phone" class="form-control" placeholder="Phone" aria-label="Phone" required>
                                 </div>
                                 <div class='col-6'>
                                     <input type="email" name="email" class="form-control" placeholder="Email" aria-label="Email">
@@ -64,7 +65,7 @@
                                 </div>
                             </div>
                         </div>
-                        <button type="submit" class="ast_btn">Get now</button>
+                        <button type="submit" class="ast_btn">Get now @ ₹51</button>
                     </form>
                 </div>
                 <!-- <h1>The hand is the visible part of the brain.</h1>

@@ -18,6 +18,8 @@
         <th>Name</th>
         <th>For</th>
         <th>Phone</th>
+        <th>Status</th>
+        <th>Paid</th>
         <th width="3%" colspan="3" class="text-center">Action</th>
     </tr>
     @foreach ($inquiries as $key => $inquiry)
@@ -27,6 +29,8 @@
         <td>{{ $inquiry->name }}</td>
         <td>{{ $inquiry->for }}</td>
         <td>{{ $inquiry->phone }}</td>
+        <td><kbd class="@if($inquiry->payment_status == 'SUCCESS') bg-success @else bg-danger @endif">{{ $inquiry->payment_status }}</kbd></td>
+        <td>{{ $inquiry->amount }}</td>
         <td>
             <a class="btn btn-info btn-sm" href="{{ route('enquiry.show', $inquiry->id) }}">Show</a>
         </td>
