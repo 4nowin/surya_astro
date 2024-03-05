@@ -12,7 +12,7 @@
         <a class="{{ Request::is('know-vastu') ? 'active' : '' }}" href="/know-vastu"><i class="fa-solid fa-couch"></i> &nbsp;Vastu Shastra</a>
         <br />
         <span>MORE</span> 
-        <a class="{{ Request::is('know-events') ? 'active' : '' }}" href="/pay_online"><i class="fas fa-swatchbook"></i> &nbsp;Pay Online</a>
+        <a class="{{ Request::is('know-events') ? 'active' : '' }}" href="/pay_online"><i class="fa-solid fa-hand-holding-dollar"></i> &nbsp;Pay Online</a>
         <a class="{{ Request::is('know-events') ? 'active' : '' }}" href="/know-events"><i class="fas fa-swatchbook"></i> &nbsp;Events</a>
         <a class="{{ Request::is('know-services') ? 'active' : '' }}" href="/know-services"><i class="fa-solid fa-tachograph-digital"></i> &nbsp;Services</a>
         <!-- <a class="{{ Request::is('know-portfolio') ? 'active' : '' }}" href="/know-portfolio"><i class="fa-brands fa-megaport"></i> &nbsp;Portfolio</a> -->
