@@ -20,6 +20,11 @@
         },
         "theme": {
             "color": "#3399cc"
+        },
+        "modal": {
+            "ondismiss": function(){
+            window.location.replace("/payment_cancelled");
+        }
         }
     };
     var rzp1 = new Razorpay(options);
@@ -31,7 +36,7 @@
         //alert(response.error.reason);
         //alert(response.error.metadata.order_id);
         //alert(response.error.metadata.payment_id);
-        window.location.href = "{{url('/')}}"
+        window.location.href = "{{url('/payment_failed')}}"
     });
     rzp1.open();
 </script>

@@ -42,6 +42,14 @@ Route::get('/pay_online', function () {
     return view('Frontend/pay_online')->with( ['id' => "Pay Online"] );
 });
 
+Route::get('/payment_cancelled', function () {
+    return view('Frontend/payment/cancelled')->with( ['id' => "Cancelled"] );
+});
+
+Route::get('/payment_failed', function () {
+    return view('Frontend/payment/failed')->with( ['id' => "Failed"] );
+});
+
 Route::post('/inquiry', [InquiryController::class, 'saveInquiry']);
 
 Route::get('/dashboard', function () {
