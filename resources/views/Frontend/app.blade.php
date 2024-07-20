@@ -33,7 +33,17 @@
     <script type="module" src="@if((new Jenssegers\Agent\Agent)->isMobile()) {{ asset('build/assets/mobile_app-v1.0.2.js') }}
             @else {{ asset('build/assets/app-v1.0.2.js') }}@endif"></script>
 
-          
+        
+
+    <!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-K29B7CFYR5"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){dataLayer.push(arguments);}
+  gtag('js', new Date());
+
+  gtag('config', 'G-K29B7CFYR5');
+</script>
 
 </head>
 
