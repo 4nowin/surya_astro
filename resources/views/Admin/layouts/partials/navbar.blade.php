@@ -148,6 +148,23 @@
                                 </ul>
                             </div>
                         </li>
+                        <li class="menu-item sub-menu">
+                            <a href="#">
+                                <span class="menu-icon">
+                                    <i class="fas fa-mobile"></i>
+                                </span>
+                                <span class="menu-title">{{ __('Mobile')}}</span>
+                            </a>
+                            <div class="sub-menu-list">
+                                <ul>
+                                    <li class="menu-item">
+                                        <a href="{{ route('pooja.index') }}">
+                                            <span class="menu-title">{{ __('Poojas')}}</span>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
                         @endrole
                         <li class="menu-item sub-menu">
                             <a href="#">

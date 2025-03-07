@@ -8,6 +8,7 @@ use App\Http\Controllers\RazorpayController;
 use App\Http\Controllers\Admin\AdminsController;
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\BannerController;
+use App\Http\Controllers\Admin\PoojaController;
 use App\Http\Controllers\Admin\CancellationPolicyController;
 use App\Http\Controllers\Admin\CouponController;
 use App\Http\Controllers\Admin\FileManagerController;
@@ -89,6 +90,8 @@ Route::group([
     Route::resource('cancellation', CancellationPolicyController::class);
     Route::resource('gallery', GalleryController::class);
     Route::resource('banner', BannerController::class);
+    Route::resource('pooja', PoojaController::class);
+    Route::post('pooja_active/{pooja}', [PoojaController::class, 'active'])->name("pooja.active");
     Route::resource('promoters', PromotersController::class);
     Route::resource('locations', LocationsController::class);
     Route::resource('coupon', CouponController::class);
