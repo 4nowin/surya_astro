@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string("image")->nullable();
             $table->string("title");
+            $table->string("language")->default('en');
             $table->string("tag");
             $table->text("excerpt")->nullable();
             $table->longText("description")->nullable();

@@ -1,0 +1,27 @@
+<?php
+
+return [
+    'new_author' => 'New Author',
+    'add_pooja' => 'Add new Pooja.',
+    'title' => 'Title',
+    'tag' => 'Tag',
+    'start_date' => 'Start Date',
+    'end_date' => 'End Date',
+    'price' => 'Price',
+    'original_price' => 'Original Price',
+    'excerpt' => 'Excerpt',
+    'description' => 'Description',
+    'save_pooja' => 'Save Pooja',
+    'back' => 'Back',
+    'edit_pooja' => 'Edit Pooja',
+    'all_pooja' => 'All Pooja',
+    'manage_pooja' => 'Manage Pooja',
+    'image' => 'Image',
+    'name' => 'Name',
+    'active' => 'Active',
+    'action' => 'Action',
+    'show' => 'Show',
+    'edit' => 'Edit',
+    'delete' => 'Delete',
+    'of_pooja' => "'s Pooja",
+];

@@ -35,11 +35,41 @@
                     @endguest
 
                 </div>
+
             </div>
             <div class="sidebar-content">
                 <nav class="menu open-current-submenu">
                     <ul>
-                        <li class="menu-header"><span> GENERAL </span></li>
+                        <li class="menu-header"><span> {{ trans('navbar.language_caps') }} </span></li>
+                        <li>
+                            <div class="text-center">
+                                <a href="#" class="dropdown-toggle text-white" type="button" id="dropdownMenuButton1" data-bs-toggle="dropdown" aria-expanded="false">
+                                    {{ trans('navbar.language') }} {{ App::getLocale() == 'hi' ? trans('navbar.hindi') : trans('navbar.english_code') }}
+                                </a>
+                                <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton1" id="content">
+                                    <li>
+                                        <a href="{{ route('lang.switch.post', 'en') }}"
+                                            onclick="event.preventDefault(); document.getElementById('language-form-en').submit();">
+                                            {{ trans('navbar.english') }}
+                                        </a>
+                                        <form id="language-form-en" action="{{ route('lang.switch.post', 'en') }}" method="POST" style="display: none;">
+                                            @csrf
+                                        </form>
+                                    </li>
+                                    <li>
+                                        <a href="{{ route('lang.switch.post', 'hi') }}" onclick="event.preventDefault(); document.getElementById('language-form-hi').submit();">
+                                            {{ trans('navbar.hindi') }}
+                                        </a>
+                                        <form id="language-form-hi" action="{{ route('lang.switch.post', 'hi') }}" method="POST" style="display: none;">
+                                            @csrf
+                                        </form>
+                                    </li>
+                                </ul>
+                            </div>
+                        </li>
+                    </ul>
+                    <ul>
+                        <li class="menu-header"><span> {{ trans('navbar.general') }} </span></li>
                         @auth
                         @role('Admin')
                         <li class="menu-item sub-menu">
@@ -47,7 +77,7 @@
                                 <span class="menu-icon">
                                     <i class="fas fa-users"></i>
                                 </span>
-                                <span class="menu-title">{{ __('Users') }}</span>
+                                <span class="menu-title">{{ trans('navbar.users') }}</span>
                                 <span class="menu-suffix">
                                     <span class="badge primary">Hot</span>
                                 </span>
@@ -56,28 +86,28 @@
                                 <ul>
                                     <li class="menu-item">
                                         <a href="{{ route('admins.index') }}">
-                                            <span class="menu-title">{{ __('Users')}}</span>
+                                            <span class="menu-title">{{ trans('navbar.users')}}</span>
                                         </a>
                                     </li>
                                     <li class="menu-item">
                                         <a href="{{ route('roles.index') }}">
-                                            <span class="menu-title">{{ __('Roles')}}</span>
+                                            <span class="menu-title">{{ trans('navbar.roles')}}</span>
                                         </a>
                                     </li>
                                     <li class="menu-item">
                                         <a href="{{ route('permissions.index') }}">
-                                            <span class="menu-title">{{ __('Permissions')}}</span>
+                                            <span class="menu-title">{{ trans('navbar.permissions')}}</span>
                                         </a>
                                     </li>
                                     <li class="menu-item sub-menu">
                                         <a href="#">
-                                            <span class="menu-title">{{ __('Forms')}}</span>
+                                            <span class="menu-title">{{ trans('navbar.forms')}}</span>
                                         </a>
                                         <div class="sub-menu-list">
                                             <ul>
                                                 <li class="menu-item">
                                                     <a href="#">
-                                                        <span class="menu-title">{{ __('Roles')}}</span>
+                                                        <span class="menu-title">{{ trans('navbar.roles')}}</span>
                                                     </a>
                                                 </li>
                                                 <li class="menu-item">
@@ -131,18 +161,18 @@
                                 <span class="menu-icon">
                                     <i class="fas fa-sitemap"></i>
                                 </span>
-                                <span class="menu-title">{{ __('Images')}}</span>
+                                <span class="menu-title">{{ trans('navbar.images')}}</span>
                             </a>
                             <div class="sub-menu-list">
                                 <ul>
                                     <li class="menu-item">
                                         <a href="{{ route('banner.index') }}">
-                                            <span class="menu-title">{{ __('Banners')}}</span>
+                                            <span class="menu-title">{{ trans('navbar.banners')}}</span>
                                         </a>
                                     </li>
                                     <li class="menu-item">
                                         <a href="{{ route('gallery.index') }}">
-                                            <span class="menu-title">{{ __('Gallery')}}</span>
+                                            <span class="menu-title">{{ trans('navbar.gallery')}}</span>
                                         </a>
                                     </li>
                                 </ul>
@@ -153,13 +183,13 @@
                                 <span class="menu-icon">
                                     <i class="fas fa-mobile"></i>
                                 </span>
-                                <span class="menu-title">{{ __('Mobile')}}</span>
+                                <span class="menu-title">{{ trans('navbar.mobile')}}</span>
                             </a>
                             <div class="sub-menu-list">
                                 <ul>
                                     <li class="menu-item">
                                         <a href="{{ route('pooja.index') }}">
-                                            <span class="menu-title">{{ __('Poojas')}}</span>
+                                            <span class="menu-title">{{ trans('navbar.poojas')}}</span>
                                         </a>
                                     </li>
                                 </ul>
@@ -171,24 +201,24 @@
                                 <span class="menu-icon">
                                     <i class="fa-solid fa-calendar-days"></i>
                                 </span>
-                                <span class="menu-title">{{ __('Catelog')}}</span>
+                                <span class="menu-title">{{ trans('navbar.catelog')}}</span>
                             </a>
                             <div class="sub-menu-list">
                                 <ul>
                                     <li class="menu-item sub-menu">
                                         <a href="#">
-                                            <span class="menu-title">{{ __('Enquiries')}}</span>
+                                            <span class="menu-title">{{ trans('navbar.enquiries')}}</span>
                                         </a>
                                         <div class="sub-menu-list">
                                             <ul>
                                                 <li class="menu-item">
                                                     <a href="{{ route('enquiry.index') }}">
-                                                        <span class="menu-title">{{ __('New Enquiries')}}</span>
+                                                        <span class="menu-title">{{ trans('navbar.new_enquiries')}}</span>
                                                     </a>
                                                 </li>
                                                 <li class="menu-item">
                                                     <a href="{{ route('enquiry.completed') }}">
-                                                        <span class="menu-title">{{ __('Completed Enquiries')}}</span>
+                                                        <span class="menu-title">{{ trans('navbar.completed_enquiries')}}</span>
                                                     </a>
                                                 </li>
                                             </ul>
@@ -196,32 +226,32 @@
                                     </li>
                                     <li class="menu-item sub-menu">
                                         <a href="#">
-                                            <span class="menu-title">{{ __('Retreat')}}</span>
+                                            <span class="menu-title">{{ trans('navbar.retreat')}}</span>
                                         </a>
                                         <div class="sub-menu-list">
                                             <ul>
                                                 @if (Auth::user()->can('retreat:list'))
                                                 <li class="menu-item">
                                                     <a href="/admin/retreat">
-                                                        <span class="menu-title">{{ __('Retreats')}}</span>
+                                                        <span class="menu-title">{{ trans('navbar.retreats')}}</span>
                                                     </a>
                                                 </li>
                                                 @endif
-                                               
+
                                                 <li class="menu-item">
                                                     <a href="{{ route('guru.index') }}">
-                                                        <span class="menu-title">{{ __('Guru')}}</span>
+                                                        <span class="menu-title">{{ trans('navbar.guru')}}</span>
                                                     </a>
                                                 </li>
                                                 <li class="menu-item sub-menu">
                                                     <a href="#">
-                                                        <span class="menu-title">Inputs</span>
+                                                        <span class="menu-title">{{ trans('navbar.inputs')}}</span>
                                                     </a>
                                                     <div class="sub-menu-list">
                                                         <ul>
                                                             <li class="menu-item">
                                                                 <a href="{{ route('cancellation.index') }}">
-                                                                    <span class="menu-title">{{ __('Cancellation Policy')}}</span>
+                                                                    <span class="menu-title">{{ trans('navbar.cancellation_policy')}}</span>
                                                                 </a>
                                                             </li>
                                                         </ul>
@@ -233,13 +263,13 @@
                                 </ul>
                             </div>
                         </li>
-                        <li class="menu-header" style="padding-top: 20px"><span> EXTRA </span></li>
+                        <li class="menu-header" style="padding-top: 20px"><span> {{ trans('navbar.extra')}} </span></li>
                         <li class="menu-item">
                             <a href="/admin/promoters">
                                 <span class="menu-icon">
                                     <i class="fa-solid fa-flask"></i>
                                 </span>
-                                <span class="menu-title">{{ __('Promoters')}}</span>
+                                <span class="menu-title">{{ trans('navbar.promoters')}}</span>
                                 <span class="menu-suffix">
                                     <span class="badge secondary">Beta</span>
                                 </span>
@@ -250,7 +280,7 @@
                                 <span class="menu-icon">
                                     <i class="fas fa-images"></i>
                                 </span>
-                                <span class="menu-title">{{ __('Gallery')}}</span>
+                                <span class="menu-title">{{ trans('navbar.gallery')}}</span>
                             </a>
                         </li>
                         <li class="menu-item">
@@ -258,7 +288,7 @@
                                 <span class="menu-icon">
                                     <i class="fas fa-ticket-alt"></i>
                                 </span>
-                                <span class="menu-title">{{ __('Coupons')}}</span>
+                                <span class="menu-title">{{ trans('navbar.coupons')}}</span>
                             </a>
                         </li>
                         <li class="menu-item">
@@ -266,7 +296,7 @@
                                 <span class="menu-icon">
                                     <i class="fas fa-map-marked-alt"></i>
                                 </span>
-                                <span class="menu-title">{{ __('Locations')}}</span>
+                                <span class="menu-title">{{ trans('navbar.locations')}}</span>
                             </a>
                         </li>
                     </ul>
@@ -358,6 +388,8 @@
                         </li>
                         @endif
                         @endguest
+
+
                     </ul>
                 </div>
             </div>

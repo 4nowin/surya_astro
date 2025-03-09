@@ -35,6 +35,24 @@ use App\Http\Controllers\Admin\UsersController;
 |
 */
 
+Route::get('lang/{locale}', function ($locale) {
+    if (!in_array($locale, ['en', 'hi'])) {
+        abort(400);
+    }
+
+    session(['locale' => $locale]);
+    return redirect()->back();
+})->name('lang.switch');
+
+Route::post('lang/{locale}/switch', function ($locale) {
+    if (!in_array($locale, ['en', 'hi'])) {
+        abort(400);
+    }
+
+    session(['locale' => $locale]);
+    return redirect()->back();
+})->name('lang.switch.post');
+
 Route::get('/', function () {
     return view('welcome')->with( ['id' => "Navgarah"] );
 });

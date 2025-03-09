@@ -1,16 +1,16 @@
 @extends('admin.layouts.admin')
 
-@section('title', '| All Pooja')
+@section('title', '| ' . __('pooja.all_pooja'))
 
 @section('content')
 
 <div class="d-flex">
     <div class="flex-grow-1">
-        <h2>Pooja</h2>
-        <p class="text-muted">Manage your pooja here.</p>
+        <h2>{{ __('pooja.all_pooja') }}</h2>
+        <p class="text-muted">{{ __('pooja.manage_pooja') }}</p>
     </div>
     <div>
-        <a href="{{ route('pooja.create') }}" class="btn btn-primary btn-sm float-right">Add Pooja</a>
+        <a href="{{ route('pooja.create') }}" class="btn btn-primary btn-sm float-right">{{ __('pooja.add_pooja') }}</a>
     </div>
 </div>
 <div class="mt-2">
@@ -21,10 +21,10 @@
     <thead>
         <tr>
             <th width="5%">#</th>
-            <th width="5%">Image</th>
-            <th>Name</th>
-            <th>Active</th>
-            <th width="3%" colspan="3">Action</th>
+            <th width="5%">{{ __('pooja.image') }}</th>
+            <th>{{ __('pooja.name') }}</th>
+            <th>{{ __('pooja.active') }}</th>
+            <th width="3%" colspan="3">{{ __('pooja.action') }}</th>
         </tr>
     </thead>
 
@@ -44,21 +44,20 @@
                 </div>
             </td>
             <td>
-                <a class="btn btn-info btn-sm" href="{{ route('pooja.show', $poo->id) }}">Show</a>
+                <a class="btn btn-info btn-sm" href="{{ route('pooja.show', $poo->id) }}">{{ __('pooja.show') }}</a>
             </td>
             <td>
-                <a class="btn btn-primary btn-sm" href="{{ route('pooja.edit', $poo->id) }}">Edit</a>
+                <a class="btn btn-primary btn-sm" href="{{ route('pooja.edit', $poo->id) }}">{{ __('pooja.edit') }}</a>
             </td>
             <td>
                 {!! Form::open(['method' => 'DELETE','route' => ['pooja.destroy', $poo->id],'style'=>'display:inline']) !!}
                 @csrf
-                {!! Form::submit('Delete', ['class' => 'btn btn-danger btn-sm']) !!}
+                {!! Form::submit(__('pooja.delete'), ['class' => 'btn btn-danger btn-sm']) !!}
                 {!! Form::close() !!}
             </td>
         </tr>
         @endforeach
     </tbody>
 </table>
-
 
 @endsection

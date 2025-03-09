@@ -12,6 +12,7 @@ class Pooja extends Model
         'title',
         'image',
         'tag',
+        'language',
         'excerpt',
         'description',
         'start_date',

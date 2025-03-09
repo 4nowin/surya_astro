@@ -14,7 +14,8 @@ class PoojaController extends Controller
      */
     public function index()
     {
-        $pooja = Pooja::latest()->paginate(10);
+        // dd(app()->getLocale());
+        $pooja = Pooja::where('language', app()->getLocale())->latest()->paginate(10);
         return view('admin.pooja.index', compact('pooja'));
     }
 
@@ -43,6 +44,7 @@ class PoojaController extends Controller
             'title', 
             'image',
             'tag', 
+            'language',
             'excerpt', 
             'description', 
             'start_date', 
@@ -83,6 +85,7 @@ class PoojaController extends Controller
         $pooja->update($request->only(
             'title', 
             'tag', 
+            'language',
             'excerpt', 
             'description', 
             'start_date', 
