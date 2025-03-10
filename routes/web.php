@@ -87,6 +87,8 @@ Route::get("/admin/login", function () {
 
 Route::post("/admin/login", [App\Http\Controllers\Admin\AuthController::class, 'login']);
 
+Auth::routes();
+
 //payment related routes
 Route::group(['prefix' => "/payment"], function () {
     Route::post('/razorpay/checkout', [RazorpayController::class, 'checkout'])->name("payment:razorpay:checkout");
