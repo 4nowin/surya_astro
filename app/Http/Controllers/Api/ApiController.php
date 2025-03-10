@@ -23,12 +23,12 @@ class ApiController extends Controller
   {
     // Validate the request
     $request->validate([
-      'username' => 'required|string',
+      'email' => 'required|string',
       'password' => 'required|string',
     ]);
 
     // Check if user exists
-    $user = User::where('username', $request->username)->first();
+    $user = User::where('email', $request->email)->first();
 
     if (!$user || !Hash::check($request->password, $user->password)) {
       return response()->json([
