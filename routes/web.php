@@ -87,8 +87,6 @@ Route::get("/admin/login", function () {
 
 Route::post("/admin/login", [App\Http\Controllers\Admin\AuthController::class, 'login']);
 
-Auth::routes();
-
 //payment related routes
 Route::group(['prefix' => "/payment"], function () {
     Route::post('/razorpay/checkout', [RazorpayController::class, 'checkout'])->name("payment:razorpay:checkout");
@@ -131,6 +129,10 @@ Route::group([
     Route::post('settings/inline-edit', [SettingsController::class, "inlineEdit"]);
 });
 
-Route::resource('/know-{id}', WebController::class);
-
 require __DIR__.'/auth.php';
+
+Auth::routes();
+
+Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
+
+Route::resource('/know-{id}', WebController::class);
