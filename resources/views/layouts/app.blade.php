@@ -14,7 +14,11 @@
     <link href="https://fonts.bunny.net/css?family=Nunito" rel="stylesheet">
 
     <!-- Scripts -->
-    @vite(['resources/sass/app.scss', 'resources/js/app.js'])
+    <link rel="stylesheet" href="@if((new Jenssegers\Agent\Agent)->isMobile()) {{ asset('build/assets/mobile_app-v1.0.2.css') }}
+            @else {{ asset('build/assets/app-v1.0.2.css') }} @endif">
+
+    <script type="module" src="@if((new Jenssegers\Agent\Agent)->isMobile()) {{ asset('build/assets/mobile_app-v1.0.2.js') }}
+            @else {{ asset('build/assets/app-v1.0.2.js') }}@endif"></script>
 </head>
 <body>
     <div id="app">
