@@ -19,6 +19,8 @@ return [
     'gallery' => 'Gallery',
     'mobile' => 'Mobile',
     'poojas' => 'Poojas',
+    'horoscope' => 'Horoscope',
+    'product' => 'Product',
     'catelog' => 'Catalog',
     'enquiries' => 'Enquiries',
     'new_enquiries' => 'New Enquiries',

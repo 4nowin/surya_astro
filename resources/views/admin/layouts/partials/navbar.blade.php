@@ -192,6 +192,18 @@
                                             <span class="menu-title">{{ trans('navbar.poojas')}}</span>
                                         </a>
                                     </li>
+                                    
+                                    <li class="menu-item">
+                                        <a href="{{ route('horoscope.index') }}">
+                                            <span class="menu-title">{{ trans('navbar.horoscope')}}</span>
+                                        </a>
+                                    </li>
+                                    
+                                    <li class="menu-item">
+                                        <a href="{{ route('product.index') }}">
+                                            <span class="menu-title">{{ trans('navbar.product')}}</span>
+                                        </a>
+                                    </li>
                                 </ul>
                             </div>
                         </li>

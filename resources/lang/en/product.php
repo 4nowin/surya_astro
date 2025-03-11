@@ -1,0 +1,27 @@
+<?php
+
+return [
+    'new_author' => 'New Author',
+    'add_product' => 'Add new',
+    'title' => 'Title',
+    'tag' => 'Tag',
+    'start_date' => 'Start Date',
+    'end_date' => 'End Date',
+    'price' => 'Price',
+    'original_price' => 'Original Price',
+    'excerpt' => 'Excerpt',
+    'description' => 'Description',
+    'save_product' => 'Save',
+    'back' => 'Back',
+    'edit_product' => 'Edit',
+    'all_product' => 'All Product',
+    'manage_product' => 'Manage',
+    'image' => 'Image',
+    'name' => 'Name',
+    'active' => 'Active',
+    'action' => 'Action',
+    'show' => 'Show',
+    'edit' => 'Edit',
+    'delete' => 'Delete',
+    'of_product' => "'s Product",
+];

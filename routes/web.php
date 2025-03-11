@@ -9,6 +9,8 @@ use App\Http\Controllers\Admin\AdminsController;
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\BannerController;
 use App\Http\Controllers\Admin\PoojaController;
+use App\Http\Controllers\Admin\HoroscopeController;
+use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\CancellationPolicyController;
 use App\Http\Controllers\Admin\CouponController;
 use App\Http\Controllers\Admin\FileManagerController;
@@ -23,6 +25,7 @@ use App\Http\Controllers\Admin\PromotersController;
 use App\Http\Controllers\Admin\RolesController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\UsersController;
+use App\Models\Horoscope;
 
 /*
 |--------------------------------------------------------------------------
@@ -110,6 +113,10 @@ Route::group([
     Route::resource('banner', BannerController::class);
     Route::resource('pooja', PoojaController::class);
     Route::post('pooja_active/{pooja}', [PoojaController::class, 'active'])->name("pooja.active");
+    Route::resource('horoscope', HoroscopeController::class);
+    Route::post('horoscope_active/{horoscope}', [HoroscopeController::class, 'active'])->name("horoscope.active");
+    Route::resource('product', ProductController::class);
+    Route::post('product_active/{product}', [ProductController::class, 'active'])->name("product.active");
     Route::resource('promoters', PromotersController::class);
     Route::resource('locations', LocationsController::class);
     Route::resource('coupon', CouponController::class);
@@ -127,6 +134,15 @@ Route::group([
 
 
     Route::post('settings/inline-edit', [SettingsController::class, "inlineEdit"]);
+});
+
+Route::get('/clear-cache', function () {
+    Artisan::call('config:clear');
+    Artisan::call('cache:clear');
+    Artisan::call('route:clear');
+    Artisan::call('view:clear');
+    Artisan::call('optimize');
+    return "Cache cleared!";
 });
 
 require __DIR__.'/auth.php';

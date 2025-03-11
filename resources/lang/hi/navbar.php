@@ -19,6 +19,8 @@ return [
     'gallery' => 'गैलरी',
     'mobile' => 'मोबाइल',
     'poojas' => 'पूजा',
+    'horoscope' => 'राशि',
+    'product' => 'उत्पाद',
     'catelog' => 'कैटलॉग',
     'enquiries' => 'जांचें',
     'new_enquiries' => 'नई जांचें',

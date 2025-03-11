@@ -1,0 +1,27 @@
+<?php
+
+return [
+    'new_author' => 'नया लेखक',
+    'add_product' => 'उत्पाद जोड़ें।',
+    'title' => 'शीर्षक',
+    'tag' => 'टैग',
+    'start_date' => 'प्रारंभ तिथि',
+    'end_date' => 'समाप्ति तिथि',
+    'price' => 'मूल्य',
+    'original_price' => 'मूल कीमत',
+    'excerpt' => 'संक्षिप्त विवरण',
+    'description' => 'विवरण',
+    'save_product' => 'सहेजें',
+    'back' => 'वापस जाएं',
+    'edit_product' => 'संपादित करें',
+    'all_product' => 'सभी उत्पाद',
+    'manage_product' => 'उत्पाद का प्रबंधन।',
+    'image' => 'छवि',
+    'name' => 'नाम',
+    'active' => 'सक्रिय',
+    'action' => 'क्रिया',
+    'show' => 'देखें',
+    'edit' => 'संपादित करें',
+    'delete' => 'हटाएं',
+    'of_product' => 'उत्पाद का',
+];
