@@ -154,4 +154,4 @@ Auth::routes();
 
 Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
 
-Route::resource('/know-{id}', WebController::class);
+// Route::resource('/know-{id}', WebController::class);
