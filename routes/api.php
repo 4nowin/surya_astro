@@ -29,7 +29,7 @@ Route::get('{id}/products', [ApiController::class, "products"]);
 Route::get('{id}/poojas', [PoojaController::class, "index"]);
 Route::get('{lang?}/horoscopes', [HoroscopeController::class, 'index']);
 
-Route::post('/reviews', [ReviewController::class, 'store']);
+Route::get('{lang?}/astrologers', [AstrologerController::class, 'index']);
 Route::get('/astrologers/{id}/reviews', [ReviewController::class, 'index']);
 
 Route::post('{id}/login', [AuthController::class, "login"]);
