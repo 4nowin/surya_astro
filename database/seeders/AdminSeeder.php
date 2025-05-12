@@ -15,19 +15,45 @@ class AdminSeeder extends Seeder
      */
     public function run(): void
     {
-        $admin = Admin::create([
+         $admin = Admin::create([
             'name' => 'Navgrah Admin', 
             'email' => 'webmaster@navgarah.com',
             'password' => bcrypt('12345678')
         ]);
-    
 
-        $role = Role::create(['name' => 'Admin', "guard_name"=>"admin"]);
-     
+        // Create Admin Role if it doesn't exist
+        $adminRole = Role::firstOrCreate(['name' => 'Admin', 'guard_name' => 'admin']);
         $permissions = Permission::pluck('id','id')->all();
-   
-        $role->syncPermissions($permissions);
+        $adminRole->syncPermissions($permissions);
+        $admin->assignRole([$adminRole->id]);
 
-        $admin->assignRole([$role->id]);
+        // Create Astrologer Role if not exists
+        $astrologerRole = Role::firstOrCreate(['name' => 'Astrologer', 'guard_name' => 'admin']);
+
+        // Create 3 astrologers
+        $astrologers = [
+            [
+                'name' => 'Ravinder Sharma',
+                'email' => 'ravinder@navgarah.com',
+            ],
+            [
+                'name' => 'Yashpal Sharma',
+                'email' => 'yashpal@navgarah.com',
+            ],
+            [
+                'name' => 'Nitika Sharma',
+                'email' => 'niti@navgarah.com',
+            ],
+        ];
+
+        foreach ($astrologers as $astro) {
+            $user = Admin::create([
+                'name' => $astro['name'],
+                'email' => $astro['email'],
+                'password' => bcrypt('12345678')
+            ]);
+
+            $user->assignRole([$astrologerRole->id]);
+        }
     }
 }

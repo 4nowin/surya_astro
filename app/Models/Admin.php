@@ -7,6 +7,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 use Spatie\Permission\Traits\HasPermissions;
+use App\Models\Astrologer;
 
 class Admin extends Authenticatable
 {
@@ -22,7 +23,7 @@ class Admin extends Authenticatable
         'email',
         'password',
     ];
-  
+
     /**
      * The attributes that should be hidden for arrays.
      *
@@ -32,5 +33,9 @@ class Admin extends Authenticatable
         'password',
         'remember_token',
     ];
-  
+
+    public function astrologers()
+    {
+        return $this->hasMany(Astrologer::class);
+    }
 }

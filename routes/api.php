@@ -3,6 +3,11 @@
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ApiController;
+use App\Http\Controllers\Api\AstrologerController;
+use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\PoojaController;
+use App\Http\Controllers\Api\HoroscopeController;
+use App\Http\Controllers\Api\ReviewController;
 
 /*
 |--------------------------------------------------------------------------
@@ -20,8 +25,11 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 });
 
 Route::get('/enquiry', [ApiController::class, "inquiry"]);
-Route::get('{id}/poojas', [ApiController::class, "pooja"]);
 Route::get('{id}/products', [ApiController::class, "products"]);
-Route::get('{lang?}/horoscopes', [ApiController::class, 'horoscopes']);
+Route::get('{id}/poojas', [PoojaController::class, "index"]);
+Route::get('{lang?}/horoscopes', [HoroscopeController::class, 'index']);
 
-Route::post('{id}/login', [ApiController::class, "login"]);
+Route::post('/reviews', [ReviewController::class, 'store']);
+Route::get('/astrologers/{id}/reviews', [ReviewController::class, 'index']);
+
+Route::post('{id}/login', [AuthController::class, "login"]);

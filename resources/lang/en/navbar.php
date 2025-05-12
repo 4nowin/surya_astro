@@ -45,4 +45,5 @@ return [
     'radio' => 'Radio',
     'want_more' => 'Want more?',
     'you_made_it' => 'You made it',
+    'astrologer' => 'Astrologer',
 ];

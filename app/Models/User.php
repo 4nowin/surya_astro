@@ -10,6 +10,7 @@ use Spatie\Permission\Traits\HasRoles;
 use Spatie\Permission\Traits\HasPermissions;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 use Laravel\Sanctum\HasApiTokens;
+use App\Models\Review;
 
 class User extends Authenticatable implements JWTSubject
 {
@@ -55,5 +56,10 @@ class User extends Authenticatable implements JWTSubject
     public function getJWTCustomClaims()
     {
         return [];
+    }
+
+    public function reviews()
+    {
+        return $this->hasMany(Review::class);
     }
 }

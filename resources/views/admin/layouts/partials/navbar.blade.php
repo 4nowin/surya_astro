@@ -204,6 +204,11 @@
                                             <span class="menu-title">{{ trans('navbar.product')}}</span>
                                         </a>
                                     </li>
+                                    <li class="menu-item">
+                                        <a href="{{ route('astrologer.index') }}">
+                                            <span class="menu-title">{{ trans('navbar.astrologer')}}</span>
+                                        </a>
+                                    </li>
                                 </ul>
                             </div>
                         </li>

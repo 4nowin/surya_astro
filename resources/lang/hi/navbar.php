@@ -45,4 +45,5 @@ return [
     'radio' => 'रेडियो बटन',
     'want_more' => 'और चाहिए?',
     'you_made_it' => 'आप सफल हुए',
+    'astrologer' => 'ज्योतिषी',
 ];

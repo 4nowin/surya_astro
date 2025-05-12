@@ -1,0 +1,44 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use App\Models\Review;
+use App\Models\Admin;
+
+class Astrologer extends Model
+{
+    use HasFactory;
+    protected $fillable = [
+        'admin_id',
+        'image',
+        'name',
+        'language',
+        'astrologer_language',
+        'expertise',
+        'experience',
+        'excerpt',
+        'description',
+        'chat_minutes',
+        'call_minutes',
+        'price',
+        'original_price',
+        'active',
+    ];
+
+    public function reviews()
+    {
+        return $this->hasMany(Review::class);
+    }
+
+    public function averageRating()
+    {
+        return $this->reviews()->avg('rating');
+    }
+
+    public function admin()
+    {
+        return $this->belongsTo(Admin::class);
+    }
+}

@@ -11,6 +11,7 @@ use App\Http\Controllers\Admin\BannerController;
 use App\Http\Controllers\Admin\PoojaController;
 use App\Http\Controllers\Admin\HoroscopeController;
 use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Admin\AstrologerController;
 use App\Http\Controllers\Admin\CancellationPolicyController;
 use App\Http\Controllers\Admin\CouponController;
 use App\Http\Controllers\Admin\FileManagerController;
@@ -116,7 +117,9 @@ Route::group([
     Route::resource('horoscope', HoroscopeController::class);
     Route::post('horoscope_active/{horoscope}', [HoroscopeController::class, 'active'])->name("horoscope.active");
     Route::resource('product', ProductController::class);
+    Route::resource('astrologer', AstrologerController::class);
     Route::post('product_active/{product}', [ProductController::class, 'active'])->name("product.active");
+    Route::post('astrologer_active/{astrologer}', [AstrologerController::class, 'active'])->name("astrologer.active");
     Route::resource('promoters', PromotersController::class);
     Route::resource('locations', LocationsController::class);
     Route::resource('coupon', CouponController::class);
