@@ -10,6 +10,18 @@ class Order extends Model
 {
     use HasFactory;
 
+    protected $fillable = [
+        'name',
+        'mobile',
+        'email',
+        'inquiry_id',
+        'payment_id',
+        'total_price',
+        'status',
+        'is_checked_in',
+        'promoter_id',
+    ];
+
     public function inquiry()
     {
         return $this->belongsTo(Inquiry::class, 'inquiry_id', 'id');
