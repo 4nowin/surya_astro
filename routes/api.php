@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\PoojaController;
 use App\Http\Controllers\Api\HoroscopeController;
 use App\Http\Controllers\Api\ReviewController;
+use App\Http\Controllers\Api\PaymentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -31,5 +32,11 @@ Route::get('{lang?}/horoscopes', [HoroscopeController::class, 'index']);
 
 Route::get('{lang?}/astrologers', [AstrologerController::class, 'index']);
 Route::get('/astrologers/{id}/reviews', [ReviewController::class, 'index']);
+
+Route::post('/razorpay/create-pooja-order', [PaymentController::class, 'createPoojaOrder']);
+Route::post('/razorpay/verify', [PaymentController::class, 'verifySignature']);
+Route::post('/payment/save-wallet', [PaymentController::class, 'saveWallet']);
+Route::post('/payment/mark-cancelled', [PaymentController::class, 'markPaymentCancelled']);
+Route::post('/razorpay/mark-failed', [PaymentController::class, 'markPaymentFailed']);
 
 Route::post('{id}/login', [AuthController::class, "login"]);

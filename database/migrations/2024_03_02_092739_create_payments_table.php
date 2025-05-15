@@ -13,16 +13,22 @@ return new class extends Migration
     {
         Schema::create('payments', function (Blueprint $table) {
             $table->id();
+            $table->unsignedBigInteger('user_id');
             $table->string('rzp_payment_id')->nullable();
             $table->string('rzp_order_id');
             $table->string('payment_method');
+            $table->string('rzp_signature')->nullable();
             $table->string('order_id');
-            $table->string('user');
             $table->string('phone')->nullable();
             $table->string('email')->nullable();
+            $table->string('wallet')->nullable();
+            $table->string('cancel_reason')->nullable();
             $table->string('amount');
             $table->string('status');
             $table->timestamps();
+
+            
+            $table->foreign('user_id')->references('id')->on('users')->onDelete('cascade');
         });
     }
 
