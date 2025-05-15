@@ -88,7 +88,6 @@ class PaymentController extends Controller
             'razorpay_order_id' => 'required|string',
             'razorpay_payment_id' => 'required|string',
             'razorpay_signature' => 'required|string',
-            'amount' => 'required|numeric',
         ]);
 
         $generated_signature = hash_hmac(
