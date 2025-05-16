@@ -21,8 +21,7 @@ class PaymentController extends Controller
         $validated = $request->validate([
             'amount' => 'required|numeric|min:1',
             'email' => 'required|email',
-            'bookingOrderId' => 'required|integer',
-            'userContact' => 'nullable|string'
+            'bookingOrderId' => 'required|integer'
         ]);
 
         $pooja = Pooja::find($validated['bookingOrderId']);
@@ -54,6 +53,8 @@ class PaymentController extends Controller
                 'payment_method' => 'Razorpay',
                 'order_id' => 0, // Will be updated after order creation
                 'user_id' => $user->id,
+                'payment_type' => 'Pooja',
+                'payment_for' => $pooja->title,
                 'amount' => $pooja['price'],
                 'status' => 'CREATED',
             ]);
@@ -70,6 +71,104 @@ class PaymentController extends Controller
             // Optional: Update order_id in payment now that order exists
             $payment->order_id = $order->id;
             $payment->save();
+
+            return response()->json([
+                'key' => config('services.razorpay.key'),
+                'order_id' => $rzp_order->id,
+                'amount' => $rzp_order->amount,
+                'currency' => $rzp_order->currency
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Payment initiation failed', 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function createDonationOrder(Request $request)
+    {
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:1',
+            'email' => 'required|email',
+            'bookingOrderId' => 'required|integer'
+        ]);
+
+        $user = User::where('email', $validated['email'])->first();
+        if (!$user) {
+            return response()->json(['error' => 'User not found'], 404);
+        }
+
+        try {
+            $api = new Api(
+                config('services.razorpay.key'),
+                config('services.razorpay.secret')
+            );
+
+            // Create Razorpay order first
+            $rzp_order = $api->order->create([
+                'receipt' => 'receipt_' . uniqid(),
+                'amount' => (int) ($request->amount * 100),
+                'currency' => 'INR',
+            ]);
+
+            // Save payment
+            Payment::create([
+                'rzp_order_id' => $rzp_order->id,
+                'payment_method' => 'Razorpay',
+                'order_id' => 0, // Will be updated after order creation
+                'user_id' => $user->id,
+                'payment_type' => 'Donation',
+                'payment_for' => $request->title,
+                'amount' => $request->amount,
+                'status' => 'CREATED',
+            ]);
+
+            return response()->json([
+                'key' => config('services.razorpay.key'),
+                'order_id' => $rzp_order->id,
+                'amount' => $rzp_order->amount,
+                'currency' => $rzp_order->currency
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Payment initiation failed', 'message' => $e->getMessage()], 500);
+        }
+    }
+
+    public function addWalletMoney(Request $request)
+    {
+        $validated = $request->validate([
+            'amount' => 'required|numeric|min:1',
+            'email' => 'required|email',
+            'bookingOrderId' => 'required|integer'
+        ]);
+
+        $user = User::where('email', $validated['email'])->first();
+        if (!$user) {
+            return response()->json(['error' => 'User not found'], 404);
+        }
+
+        try {
+            $api = new Api(
+                config('services.razorpay.key'),
+                config('services.razorpay.secret')
+            );
+
+            // Create Razorpay order first
+            $rzp_order = $api->order->create([
+                'receipt' => 'receipt_' . uniqid(),
+                'amount' => (int) ($request->amount * 100),
+                'currency' => 'INR',
+            ]);
+
+            // Save payment
+            Payment::create([
+                'rzp_order_id' => $rzp_order->id,
+                'payment_method' => 'Razorpay',
+                'order_id' => 0, // Will be updated after order creation
+                'user_id' => $user->id,
+                'payment_type' => 'Wallet',
+                'payment_for' => $request->title,
+                'amount' => $request->amount,
+                'status' => 'CREATED',
+            ]);
 
             return response()->json([
                 'key' => config('services.razorpay.key'),
@@ -119,11 +218,18 @@ class PaymentController extends Controller
         $payment->status = 'PAID';
         $payment->save();
 
-        // Update related order
-        $order = Order::where('payment_id', $payment->id)->first();
-        if ($order) {
-            $order->status = 'CONFIRMED';
-            $order->save();
+        if ($payment->payment_type === 'Wallet') {
+            $user = $payment->user;
+            $user->wallet_balance += $payment->amount;
+            $user->save();
+        }
+
+        if ($payment->order_id > 0) {
+            $order = Order::where('id', $payment->order_id)->first();
+            if ($order) {
+                $order->status = 'CONFIRMED';
+                $order->save();
+            }
         }
 
         return response()->json([
@@ -151,10 +257,12 @@ class PaymentController extends Controller
         $payment->error_description = $request->error_description;
         $payment->save();
 
-        $order = Order::where('payment_id', $payment->id)->first();
-        if ($order) {
-            $order->status = 'FAILED';
-            $order->save();
+        if ($payment->order_id > 0) {
+            $order = Order::where('id', $payment->order_id)->first();
+            if ($order) {
+                $order->status = 'FAILED';
+                $order->save();
+            }
         }
 
         return response()->json(['message' => 'Payment marked as failed.']);
@@ -177,16 +285,18 @@ class PaymentController extends Controller
         $payment->cancel_reason = $request->cancel_reason ?? 'Cancelled by user';
         $payment->save();
 
-        $order = Order::where('payment_id', $payment->id)->first();
-        if ($order) {
-            $order->status = 'CANCELLED';
-            $order->save();
+        if ($payment->order_id > 0) {
+            $order = Order::where('id', $payment->order_id)->first();
+            if ($order) {
+                $order->status = 'CANCELLED';
+                $order->save();
+            }
         }
 
         return response()->json(['message' => 'Payment marked as cancelled.']);
     }
 
-    
+
     public function saveWallet(Request $request)
     {
         $request->validate([

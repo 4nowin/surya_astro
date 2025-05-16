@@ -19,6 +19,8 @@ return new class extends Migration
             $table->string('payment_method');
             $table->string('rzp_signature')->nullable();
             $table->string('order_id');
+            $table->string('payment_type')->nullable();
+            $table->string('payment_for')->nullable();
             $table->string('phone')->nullable();
             $table->string('email')->nullable();
             $table->string('wallet')->nullable();

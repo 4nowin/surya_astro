@@ -34,6 +34,8 @@ Route::get('{lang?}/astrologers', [AstrologerController::class, 'index']);
 Route::get('/astrologers/{id}/reviews', [ReviewController::class, 'index']);
 
 Route::post('/razorpay/create-pooja-order', [PaymentController::class, 'createPoojaOrder']);
+Route::post('/razorpay/create-donation-order', [PaymentController::class, 'createDonationOrder']);
+Route::post('/razorpay/add-wallet-money', [PaymentController::class, 'addWalletMoney']);
 Route::post('/razorpay/verify', [PaymentController::class, 'verifySignature']);
 Route::post('/payment/save-wallet', [PaymentController::class, 'saveWallet']);
 Route::post('/payment/mark-cancelled', [PaymentController::class, 'markPaymentCancelled']);
