@@ -12,6 +12,29 @@ use Laravel\Socialite\Facades\Socialite;
 class AuthController extends Controller
 {
 
+  private function authResponse(User $user, string $token)
+  {
+    return response()->json([
+      'success' => true,
+      'message' => 'Login successful',
+      'token' => $token,
+      'user' => [
+        'id' => $user->id,
+        'name' => $user->name,
+        'language' => $user->language,
+        'wallet_balance' => $user->wallet_balance,
+        'email' => $user->email,
+        'mobile' => $user->mobile,
+        'gender' => $user->gender,
+        'birth_time' => $user->birth_time,
+        'date_of_birth' => $user->date_of_birth,
+        'place_of_birth' => $user->place_of_birth,
+        'country' => $user->country,
+        'profile_image' => $user->profile_image,
+      ]
+    ], 200);
+  }
+
   public function login($lang = 'en', Request $request)
   {
     // Validate the request
@@ -20,8 +43,10 @@ class AuthController extends Controller
       'password' => 'required|string',
     ]);
 
+    $email = trim($request->email);
+
     // Check if user exists
-    $user = User::where('email', $request->email)->first();
+    $user = User::where('email', $email)->first();
 
     if (!$user) {
       return response()->json([
@@ -48,27 +73,10 @@ class AuthController extends Controller
     $token = $user->createToken('authToken')->plainTextToken;
     $user->update(['language' => $lang]);
 
-    return response()->json([
-      'success' => true,
-      'message' => 'Login successful',
-      'token' => $token,
-      'user' => [
-        'id' => $user->id,
-        'name' => $user->name,
-        'language' => $user->language,
-        'wallet_balance' => $user->wallet_balance,
-        'email' => $user->email,
-        'mobile' => $user->mobile,
-        'gender' => $user->gender,
-        'birth_time' => $user->birth_time,
-        'date_of_birth' => $user->date_of_birth,
-        'place_of_birth' => $user->place_of_birth,
-        'country' => $user->country,
-      ]
-    ], 200);
+    return $this->authResponse($user, $token);
   }
 
-  public function loginWithGoogle(Request $request)
+  public function loginWithGoogle($lang = 'en', Request $request)
   {
     $request->validate([
       'id_token' => 'required|string',
@@ -81,19 +89,27 @@ class AuthController extends Controller
     $payload = $client->verifyIdToken($request->id_token);
 
     if (!$payload) {
-      return response()->json(['error' => 'Invalid ID token'], 401);
+      return response()->json(['success' => false, 'message' => 'Invalid ID token'], 401);
     }
 
-    $email = $payload['email'];
-    $name = $payload['name'] ?? '';
+
+    \Log::info('Google login payload', $payload);
 
     $user = User::updateOrCreate(
       ['email' => $request->email],
       [
         'name' => $request->name,
         'profile_image' => $request->photo_url,
+        'language' => $lang,
       ]
     );
+
+    if ($user && $user->status === 'blocked') {
+      return response()->json([
+        'success' => false,
+        'message' => 'Your account has been blocked. Contact support.'
+      ], 403);
+    }
 
     $token = $user->createToken('google_token')->plainTextToken;
 
@@ -129,7 +145,7 @@ class AuthController extends Controller
     $token = $user->createToken('google_token')->plainTextToken;
 
     // Redirect to frontend with token as query param
-    return redirect()->away(env('APP_URL')."/oauth-success?token=$token");
+    return redirect()->away(env('APP_URL') . "/oauth-success?token=$token");
   }
 
   public function logout(Request $request)

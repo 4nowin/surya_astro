@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ApiController;
 use App\Http\Controllers\Api\AstrologerController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\PoojaController;
 use App\Http\Controllers\Api\HoroscopeController;
 use App\Http\Controllers\Api\ReviewController;
@@ -42,7 +43,8 @@ Route::post('/payment/mark-cancelled', [PaymentController::class, 'markPaymentCa
 Route::post('/razorpay/mark-failed', [PaymentController::class, 'markPaymentFailed']);
 
 Route::post('{lang?}/login', [AuthController::class, "login"]);
-Route::post('/auth/google', [AuthController::class, 'loginWithGoogle']);
+Route::post('{lang?}/auth/google', [AuthController::class, 'loginWithGoogle']);
 Route::get('/auth/google/redirect', [AuthController::class, 'redirectToGoogle']);
 Route::get('/auth/google/callback', [AuthController::class, 'handleGoogleCallback']);
 Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
+Route::middleware('auth:sanctum')->post('/update-profile', [UserController::class, 'updateProfile']);
