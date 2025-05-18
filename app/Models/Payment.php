@@ -16,6 +16,8 @@ class Payment extends Model
     'payment_method',
     'rzp_signature',
     'order_id',
+    'payment_type',
+    'payment_for',
     'phone',
     'email',
     'wallet',
