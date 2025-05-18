@@ -26,7 +26,8 @@ return new class extends Migration
             $table->string('wallet')->nullable();
             $table->string('cancel_reason')->nullable();
             $table->string('amount');
-            $table->string('status');
+            $table->enum('status', ['CREATED', 'PENDING', 'CONFIRMED', 'FAILED', 'CANCELLED'])->default('CREATED');
+            $table->index('status');
             $table->timestamps();
 
             

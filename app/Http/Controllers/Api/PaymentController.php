@@ -16,20 +16,36 @@ use App\Models\Astrologer;
 
 class PaymentController extends Controller
 {
+    private function getUserByEmail($email)
+    {
+        return User::where('email', $email)->first();
+    }
+
+    private function createRazorpayOrder($amount)
+    {
+        $api = new Api(config('services.razorpay.key'), config('services.razorpay.secret'));
+        return $api->order->create([
+            'receipt' => 'receipt_' . uniqid(),
+            'amount' => (int) ($amount * 100),
+            'currency' => 'INR',
+        ]);
+    }
+
     public function createPoojaOrder(Request $request)
     {
         $validated = $request->validate([
             'amount' => 'required|numeric|min:1',
-            'email' => 'required|email',
             'bookingOrderId' => 'required|integer'
         ]);
 
         $pooja = Pooja::find($validated['bookingOrderId']);
+        
         if (!$pooja) {
             return response()->json(['error' => 'Pooja not found'], 404);
         }
 
-        $user = User::where('email', $validated['email'])->first();
+        $user = auth()->user();
+
         if (!$user) {
             return response()->json(['error' => 'User not found'], 404);
         }
@@ -86,12 +102,13 @@ class PaymentController extends Controller
     public function createDonationOrder(Request $request)
     {
         $validated = $request->validate([
+            'title' => 'required|string',
             'amount' => 'required|numeric|min:1',
-            'email' => 'required|email',
             'bookingOrderId' => 'required|integer'
         ]);
 
-        $user = User::where('email', $validated['email'])->first();
+        $user = auth()->user();
+
         if (!$user) {
             return response()->json(['error' => 'User not found'], 404);
         }
@@ -135,12 +152,13 @@ class PaymentController extends Controller
     public function addWalletMoney(Request $request)
     {
         $validated = $request->validate([
+            'title' => 'required|string',
             'amount' => 'required|numeric|min:1',
-            'email' => 'required|email',
             'bookingOrderId' => 'required|integer'
         ]);
 
-        $user = User::where('email', $validated['email'])->first();
+        $user = auth()->user();
+
         if (!$user) {
             return response()->json(['error' => 'User not found'], 404);
         }
@@ -212,17 +230,22 @@ class PaymentController extends Controller
             ], 404);
         }
 
-        // Update payment status
-        $payment->rzp_payment_id = $request->razorpay_payment_id;
-        $payment->rzp_signature = $request->razorpay_signature;
-        $payment->status = 'PAID';
-        $payment->save();
-
         if ($payment->payment_type === 'Wallet') {
+            $user = auth()->user();
+            if (!$user) {
+                return response()->json(['error' => 'User not found'], 404);
+            }
             $user = $payment->user;
             $user->wallet_balance += $payment->amount;
             $user->save();
         }
+
+        // Update payment status
+        $payment->rzp_payment_id = $request->razorpay_payment_id;
+        $payment->rzp_signature = $request->razorpay_signature;
+        $payment->status = 'CONFIRMED';
+        $payment->save();
+
 
         if ($payment->order_id > 0) {
             $order = Order::where('id', $payment->order_id)->first();

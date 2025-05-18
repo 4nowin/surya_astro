@@ -34,17 +34,19 @@ Route::get('{lang?}/horoscopes', [HoroscopeController::class, 'index']);
 Route::get('{lang?}/astrologers', [AstrologerController::class, 'index']);
 Route::get('/astrologers/{id}/reviews', [ReviewController::class, 'index']);
 
-Route::post('/razorpay/create-pooja-order', [PaymentController::class, 'createPoojaOrder']);
-Route::post('/razorpay/create-donation-order', [PaymentController::class, 'createDonationOrder']);
-Route::post('/razorpay/add-wallet-money', [PaymentController::class, 'addWalletMoney']);
-Route::post('/razorpay/verify', [PaymentController::class, 'verifySignature']);
-Route::post('/payment/save-wallet', [PaymentController::class, 'saveWallet']);
-Route::post('/payment/mark-cancelled', [PaymentController::class, 'markPaymentCancelled']);
-Route::post('/razorpay/mark-failed', [PaymentController::class, 'markPaymentFailed']);
-
 Route::post('{lang?}/login', [AuthController::class, "login"]);
 Route::post('{lang?}/auth/google', [AuthController::class, 'loginWithGoogle']);
 Route::get('/auth/google/redirect', [AuthController::class, 'redirectToGoogle']);
 Route::get('/auth/google/callback', [AuthController::class, 'handleGoogleCallback']);
 Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
 Route::middleware('auth:sanctum')->post('/update-profile', [UserController::class, 'updateProfile']);
+
+Route::middleware('auth:sanctum')->group(function () {
+    Route::post('/razorpay/create-donation-order', [PaymentController::class, 'createDonationOrder']);
+    Route::post('/razorpay/add-wallet-money', [PaymentController::class, 'addWalletMoney']);
+    Route::post('/razorpay/create-pooja-order', [PaymentController::class, 'createPoojaOrder']);
+    Route::post('/razorpay/verify', [PaymentController::class, 'verifySignature']);
+    Route::post('/payment/save-wallet', [PaymentController::class, 'saveWallet']);
+    Route::post('/payment/mark-cancelled', [PaymentController::class, 'markPaymentCancelled']);
+    Route::post('/razorpay/mark-failed', [PaymentController::class, 'markPaymentFailed']);
+});

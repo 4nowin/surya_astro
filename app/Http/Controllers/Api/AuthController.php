@@ -113,10 +113,7 @@ class AuthController extends Controller
 
     $token = $user->createToken('google_token')->plainTextToken;
 
-    return response()->json([
-      'token' => $token,
-      'user' => $user,
-    ]);
+    return $this->authResponse($user, $token);
   }
 
   public function redirectToGoogle()

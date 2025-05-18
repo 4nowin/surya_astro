@@ -19,7 +19,8 @@ return new class extends Migration
             $table->string('inquiry_id');
             $table->string('payment_id');
             $table->integer('total_price');
-            $table->string('status');
+            $table->enum('status', ['CREATED', 'PENDING', 'CONFIRMED', 'FAILED', 'CANCELLED'])->default('CREATED');
+            $table->index('status');
             $table->boolean('is_checked_in')->nullable();
             $table->integer("promoter_id")->nullable()->reference("id")->on("promoters");
             $table->timestamps();
