@@ -41,12 +41,12 @@ Route::get('/auth/google/callback', [AuthController::class, 'handleGoogleCallbac
 Route::middleware('auth:sanctum')->post('/logout', [AuthController::class, 'logout']);
 Route::middleware('auth:sanctum')->post('/update-profile', [UserController::class, 'updateProfile']);
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::group(['middleware' => ['auth:sanctum'],'prefix' => "/{lang?}" ], function () {
     Route::post('/razorpay/create-donation-order', [PaymentController::class, 'createDonationOrder']);
     Route::post('/razorpay/add-wallet-money', [PaymentController::class, 'addWalletMoney']);
     Route::post('/razorpay/create-pooja-order', [PaymentController::class, 'createPoojaOrder']);
     Route::post('/razorpay/verify', [PaymentController::class, 'verifySignature']);
-    Route::post('/payment/save-wallet', [PaymentController::class, 'saveWallet']);
-    Route::post('/payment/mark-cancelled', [PaymentController::class, 'markPaymentCancelled']);
+    Route::post('/razorpay/payment/save-wallet', [PaymentController::class, 'saveWallet']);
+    Route::post('/razorpay/payment/mark-cancelled', [PaymentController::class, 'markPaymentCancelled']);
     Route::post('/razorpay/mark-failed', [PaymentController::class, 'markPaymentFailed']);
 });
