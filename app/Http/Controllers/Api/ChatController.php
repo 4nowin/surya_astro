@@ -40,16 +40,26 @@ class ChatController extends Controller
       ]);
     }
 
-    // 🔥 Add metadata to Firestore
-    $factory = (new Factory)->withServiceAccount(env('FIREBASE_CREDENTIALS_PATH'));
-    $firestore = $factory->createFirestore()->database();
+    try {
+      // 🔥 Add metadata to Firestore
+      $factory = (new Factory)->withServiceAccount(env('FIREBASE_CREDENTIALS_PATH'));
+      $firestore = $factory->createFirestore()->database();
 
-    $firestore->collection('chats')->document((string)$chatSession->id)->set([
-      'user_id' => $user->id,
-      'user_name' => $user->name,
-      'astrologer_id' => $astrologerId,
-      'started_at' => now()->toDateTimeString(),
-    ]);
+      $firestore->collection('chats')->document((string)$chatSession->id)->set([
+        'text' => '',
+        'sender_id' => $user->id,
+        'receiver_id' => $astrologerId,
+        'user_type' => 'user',
+        'user_name' => $user->name,
+        'timestamp' => now()->toDateTimeString(),
+      ]);
+    } catch (\Throwable $e) {
+      \Log::error('Firestore Error: ' . $e->getMessage());
+      return response()->json([
+        'status' => 'error',
+        'message' => 'Failed to create Firestore chat metadata.',
+      ], 500);
+    }
 
     return response()->json([
       'status' => $existingSession ? 'existing' : 'new',
