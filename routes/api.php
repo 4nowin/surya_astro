@@ -58,16 +58,6 @@ Route::prefix('astrologer')->group(function () {
         Route::post('/toggle-online', [AstrologerChatController::class, 'toggleOnline']);
         Route::get('/chat/astrologer/history', [AstrologerChatController::class, 'getAstrologerChats']);
 
-        Route::post('/update-astrologer-fcm-token', [AstrologerController::class, 'updateFcmToken']);
-
-        // ✅ 1. Get initial messages (with optional pagination)
-        Route::get('/chat-messages/{sessionId}', [AstrologerChatController::class, 'getMessages']);
-
-        // ✅ 2. Send a new message
-        Route::post('/send-message', [AstrologerChatController::class, 'sendMessage']);
-
-        // ✅ 3. Fetch new messages (polling)
-        Route::post('/chat/messages', [AstrologerChatController::class, 'fetchNewMessages']);
     });
 });
 
