@@ -7,11 +7,12 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 use Spatie\Permission\Traits\HasPermissions;
+use Laravel\Sanctum\HasApiTokens;
 use App\Models\Astrologer;
 
 class Admin extends Authenticatable
 {
-    use HasFactory, Notifiable, HasRoles, HasPermissions;
+    use HasFactory, Notifiable, HasRoles, HasPermissions, HasApiTokens;
 
     /**
      * The attributes that are mass assignable.
@@ -33,6 +34,11 @@ class Admin extends Authenticatable
         'password',
         'remember_token',
     ];
+
+    public function astrologer()
+    {
+        return $this->hasOne(Astrologer::class);
+    }
 
     public function astrologers()
     {

@@ -9,20 +9,20 @@ use Carbon\Carbon;
 class PoojaController extends Controller
 {
 
-  public function index($id = 'en')
+  public function index($lang = 'en')
   {
     // Validate the language parameter (optional but recommended)
     $validLanguages = ['en', 'hi']; // Add supported languages here
-    if (!in_array($id, $validLanguages)) {
+    if (!in_array($lang, $validLanguages)) {
       return response()->json(['error' => 'Invalid language selected'], 400);
     }
 
     // Fetch active pooja records for the selected language
     $data = Pooja::where([
       ['active', 1],
-      ['language', $id]
-    ])->get()->map(function ($item) use ($id) {
-      $locale = ($id === 'hi') ? 'hi' : 'en'; // Set locale dynamically
+      ['language', $lang]
+    ])->get()->map(function ($item) use ($lang) {
+      $locale = ($lang === 'hi') ? 'hi' : 'en'; // Set locale dynamically
 
       $item->start_date = Carbon::parse($item->start_date)
         ->locale($locale)

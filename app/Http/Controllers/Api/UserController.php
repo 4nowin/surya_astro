@@ -45,4 +45,23 @@ class UserController extends Controller
       'user' => $user
     ]);
   }
+
+  public function userProfile()
+  {
+    return response()->json(auth()->user());
+  }
+
+  public function updateFcmToken(Request $request)
+  {
+    $request->validate([
+      'fcm_token' => 'required|string',
+    ]);
+
+    $user = $request->user();
+
+    $user->fcm_token = $request->fcm_token;
+    $user->save();
+
+    return response()->json(['status' => 'token_updated']);
+  }
 }

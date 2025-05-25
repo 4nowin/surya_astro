@@ -4,7 +4,11 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Astrologer;
+use Illuminate\Support\Facades\Auth;
 use App\Models\Review;
+use Illuminate\Http\Request;
+use App\Models\Chat;
+use App\Models\ChatSession;
 
 class AstrologerController extends Controller
 {
@@ -38,5 +42,19 @@ class AstrologerController extends Controller
     });
 
     return response()->json($data, 200);
+  }
+
+  public function updateFcmToken(Request $request)
+  {
+    $request->validate([
+      'fcm_token' => 'required|string',
+    ]);
+
+    $astrologer = Auth::user();
+
+    $astrologer->fcm_token = $request->fcm_token;
+    $astrologer->save();
+
+    return response()->json(['status' => 'token_updated']);
   }
 }

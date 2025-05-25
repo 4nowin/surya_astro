@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use App\Models\Review;
 use App\Models\Admin;
+use App\Models\ChatSession;
+use App\Models\Chat;
 
 class Astrologer extends Model
 {
@@ -23,8 +25,12 @@ class Astrologer extends Model
         'chat_minutes',
         'call_minutes',
         'price',
+        'call_price',
         'original_price',
+        'is_online',
+        'is_typing',
         'active',
+        'fcm_token',
     ];
 
     public function reviews()
@@ -40,5 +46,20 @@ class Astrologer extends Model
     public function admin()
     {
         return $this->belongsTo(Admin::class);
+    }
+
+    public function chatSessions()
+    {
+        return $this->hasMany(ChatSession::class);
+    }
+
+    public function chats()
+    {
+        return $this->hasMany(Chat::class);
+    }
+
+    public function chatPayments()
+    {
+        return $this->hasMany(ChatPayment::class);
     }
 }

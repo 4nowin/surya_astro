@@ -233,7 +233,7 @@ class PaymentController extends Controller
         if ($payment->payment_type === 'Wallet') {
             $user = auth()->user();
             if (!$user) {
-                return response()->json(['error' => 'User not found'], 404);
+                return response()->json(['success' => false, 'error' => 'User not found'], 404);
             }
             $user = $payment->user;
             $user->wallet_balance += $payment->amount;

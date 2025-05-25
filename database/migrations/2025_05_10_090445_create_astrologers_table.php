@@ -25,7 +25,11 @@ return new class extends Migration
             $table->integer("chat_minutes")->default(0);
             $table->integer("call_minutes")->default(0);
             $table->integer("price")->default(0);
+            $table->integer("call_price")->default(0);
             $table->integer("original_price")->default(0);
+            $table->boolean('is_online')->default(false);
+            $table->boolean('is_typing')->default(false);
+            $table->string('fcm_token')->nullable();
             $table->boolean("active")->default(false);
             $table->timestamps();
         });

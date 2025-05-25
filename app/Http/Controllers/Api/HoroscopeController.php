@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Horoscope;
+use App\Models\User;
+use App\Services\FcmService;
 use Carbon\Carbon;
 
 class HoroscopeController extends Controller
@@ -49,6 +51,36 @@ class HoroscopeController extends Controller
       'monthly' => $horoscopes->get('monthly', []),
       'yearly' => $horoscopes->get('yearly', [])
     ], 200);
+  }
+
+  public function sendLocalizedHoroscopeNotifications()
+  {
+    $date = Carbon::today();
+    $languages = ['en', 'hi']; // Add all supported language codes here
+
+    foreach ($languages as $lang) {
+        $horoscope = Horoscope::where('language', $lang)
+            ->where('horoscope_type', 'daily')
+            ->where('start_date', $date)
+            ->first();
+
+        if ($horoscope) {
+            $topic = "horoscope-$lang";
+
+            FcmService::sendToTopic(
+                $topic,
+                $horoscope->title,
+                $horoscope->excerpt,
+                [
+                    'type' => 'update',
+                    'lang' => $lang,
+                    'date' => $date->toDateString()
+                ]
+            );
+        }
+    }
+
+    return response()->json(['message' => 'Bulk notification sent'], 200);
   }
 
 }

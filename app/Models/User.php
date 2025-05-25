@@ -11,6 +11,8 @@ use Spatie\Permission\Traits\HasPermissions;
 use Tymon\JWTAuth\Contracts\JWTSubject;
 use Laravel\Sanctum\HasApiTokens;
 use App\Models\Review;
+use App\Models\ChatSession;
+use App\Models\Chat;
 
 class User extends Authenticatable implements JWTSubject
 {
@@ -73,5 +75,20 @@ class User extends Authenticatable implements JWTSubject
     public function reviews()
     {
         return $this->hasMany(Review::class);
+    }
+
+    public function chatSessions()
+    {
+        return $this->hasMany(ChatSession::class);
+    }
+
+    public function chats()
+    {
+        return $this->hasMany(Chat::class);
+    }
+
+    public function chatPayments()
+    {
+        return $this->hasMany(ChatPayment::class);
     }
 }
