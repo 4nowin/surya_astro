@@ -8,6 +8,7 @@
         "php": "^8.1",
         "google/apiclient": "^2.18",
         "google/auth": "^1.47",
+        "google/cloud-firestore": "^1.50",
         "guzzlehttp/guzzle": "^7.9",
         "intervention/image": "^2.7",
         "intervention/imagecache": "^2.5",
