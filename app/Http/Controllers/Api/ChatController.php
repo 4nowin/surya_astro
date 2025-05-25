@@ -5,68 +5,101 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Models\Chat;
 use App\Models\ChatSession;
 use App\Models\User;
 use App\Models\Astrologer;
 use App\Models\ChatPayment;
 use Kreait\Firebase\Factory;
+use Illuminate\Support\Facades\Log; 
 
 class ChatController extends Controller
 {
 
-  public function startSession(Request $request)
-  {
-    $request->validate([
-      'astrologer_id' => 'required|exists:astrologers,id',
-    ]);
+   public function startSession(Request $request)
+    {
+        try {
+            $request->validate([
+                'astrologer_id' => 'required|exists:astrologers,id',
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('Validation failed in startSession', [
+                'error' => $e->getMessage(),
+                'data' => $request->all(),
+                'trace' => $e->getTraceAsString(),
+            ]);
 
-    $user = Auth::user();
-    $astrologerId = $request->input('astrologer_id');
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Invalid astrologer ID or missing data.',
+            ], 422);
+        }
 
-    $existingSession = ChatSession::where('user_id', $user->id)
-      ->where('astrologer_id', $astrologerId)
-      ->whereNull('ended_at')
-      ->latest()
-      ->first();
+        try {
+            $user = Auth::user();
+            $astrologerId = $request->input('astrologer_id');
 
-    if ($existingSession) {
-      $chatSession = $existingSession;
-    } else {
-      $chatSession = ChatSession::create([
-        'user_id' => $user->id,
-        'astrologer_id' => $astrologerId,
-        'started_at' => now(),
-      ]);
+            $existingSession = ChatSession::where('user_id', $user->id)
+                ->where('astrologer_id', $astrologerId)
+                ->whereNull('ended_at')
+                ->latest()
+                ->first();
+
+            if ($existingSession) {
+                $chatSession = $existingSession;
+            } else {
+                $chatSession = ChatSession::create([
+                    'user_id' => $user->id,
+                    'astrologer_id' => $astrologerId,
+                    'started_at' => now(),
+                ]);
+            }
+
+            try {
+                $factory = (new Factory)->withServiceAccount(env('FIREBASE_CREDENTIALS_PATH'));
+                $firestore = $factory->createFirestore()->database();
+
+                $firestore->collection('chats')->document((string) $chatSession->id)->set([
+                    'text' => '',
+                    'sender_id' => $user->id,
+                    'receiver_id' => $astrologerId,
+                    'user_type' => 'user',
+                    'user_name' => $user->name,
+                    'timestamp' => now()->toDateTimeString(),
+                ]);
+            } catch (\Throwable $e) {
+                Log::error('Firestore write failed in startSession', [
+                    'chat_session_id' => $chatSession->id,
+                    'user_id' => $user->id,
+                    'astrologer_id' => $astrologerId,
+                    'error' => $e->getMessage(),
+                    'trace' => $e->getTraceAsString(),
+                ]);
+
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Failed to create Firestore chat metadata.',
+                ], 500);
+            }
+
+            return response()->json([
+                'status' => $existingSession ? 'existing' : 'new',
+                'chat_session_id' => $chatSession->id,
+                'message' => $existingSession ? 'Existing chat session resumed' : 'New chat session started',
+            ]);
+        } catch (\Throwable $e) {
+            Log::error('General error in startSession', [
+                'user_id' => Auth::id(),
+                'data' => $request->all(),
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Something went wrong while starting chat session.',
+            ], 500);
+        }
     }
-
-    try {
-      // 🔥 Add metadata to Firestore
-      $factory = (new Factory)->withServiceAccount(env('FIREBASE_CREDENTIALS_PATH'));
-      $firestore = $factory->createFirestore()->database();
-
-      $firestore->collection('chats')->document((string)$chatSession->id)->set([
-        'text' => '',
-        'sender_id' => $user->id,
-        'receiver_id' => $astrologerId,
-        'user_type' => 'user',
-        'user_name' => $user->name,
-        'timestamp' => now()->toDateTimeString(),
-      ]);
-    } catch (\Throwable $e) {
-      \Log::error('Firestore Error: ' . $e->getMessage());
-      return response()->json([
-        'status' => 'error',
-        'message' => 'Failed to create Firestore chat metadata.',
-      ], 500);
-    }
-
-    return response()->json([
-      'status' => $existingSession ? 'existing' : 'new',
-      'chat_session_id' => $chatSession->id,
-      'message' => $existingSession ? 'Existing chat session resumed' : 'New chat session started',
-    ]);
-  }
 
   public function deductFee(Request $request)
   {
