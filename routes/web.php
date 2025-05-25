@@ -26,7 +26,8 @@ use App\Http\Controllers\Admin\PromotersController;
 use App\Http\Controllers\Admin\RolesController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\UsersController;
-use App\Models\Horoscope;
+
+use Kreait\Firebase\Factory;
 
 /*
 |--------------------------------------------------------------------------
@@ -153,5 +154,25 @@ require __DIR__.'/auth.php';
 Auth::routes();
 
 Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
+
+Route::get('/test-firebase', function () {
+    $path = storage_path('app/firebase/navgarah-bba2c-firebase-adminsdk-fbsvc-a2292dc6bc.json');
+
+    if (!file_exists($path)) {
+        return response()->json(['error' => 'File not found', 'path' => $path], 404);
+    }
+
+    try {
+        $factory = (new Factory)->withServiceAccount($path);
+        $firestore = $factory->createFirestore()->database();
+
+        return response()->json(['success' => true, 'message' => 'Credentials loaded and Firestore client initialized.']);
+    } catch (\Throwable $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage(),
+        ], 500);
+    }
+});
 
 // Route::resource('/know-{id}', WebController::class);
