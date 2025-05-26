@@ -209,6 +209,11 @@
                                             <span class="menu-title">{{ trans('navbar.astrologer')}}</span>
                                         </a>
                                     </li>
+                                    <li class="menu-item">
+                                        <a href="{{ route('fcm.create') }}">
+                                            <span class="menu-title">{{ trans('navbar.notification')}}</span>
+                                        </a>
+                                    </li>
                                 </ul>
                             </div>
                         </li>

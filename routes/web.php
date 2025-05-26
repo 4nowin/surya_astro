@@ -26,6 +26,7 @@ use App\Http\Controllers\Admin\PromotersController;
 use App\Http\Controllers\Admin\RolesController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\UsersController;
+use App\Http\Controllers\Admin\NotificationController;
 
 use Kreait\Firebase\Factory;
 
@@ -136,6 +137,8 @@ Route::group([
         Route::post('files/uploader',  "uploader");
     });
 
+    Route::get('/fcm/send', [NotificationController::class, 'create'])->name('fcm.create');
+    Route::post('/fcm/send', [NotificationController::class, 'send'])->name('fcm.send');
 
     Route::post('settings/inline-edit', [SettingsController::class, "inlineEdit"]);
 });
