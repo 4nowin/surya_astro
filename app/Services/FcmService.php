@@ -10,7 +10,7 @@ class FcmService
     protected static function getAccessToken()
     {
         return cache()->remember('fcm_access_token', 3500, function () {
-            $credentialsPath = storage_path(str_replace('storage/', '', env('FIREBASE_CREDENTIALS_PATH')));
+            $credentialsPath = config('services.firebase.credentials_path');
 
             $client = new Google_Client();
             $client->setAuthConfig($credentialsPath);
