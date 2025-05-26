@@ -42,6 +42,7 @@ class User extends Authenticatable implements JWTSubject
         'google_id',
         'facebook_id',
         'device_token',
+        'fcm_token',
     ];
 
     /**
