@@ -50,6 +50,7 @@ class AdminSeeder extends Seeder
             $user = Admin::create([
                 'name' => $astro['name'],
                 'email' => $astro['email'],
+                'active' => true,
                 'password' => bcrypt('12345678')
             ]);
 

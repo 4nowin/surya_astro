@@ -27,10 +27,6 @@ class Astrologer extends Model
         'price',
         'call_price',
         'original_price',
-        'is_online',
-        'is_typing',
-        'active',
-        'fcm_token',
     ];
 
     public function reviews()

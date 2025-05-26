@@ -23,6 +23,10 @@ class Admin extends Authenticatable
         'name',
         'email',
         'password',
+        'is_online',
+        'is_typing',
+        'active',
+        'fcm_token',
     ];
 
     /**

@@ -19,6 +19,10 @@ return new class extends Migration
             $table->string("google_id")->nullable();
             $table->string("facebook_id")->nullable();
             $table->rememberToken();
+            $table->boolean('is_online')->default(false);
+            $table->boolean('is_typing')->default(false);
+            $table->string('fcm_token')->nullable();
+            $table->boolean("active")->default(false);
             $table->timestamps();
         });
     }
