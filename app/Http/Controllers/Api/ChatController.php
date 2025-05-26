@@ -65,8 +65,8 @@ class ChatController extends Controller
 
         $firestore->collection('chats')->document((string) $chatSession->id)->set([
           'text' => '',
-          'sender_id' => $user->id,
-          'receiver_id' => $astrologerId,
+          'user_id' => $user->id,
+          'astrologer_id' => $astrologerId,
           'user_type' => 'user',
           'user_name' => $user->name,
           'timestamp' => now()->toDateTimeString(),

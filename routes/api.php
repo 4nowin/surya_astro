@@ -83,7 +83,7 @@ Route::group(['middleware' => ['auth:sanctum'], 'prefix' => "/{lang?}"], functio
 
 
     Route::post('/firebase-chat/store', [FirebaseChatController::class, 'store']);
-    Route::post('/firebase-chat/deduct-fee', [FirebaseChatController::class, 'deductFee']);
+    Route::post('/chat/deduct-fee', [ChatController::class, 'deductFee']);
 
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/update-profile', [UserController::class, 'updateProfile']);

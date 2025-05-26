@@ -18,8 +18,8 @@ class FirebaseChatController extends Controller
   {
     $request->validate([
       'chat_id' => 'required|string',
-      'sender_id' => 'required|exists:users,id',
-      'receiver_id' => 'required|exists:astrologers,id',
+      'user_id' => 'required|exists:users,id',
+      'astrologer_id' => 'required|exists:astrologers,id',
       'message' => 'required|string',
       'timestamp' => 'required|date',
     ]);
@@ -27,8 +27,8 @@ class FirebaseChatController extends Controller
     // Store message in DB (for logs/history/analytics)
     Chat::create([
       'chat_session_id' => $request->chat_session_id, // rename field if needed
-      'user_id' => $request->sender_id,
-      'astrologer_id' => $request->receiver_id,
+      'user_id' => $request->user_id,
+      'astrologer_id' => $request->astrologer_id,
       'message' => $request->message,
       'sender' => $request->sender_type ?? 'user', // default to 'user'
       'sent_at' => $request->timestamp,
@@ -39,7 +39,7 @@ class FirebaseChatController extends Controller
 
     if ($messageCount === 1) {
       // Send FCM notification to astrologer
-      $fcmToken = Astrologer::where('id', $request->receiver_id)->value('fcm_token');
+      $fcmToken = Astrologer::where('id', $request->astrologer_id)->value('fcm_token');
 
       if ($fcmToken) {
         $this->sendFcmNotification($fcmToken, 'New Chat', 'A user just started a chat with you.');
