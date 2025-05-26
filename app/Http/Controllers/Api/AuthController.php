@@ -30,6 +30,9 @@ class AuthController extends Controller
         'date_of_birth' => $user->date_of_birth,
         'place_of_birth' => $user->place_of_birth,
         'country' => $user->country,
+        'role' => $user->role,
+        'status' => $user->status,
+        'fcm_token' => $user->fcm_token,
         'profile_image' => $user->profile_image,
       ]
     ], 200);
