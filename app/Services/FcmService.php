@@ -26,6 +26,9 @@ class FcmService
         $accessToken = self::getAccessToken();
         $projectId = env('FIREBASE_PROJECT_ID');
 
+        // Ensure data is a key-value map
+        $data = is_array($data) ? array_filter($data, fn($key) => is_string($key), ARRAY_FILTER_USE_KEY) : [];
+
         $message = [
             "message" => [
                 "token" => $token,
@@ -33,8 +36,8 @@ class FcmService
                     "title" => $title,
                     "body" => $body,
                 ],
-                "data" => $data
-            ]
+                "data" => $data,
+            ],
         ];
 
         $response = Http::withToken($accessToken)
@@ -43,11 +46,13 @@ class FcmService
 
         return $response->json();
     }
-
     public static function sendToTopic($topic, $title, $body, $data = [])
     {
         $accessToken = self::getAccessToken();
         $projectId = env('FIREBASE_PROJECT_ID');
+
+        // Ensure data is a key-value map
+        $data = is_array($data) ? array_filter($data, fn($key) => is_string($key), ARRAY_FILTER_USE_KEY) : [];
 
         $message = [
             "message" => [
