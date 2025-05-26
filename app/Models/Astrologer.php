@@ -27,6 +27,7 @@ class Astrologer extends Model
         'price',
         'call_price',
         'original_price',
+        'active',
     ];
 
     public function reviews()

@@ -27,6 +27,7 @@ return new class extends Migration
             $table->integer("price")->default(0);
             $table->integer("call_price")->default(0);
             $table->integer("original_price")->default(0);
+            $table->boolean("active")->default(false);
             $table->timestamps();
         });
     }

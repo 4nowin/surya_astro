@@ -25,7 +25,6 @@ class Admin extends Authenticatable
         'password',
         'is_online',
         'is_typing',
-        'active',
         'fcm_token',
     ];
 
