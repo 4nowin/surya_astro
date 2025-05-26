@@ -55,9 +55,9 @@ class ChatController extends Controller
       }
 
       try {
-        $credentialsPath = env('FIREBASE_CREDENTIALS_PATH');
+        $credentialsPath = config('services.firebase.credentials_path');
         if (!$credentialsPath) {
-          Log::error("FIREBASE_CREDENTIALS_PATH is not set in .env");
+          Log::error("FIREBASE_CREDENTIALS_PATH is not set in config");
           return response()->json(['error' => 'Server misconfiguration.'], 500);
         }
         $factory = (new Factory)->withServiceAccount($credentialsPath);

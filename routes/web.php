@@ -175,4 +175,8 @@ Route::get('/test-firebase', function () {
     }
 });
 
+Route::get('/test-env', function () {
+    return env('FIREBASE_CREDENTIALS_PATH', 'not found');
+});
+
 // Route::resource('/know-{id}', WebController::class);

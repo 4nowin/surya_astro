@@ -48,4 +48,8 @@ return [
         'secret' => env('RAZORPAY_API_SECRET'),
     ],
 
+    'firebase' => [
+        'credentials_path' => env('FIREBASE_CREDENTIALS_PATH'),
+    ],
+
 ];
