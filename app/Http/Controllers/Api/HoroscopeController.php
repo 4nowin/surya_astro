@@ -78,16 +78,10 @@ class HoroscopeController extends Controller
     }
 
     return response()->json([
-      'id' => $todayHoroscope->id,
       'date' => Carbon::parse($todayHoroscope->start_date)
         ->locale($locale)
         ->translatedFormat('d F Y'),
-      'zodiac_sign' => $todayHoroscope->zodiac_sign,
-      'zodiac' => $todayHoroscope->zodiac,
-      'lucky_number' => $todayHoroscope->lucky_number,
-      'lucky_color' => $todayHoroscope->lucky_color,
-      'context' => $todayHoroscope->context,
-      'horoscope_type' => $todayHoroscope->horoscope_type,
+      'data' => $todayHoroscope
     ], 200);
   }
 
