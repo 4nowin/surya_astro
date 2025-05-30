@@ -20,5 +20,6 @@ class Pooja extends Model
         'price',
         'original_price',
         'active',
+        'home_priority',
     ];
 }
