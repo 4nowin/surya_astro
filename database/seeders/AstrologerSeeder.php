@@ -34,7 +34,7 @@ class AstrologerSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
-                'admin_id' => 3,
+                'admin_id' => 2,
                 'image' => '/seed/astro/yashpal.jpg',
                 'name' => 'Yashpal Sharma',
                 'language' => 'en',
@@ -52,7 +52,7 @@ class AstrologerSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
-                'admin_id' => 4,
+                'admin_id' => 2,
                 'image' => '/seed/astro/niti.jpg',
                 'name' => 'Nitika Sharma',
                 'language' => 'en',
@@ -88,7 +88,7 @@ class AstrologerSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
-                'admin_id' => 3,
+                'admin_id' => 2,
                 'image' => '/seed/astro/yashpal.jpg',
                 'name' => 'यशपाल शर्मा',
                 'language' => 'hi',
@@ -106,7 +106,7 @@ class AstrologerSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
-                'admin_id' => 4,
+                'admin_id' => 2,
                 'image' => '/seed/astro/niti.jpg',
                 'name' => 'नितिका शर्मा',
                 'language' => 'hi',

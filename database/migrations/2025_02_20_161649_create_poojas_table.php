@@ -24,6 +24,7 @@ return new class extends Migration
             $table->integer("price")->default(0);
             $table->integer("original_price")->default(0);
             $table->boolean("active")->default(false);
+            $table->unsignedInteger("home_priority")->nullable()->index();
             $table->timestamps();
         });
     }

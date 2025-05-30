@@ -34,6 +34,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::get('/enquiry', [ApiController::class, "inquiry"]);
 Route::get('{id}/products', [ApiController::class, "products"]);
 Route::get('{lang?}/poojas', [PoojaController::class, "index"]);
+Route::get('{lang?}/home-poojas', [PoojaController::class, 'homePoojas']);
 Route::get('{lang?}/horoscopes', [HoroscopeController::class, 'index']);
 
 Route::get('{lang?}/astrologers', [AstrologerController::class, 'index']);
