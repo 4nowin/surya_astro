@@ -53,34 +53,70 @@ class HoroscopeController extends Controller
     ], 200);
   }
 
+  public function homeHoroscope($lang = 'en')
+  {
+    $date = Carbon::today();
+    $locale = ($lang === 'hi') ? 'hi' : 'en';
+
+    // Try to get a horoscope for today
+    $todayHoroscope = Horoscope::where('language', $lang)
+      ->where('horoscope_type', 'daily')
+      ->where('start_date', $date)
+      ->orderByRaw("FIELD(zodiac_sign, 'Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces')")
+      ->first();
+
+    // If no horoscope for today, use a fallback (e.g. latest available)
+    if (!$todayHoroscope) {
+      $todayHoroscope = Horoscope::where('language', $lang)
+        ->where('horoscope_type', 'daily')
+        ->orderBy('start_date', 'desc')
+        ->first();
+
+      if (!$todayHoroscope) {
+        return response()->json(['message' => 'No horoscope available'], 404);
+      }
+    }
+
+    return response()->json([
+      'date' => Carbon::parse($todayHoroscope->start_date)
+        ->locale($locale)
+        ->translatedFormat('d F Y'),
+      'zodiac_sign' => $todayHoroscope->zodiac_sign,
+      'zodiac' => $todayHoroscope->zodiac,
+      'lucky_number' => $todayHoroscope->lucky_number,
+      'lucky_color' => $todayHoroscope->lucky_color,
+      'content' => $todayHoroscope->content,
+      'horoscope_type' => $todayHoroscope->horoscope_type,
+    ], 200);
+  }
+
   public function sendLocalizedHoroscopeNotifications()
   {
     $date = Carbon::today();
     $languages = ['en', 'hi']; // Add all supported language codes here
 
     foreach ($languages as $lang) {
-        $horoscope = Horoscope::where('language', $lang)
-            ->where('horoscope_type', 'daily')
-            ->where('start_date', $date)
-            ->first();
+      $horoscope = Horoscope::where('language', $lang)
+        ->where('horoscope_type', 'daily')
+        ->where('start_date', $date)
+        ->first();
 
-        if ($horoscope) {
-            $topic = "horoscope-$lang";
+      if ($horoscope) {
+        $topic = "horoscope-$lang";
 
-            FcmService::sendToTopic(
-                $topic,
-                $horoscope->title,
-                $horoscope->excerpt,
-                [
-                    'type' => 'update',
-                    'lang' => $lang,
-                    'date' => $date->toDateString()
-                ]
-            );
-        }
+        FcmService::sendToTopic(
+          $topic,
+          $horoscope->title,
+          $horoscope->excerpt,
+          [
+            'type' => 'update',
+            'lang' => $lang,
+            'date' => $date->toDateString()
+          ]
+        );
+      }
     }
 
     return response()->json(['message' => 'Bulk notification sent'], 200);
   }
-
 }

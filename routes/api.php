@@ -36,6 +36,7 @@ Route::get('{id}/products', [ApiController::class, "products"]);
 Route::get('{lang?}/poojas', [PoojaController::class, "index"]);
 Route::get('{lang?}/home-poojas', [PoojaController::class, 'homePoojas']);
 Route::get('{lang?}/horoscopes', [HoroscopeController::class, 'index']);
+Route::get('{lang?}/home-horoscopes', [HoroscopeController::class, 'homeHoroscope']);
 
 Route::get('{lang?}/astrologers', [AstrologerController::class, 'index']);
 Route::get('/astrologers/{id}/reviews', [ReviewController::class, 'index']);
