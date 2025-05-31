@@ -13,17 +13,20 @@ class HoroscopeController extends Controller
 
   public function index($lang = 'en')
   {
-    $date = Carbon::today();
-    $startOfWeek = $date->copy()->startOfWeek();
-    $startOfMonth = $date->copy()->startOfMonth();
-    $startOfYear = $date->copy()->startOfYear();
+    $today = Carbon::today();
+    $tomorrow = Carbon::tomorrow();
+    $startOfWeek = $today->copy()->startOfWeek();
+    $startOfMonth = $today->copy()->startOfMonth();
+    $startOfYear = $today->copy()->startOfYear();
     $locale = ($lang === 'hi') ? 'hi' : 'en';
 
     $horoscopes = Horoscope::where('language', $lang)
       ->whereIn('horoscope_type', ['daily', 'weekly', 'monthly', 'yearly'])
-      ->where(function ($query) use ($date, $startOfWeek, $startOfMonth, $startOfYear) {
-        $query->where(function ($q) use ($date) {
-          $q->where('horoscope_type', 'daily')->where('start_date', $date);
+      ->where(function ($query) use ($today, $tomorrow, $startOfWeek, $startOfMonth, $startOfYear) {
+        $query->where(function ($q) use ($today) {
+          $q->where('horoscope_type', 'daily')->where('start_date', $today);
+        })->orWhere(function ($q) use ($tomorrow) {
+          $q->where('horoscope_type', 'daily')->where('start_date', $tomorrow);
         })->orWhere(function ($q) use ($startOfWeek) {
           $q->where('horoscope_type', 'weekly')->where('start_date', $startOfWeek);
         })->orWhere(function ($q) use ($startOfMonth) {
@@ -34,19 +37,28 @@ class HoroscopeController extends Controller
       })
       ->orderByRaw("FIELD(zodiac_sign, 'Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces')")
       ->get()
-      ->groupBy('horoscope_type'); // Group by horoscope_type
+      ->groupBy(function ($item) {
+        $startDate = Carbon::parse($item->start_date);
 
+        if ($item->horoscope_type == 'daily') {
+          if ($startDate->isToday()) {
+            return 'today';
+          } elseif ($startDate->isTomorrow()) {
+            return 'tomorrow';
+          }
+        }
 
-    // Check if data exists
+        return $item->horoscope_type;
+      });
+
     if ($horoscopes->isEmpty()) {
       return response()->json(['message' => 'No data found'], 404);
     }
 
     return response()->json([
-      'date' =>  Carbon::parse($date->toDateString())
-        ->locale($locale)
-        ->translatedFormat('d F Y'),
-      'daily' => $horoscopes->get('daily', []),
+      'date' => $today->locale($locale)->translatedFormat('d F Y'),
+      'today' => $horoscopes->get('today', []),
+      'tomorrow' => $horoscopes->get('tomorrow', []),
       'weekly' => $horoscopes->get('weekly', []),
       'monthly' => $horoscopes->get('monthly', []),
       'yearly' => $horoscopes->get('yearly', [])
