@@ -14,8 +14,18 @@ class HoroscopeSeeder extends Seeder
     public function run(): void
     {
         $zodiacSigns = [
-            'Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo',
-            'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces'
+            'Aries',
+            'Taurus',
+            'Gemini',
+            'Cancer',
+            'Leo',
+            'Virgo',
+            'Libra',
+            'Scorpio',
+            'Sagittarius',
+            'Capricorn',
+            'Aquarius',
+            'Pisces'
         ];
 
         $types = ['daily', 'weekly', 'monthly', 'yearly'];
@@ -59,6 +69,9 @@ class HoroscopeSeeder extends Seeder
 
     private function buildHoroscope(string $sign, string $type, string $lang, $startDate, $endDate = null): array
     {
+        $colors = ['red', 'blue', 'green', 'yellow', 'orange', 'purple', 'brown', 'pink', 'black', 'cyan', 'teal', 'white', 'gray'];
+        $moods = ['happy', 'excited', 'calm', 'sad', 'angry', 'anxious', 'confused', 'loving', 'friendly', 'energetic', 'relaxed', 'peaceful'];
+
         return [
             'image' => null,
             'zodiac_sign' => $sign,
@@ -70,8 +83,8 @@ class HoroscopeSeeder extends Seeder
                 ? "This is your {$type} horoscope for {$sign}. Expect change and growth."
                 : "यह {$sign} के लिए आपका {$type} राशिफल है। परिवर्तन और विकास की उम्मीद करें।",
             'love' => $lang === 'en'
-                ? 'Opportunities for emotional bonding.'
-                : 'भावनात्मक संबंध मजबूत करने के अवसर मिलेंगे।',
+                ? "Opportunities for {$sign} emotional bonding."
+                : " {$sign} भावनात्मक संबंध मजबूत करने के अवसर मिलेंगे।",
             'career' => $lang === 'en'
                 ? 'Workplace challenges may arise, stay focused.'
                 : 'कार्यक्षेत्र में चुनौतियाँ आ सकती हैं, ध्यान केंद्रित रखें।',
@@ -85,7 +98,8 @@ class HoroscopeSeeder extends Seeder
                 ? 'A good time to plan short getaways.'
                 : 'छोटे यात्रा की योजना बनाने के लिए अच्छा समय है।',
             'lucky_number' => rand(1, 99),
-            'lucky_color' => $lang === 'en' ? 'Blue' : 'नीला',
+            'lucky_color' => $colors[array_rand($colors)],
+            'mood' => $moods[array_rand($moods)],
             'lucky_time' => '08:00 AM',
             'start_date' => $startDate->format('Y-m-d H:i'),
             'end_date' => $endDate?->format('Y-m-d H:i'),

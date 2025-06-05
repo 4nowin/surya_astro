@@ -43,6 +43,8 @@ class User extends Authenticatable implements JWTSubject
         'facebook_id',
         'device_token',
         'fcm_token',
+        'referral_code',
+        'referred_by',
     ];
 
     /**

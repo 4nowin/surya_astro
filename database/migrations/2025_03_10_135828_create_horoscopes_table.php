@@ -28,6 +28,7 @@ return new class extends Migration
             $table->string("money"); 
             $table->string("health"); 
             $table->string("travel"); 
+            $table->string("mood"); 
             $table->string("lucky_number"); 
             $table->string("lucky_color"); 
             $table->string("lucky_time")->nullable(); 

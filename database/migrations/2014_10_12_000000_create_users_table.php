@@ -35,6 +35,8 @@ return new class extends Migration
             $table->string("google_id")->nullable();
             $table->string("facebook_id")->nullable();
             $table->string('device_token')->nullable();
+            $table->string('referral_code')->unique()->nullable();
+            $table->string('referred_by')->nullable();
             $table->string('fcm_token')->nullable();
             $table->foreignId('created_by')->nullable()->constrained('users');
             $table->foreignId('updated_by')->nullable()->constrained('users');

@@ -59,7 +59,6 @@ Route::prefix('astrologer')->group(function () {
         Route::post('/set-online', [AstrologerChatController::class, 'setOnline']);
         Route::post('/toggle-online', [AstrologerChatController::class, 'toggleOnline']);
         Route::get('/chat/astrologer/history', [AstrologerChatController::class, 'getAstrologerChats']);
-
     });
 });
 
@@ -90,4 +89,7 @@ Route::group(['middleware' => ['auth:sanctum'], 'prefix' => "/{lang?}"], functio
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/update-profile', [UserController::class, 'updateProfile']);
     Route::get('/user-details', [UserController::class, 'userProfile']);
+    Route::get('/auth/check', function (Request $request) {
+        return response()->json(['success' => true, 'user' => $request->user()]);
+    });
 });

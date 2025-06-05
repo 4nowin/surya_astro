@@ -16,6 +16,7 @@ class Horoscope extends Model
         'tag',
         'language',
         'context',
+        'mood',
         'love',
         'career',
         'money',

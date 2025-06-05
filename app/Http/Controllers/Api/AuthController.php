@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Google_Client;
 use Laravel\Socialite\Facades\Socialite;
+use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
@@ -33,9 +34,19 @@ class AuthController extends Controller
         'role' => $user->role,
         'status' => $user->status,
         'fcm_token' => $user->fcm_token,
+        'referral_code' => $user->referral_code,
         'profile_image' => $user->profile_image,
       ]
     ], 200);
+  }
+
+  public static function generateReferralCode(): string
+  {
+    do {
+      $code = strtoupper(Str::random(8));
+    } while (self::where('referral_code', $code)->exists());
+
+    return $code;
   }
 
   public function login($lang = 'en', Request $request)
@@ -72,6 +83,20 @@ class AuthController extends Controller
       ], 403);
     }
 
+    if (!$user->referral_code) {
+      $user->referral_code = User::generateReferralCode();
+      $user->save();
+    }
+
+    if ($request->has('referred_by')) {
+      $referrer = User::where('referral_code', $request->input('referred_by'))->first();
+      if ($referrer) {
+        $user->referred_by = $referrer->referral_code;
+        $referrer->wallet_balance += 10; // reward
+        $referrer->save();
+      }
+    }
+
     // Generate API token for the user
     $token = $user->createToken('authToken')->plainTextToken;
     $user->update(['language' => $lang]);
@@ -106,6 +131,20 @@ class AuthController extends Controller
         'language' => $lang,
       ]
     );
+
+    if (!$user->referral_code) {
+      $user->referral_code = User::generateReferralCode();
+      $user->save();
+    }
+
+    if ($request->has('referred_by')) {
+      $referrer = User::where('referral_code', $request->input('referred_by'))->first();
+      if ($referrer) {
+        $user->referred_by = $referrer->referral_code;
+        $referrer->wallet_balance += 10; // reward
+        $referrer->save();
+      }
+    }
 
     if ($user && $user->status === 'blocked') {
       return response()->json([
