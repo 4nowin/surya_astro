@@ -8,7 +8,6 @@ use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Google_Client;
 use Laravel\Socialite\Facades\Socialite;
-use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
@@ -38,15 +37,6 @@ class AuthController extends Controller
         'profile_image' => $user->profile_image,
       ]
     ], 200);
-  }
-
-  public static function generateReferralCode(): string
-  {
-    do {
-      $code = strtoupper(Str::random(8));
-    } while (self::where('referral_code', $code)->exists());
-
-    return $code;
   }
 
   public function login($lang = 'en', Request $request)

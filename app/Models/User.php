@@ -13,6 +13,7 @@ use Laravel\Sanctum\HasApiTokens;
 use App\Models\Review;
 use App\Models\ChatSession;
 use App\Models\Chat;
+use Illuminate\Support\Str;
 
 class User extends Authenticatable implements JWTSubject
 {
@@ -93,5 +94,14 @@ class User extends Authenticatable implements JWTSubject
     public function chatPayments()
     {
         return $this->hasMany(ChatPayment::class);
+    }
+
+    public static function generateReferralCode(): string
+    {
+        do {
+            $code = strtoupper(Str::random(8));
+        } while (self::where('referral_code', $code)->exists());
+
+        return $code;
     }
 }
