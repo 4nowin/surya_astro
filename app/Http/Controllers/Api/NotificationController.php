@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Astrologer;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Response;
+use Google\Client as Google_Client;
 
 class NotificationController extends Controller
 {
@@ -60,5 +62,20 @@ class NotificationController extends Controller
     return $response->json();
   }
 
-  
+  public function getAccessToken()
+  {
+    $path = config('services.firebase.credentials_path');
+
+    $client = new Google_Client();
+    $client->setAuthConfig($path);
+    $client->addScope('https://www.googleapis.com/auth/firebase.messaging');
+    $client->useApplicationDefaultCredentials();
+
+    $token = $client->fetchAccessTokenWithAssertion();
+
+    return Response::json([
+      'access_token' => $token['access_token'],
+    ]);
+  }
+
 }

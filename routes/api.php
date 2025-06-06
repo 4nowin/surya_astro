@@ -66,6 +66,7 @@ Route::post('{lang?}/login', [AuthController::class, "login"]);
 Route::post('{lang?}/auth/google', [AuthController::class, 'loginWithGoogle']);
 Route::get('/auth/google/redirect', [AuthController::class, 'redirectToGoogle']);
 Route::get('/auth/google/callback', [AuthController::class, 'handleGoogleCallback']);
+Route::get('/fcm-token', [NotificationController::class, 'getAccessToken']);
 
 
 Route::group(['middleware' => ['auth:sanctum'], 'prefix' => "/{lang?}"], function () {
