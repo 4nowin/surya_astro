@@ -20,6 +20,7 @@ class ChatController extends Controller
     try {
       $request->validate([
         'astrologer_id' => 'required|exists:astrologers,id',
+        'admin_id' => 'required|exists:admins,id',
       ]);
     } catch (\Throwable $e) {
       Log::error('Validation failed in startSession', [
@@ -37,8 +38,10 @@ class ChatController extends Controller
     try {
       $user = Auth::user();
       $astrologerId = $request->input('astrologer_id');
+      $adminId = $request->input('admin_id');
 
       $existingSession = ChatSession::where('user_id', $user->id)
+        ->where('admin_id', $adminId)
         ->where('astrologer_id', $astrologerId)
         ->whereNull('ended_at')
         ->latest()
@@ -49,6 +52,7 @@ class ChatController extends Controller
       } else {
         $chatSession = ChatSession::create([
           'user_id' => $user->id,
+          'admin_id' => $adminId,
           'astrologer_id' => $astrologerId,
           'started_at' => now(),
         ]);
@@ -66,6 +70,7 @@ class ChatController extends Controller
         $firestore->collection('chats')->document((string) $chatSession->id)->set([
           'text' => '',
           'user_id' => $user->id,
+          'admin_id' => $adminId,
           'astrologer_id' => $astrologerId,
           'user_type' => 'user',
           'user_name' => $user->name,
@@ -75,6 +80,7 @@ class ChatController extends Controller
         Log::error('Firestore write failed in startSession', [
           'chat_session_id' => $chatSession->id,
           'user_id' => $user->id,
+          'admin_id' => $adminId,
           'astrologer_id' => $astrologerId,
           'error' => $e->getMessage(),
           'trace' => $e->getTraceAsString(),
@@ -133,6 +139,7 @@ class ChatController extends Controller
     ChatPayment::create([
       'chat_session_id' => $session->id,
       'user_id' => $user->id,
+      'admin_id' => $astrologer->admin_id,
       'astrologer_id' => $astrologer->id,
       'amount' => $fee,
       'deducted_at' => now(),

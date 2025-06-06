@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('chat_sessions', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->foreignId('admin_id')->constrained('admins')->onDelete('cascade');
             $table->foreignId('astrologer_id')->constrained('astrologers')->onDelete('cascade');
             $table->timestamp('started_at')->nullable();
             $table->timestamp('ended_at')->nullable();
@@ -26,6 +27,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('chat_session_id')->constrained()->onDelete('cascade');
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->foreignId('admin_id')->constrained('admins')->onDelete('cascade');
             $table->foreignId('astrologer_id')->constrained('astrologers')->onDelete('cascade');
             $table->text('message');
             $table->enum('sender', ['user', 'astrologer']);

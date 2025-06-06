@@ -12,6 +12,7 @@ class ChatPayment extends Model
     protected $fillable = [
         'chat_session_id',
         'user_id',
+        'admin_id',
         'astrologer_id',
         'amount',
         'deducted_at',

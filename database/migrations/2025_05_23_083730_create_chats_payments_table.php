@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('chat_session_id')->constrained()->onDelete('cascade');
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->foreignId('admin_id')->constrained('admins')->onDelete('cascade');
             $table->foreignId('astrologer_id')->constrained('astrologers')->onDelete('cascade');
             $table->decimal('amount', 8, 2);
             $table->timestamp('deducted_at')->nullable();

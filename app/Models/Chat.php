@@ -10,7 +10,7 @@ class Chat extends Model
     use HasFactory;
 
     protected $fillable = [
-        'chat_session_id', 'user_id', 'astrologer_id', 'message', 'sender', 'sent_at'
+        'chat_session_id', 'user_id', 'admin_id', 'astrologer_id', 'message', 'sender', 'sent_at'
     ];
 
     public function session()
