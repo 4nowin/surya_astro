@@ -60,19 +60,19 @@ Route::post('lang/{locale}/switch', function ($locale) {
 })->name('lang.switch.post');
 
 Route::get('/', function () {
-    return view('welcome')->with( ['id' => "Navgarah"] );
+    return view('welcome')->with(['id' => "Navgarah"]);
 });
 
 Route::get('/pay_online', function () {
-    return view('Frontend/pay_online')->with( ['id' => "Pay Online"] );
+    return view('Frontend/pay_online')->with(['id' => "Pay Online"]);
 });
 
 Route::get('/payment_cancelled', function () {
-    return view('Frontend/payment/cancelled')->with( ['id' => "Cancelled"] );
+    return view('Frontend/payment/cancelled')->with(['id' => "Cancelled"]);
 });
 
 Route::get('/payment_failed', function () {
-    return view('Frontend/payment/failed')->with( ['id' => "Failed"] );
+    return view('Frontend/payment/failed')->with(['id' => "Failed"]);
 });
 
 Route::post('/inquiry', [InquiryController::class, 'saveInquiry']);
@@ -152,7 +152,21 @@ Route::get('/clear-cache', function () {
     return "Cache cleared!";
 });
 
-require __DIR__.'/auth.php';
+Route::get('/fetch-token', function () {
+    require 'vendor/autoload.php';
+
+    $credentialsPath = config('services.firebase.credentials_path');
+       
+    $client = new Google_Client();
+    $client->setAuthConfig($credentialsPath);
+    $client->addScope('https://www.googleapis.com/auth/firebase.messaging');
+    $client->fetchAccessTokenWithAssertion();
+
+    echo $client->getAccessToken()['access_token'];
+});
+
+
+require __DIR__ . '/auth.php';
 
 Auth::routes();
 
