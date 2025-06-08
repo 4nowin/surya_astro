@@ -92,7 +92,7 @@ Route::group(['middleware' => ['auth:sanctum'], 'prefix' => "/{lang?}"], functio
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/update-profile', [UserController::class, 'updateProfile']);
     Route::get('/user-details', [UserController::class, 'userProfile']);
-    Route::post('wallet/pay-for-premium', [PaymentController::class, 'payForPremium']);
+    Route::post('/wallet/pay-for-premium', [PaymentController::class, 'payForPremium']);
     Route::get('/auth/check', function (Request $request) {
         $user = $request->user();
 
