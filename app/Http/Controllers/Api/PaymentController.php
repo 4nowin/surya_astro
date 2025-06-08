@@ -290,6 +290,19 @@ class PaymentController extends Controller
             $user->save();
         }
 
+        if ($payment->payment_type === 'Premium') {
+            $user = auth()->user();
+            if (!$user) {
+                return response()->json(['success' => false, 'error' => 'User not found'], 404);
+            }
+            $user = $payment->user;
+            $user->role = 'premium';
+            $user->premium_started_at = now();
+            $user->save();
+        }
+
+
+
         // Update payment status
         $payment->rzp_payment_id = $request->razorpay_payment_id;
         $payment->rzp_signature = $request->razorpay_signature;
@@ -401,6 +414,7 @@ class PaymentController extends Controller
         // Deduct amount and mark user as premium
         $user->wallet_balance -= $amount;
         $user->role = 'premium';
+        $user->premium_started_at = now();
         $user->save();
 
         return response()->json([

@@ -25,7 +25,7 @@ return new class extends Migration
             $table->date("date_of_birth")->nullable();
             $table->string("place_of_birth")->nullable();
             $table->string("country")->nullable();
-            $table->enum('role', ['free', 'freemium', 'premium'])->default('free');
+            $table->enum('role', ['free', 'premium', 'gold', 'platinum', 'diamond'])->default('free');
             $table->index('role');
             $table->enum('status', ['active', 'inactive', 'blocked'])->default('active');
             $table->index('status');
@@ -40,6 +40,7 @@ return new class extends Migration
             $table->string('fcm_token')->nullable();
             $table->foreignId('created_by')->nullable()->constrained('users');
             $table->foreignId('updated_by')->nullable()->constrained('users');
+            $table->timestamp('premium_started_at')->nullable();
             $table->softDeletes();
             $table->timestamps();
         });

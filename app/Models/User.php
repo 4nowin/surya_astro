@@ -46,6 +46,7 @@ class User extends Authenticatable implements JWTSubject
         'fcm_token',
         'referral_code',
         'referred_by',
+        'premium_started_at',
     ];
 
     /**

@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\AstrologerChatController;
 use App\Http\Controllers\Api\FirebaseChatController;
 use App\Http\Controllers\Api\NotificationController;
+use Carbon\Carbon;
 
 /*
 |--------------------------------------------------------------------------
@@ -93,6 +94,13 @@ Route::group(['middleware' => ['auth:sanctum'], 'prefix' => "/{lang?}"], functio
     Route::get('/user-details', [UserController::class, 'userProfile']);
     Route::post('wallet/pay-for-premium', [PaymentController::class, 'payForPremium']);
     Route::get('/auth/check', function (Request $request) {
-        return response()->json(['success' => true, 'user' => $request->user()]);
+        $user = $request->user();
+
+        // Check if user is premium and the subscription is over 30 days old
+        if ($user->role === 'premium' && $user->updated_at->diffInDays(Carbon::now()) > 30) {
+            $user->role = 'free';
+            $user->save();
+        }
+        return response()->json(['success' => true, 'user' => $user]);
     });
 });
