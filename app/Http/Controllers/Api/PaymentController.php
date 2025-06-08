@@ -199,6 +199,56 @@ class PaymentController extends Controller
         }
     }
 
+    public function createPremiumUser(Request $request)
+    {
+        $validated = $request->validate([
+            'title' => 'required|string',
+            'amount' => 'required|numeric|min:1',
+            'bookingOrderId' => 'required|integer'
+        ]);
+
+        $user = auth()->user();
+
+        if (!$user) {
+            return response()->json(['error' => 'User not found'], 404);
+        }
+
+        try {
+            $api = new Api(
+                config('services.razorpay.key'),
+                config('services.razorpay.secret')
+            );
+
+            // Create Razorpay order first
+            $rzp_order = $api->order->create([
+                'receipt' => 'receipt_' . uniqid(),
+                'amount' => (int) ($request->amount * 100),
+                'currency' => 'INR',
+            ]);
+
+            // Save payment
+            Payment::create([
+                'rzp_order_id' => $rzp_order->id,
+                'payment_method' => 'Razorpay',
+                'order_id' => 0, // Will be updated after order creation
+                'user_id' => $user->id,
+                'payment_type' => 'Premium',
+                'payment_for' => $request->title,
+                'amount' => $request->amount,
+                'status' => 'CREATED',
+            ]);
+
+            return response()->json([
+                'key' => config('services.razorpay.key'),
+                'order_id' => $rzp_order->id,
+                'amount' => $rzp_order->amount,
+                'currency' => $rzp_order->currency
+            ]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => 'Payment initiation failed', 'message' => $e->getMessage()], 500);
+        }
+    }
+
     public function verifySignature(Request $request)
     {
         $request->validate([
