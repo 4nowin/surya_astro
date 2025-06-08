@@ -73,6 +73,7 @@ Route::group(['middleware' => ['auth:sanctum'], 'prefix' => "/{lang?}"], functio
     Route::post('/razorpay/create-donation-order', [PaymentController::class, 'createDonationOrder']);
     Route::post('/razorpay/add-wallet-money', [PaymentController::class, 'addWalletMoney']);
     Route::post('/razorpay/create-pooja-order', [PaymentController::class, 'createPoojaOrder']);
+    Route::post('/razorpay/create-premium-order', [PaymentController::class, 'createPrewmiumUser']);
     Route::post('/razorpay/verify', [PaymentController::class, 'verifySignature']);
     Route::post('/razorpay/payment/save-wallet', [PaymentController::class, 'saveWallet']);
     Route::post('/razorpay/payment/mark-cancelled', [PaymentController::class, 'markPaymentCancelled']);
@@ -90,6 +91,7 @@ Route::group(['middleware' => ['auth:sanctum'], 'prefix' => "/{lang?}"], functio
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::post('/update-profile', [UserController::class, 'updateProfile']);
     Route::get('/user-details', [UserController::class, 'userProfile']);
+    Route::post('wallet/pay-for-premium', [PaymentController::class, 'payForPremium']);
     Route::get('/auth/check', function (Request $request) {
         return response()->json(['success' => true, 'user' => $request->user()]);
     });

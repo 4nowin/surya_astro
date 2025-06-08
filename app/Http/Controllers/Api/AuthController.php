@@ -96,6 +96,7 @@ class AuthController extends Controller
 
   public function loginWithGoogle($lang = 'en', Request $request)
   {
+    \Log::info('Request data for google login', $request->all());
     $request->validate([
       'id_token' => 'required|string',
       'email' => 'required|email',

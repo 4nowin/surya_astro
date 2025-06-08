@@ -39,7 +39,7 @@ class PaymentController extends Controller
         ]);
 
         $pooja = Pooja::find($validated['bookingOrderId']);
-        
+
         if (!$pooja) {
             return response()->json(['error' => 'Pooja not found'], 404);
         }
@@ -337,5 +337,25 @@ class PaymentController extends Controller
         $payment->save();
 
         return response()->json(['message' => 'Wallet saved successfully.']);
+    }
+
+    public function payForPremium(Request $request)
+    {
+        $user = $request->user();
+        $amount = $request->input('amount', 51);
+
+        if ($user->wallet_balance < $amount) {
+            return response()->json(['error' => 'Insufficient balance'], 400);
+        }
+
+        // Deduct amount and mark user as premium
+        $user->wallet_balance -= $amount;
+        $user->role = 'premium';
+        $user->save();
+
+        return response()->json([
+            'message' => 'Payment successful',
+            'wallet_balance' => $user->wallet_balance,
+        ]);
     }
 }
