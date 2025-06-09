@@ -41,8 +41,8 @@ class AdminSeeder extends Seeder
                 'email' => 'yashpal@navgarah.com',
             ],
             [
-                'name' => 'Nitika Sharma',
-                'email' => 'niti@navgarah.com',
+                'name' => 'Suman Sharma',
+                'email' => 'suman@navgarah.com',
             ],
         ];
 
