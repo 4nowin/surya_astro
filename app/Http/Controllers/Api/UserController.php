@@ -44,7 +44,7 @@ class UserController extends Controller
     }
 
     // Map dob, pob, birth_time, country, etc.
-    $fieldsToNormalize = ['dob', 'pob', 'birth_time', 'phone', 'country', 'gender'];
+    $fieldsToNormalize = ['date_of_birth', 'place_of_birth', 'birth_time', 'phone', 'country', 'gender'];
     foreach ($fieldsToNormalize as $field) {
       if (!empty($requestData[$field]) && in_array($requestData[$field], ['अनुपलब्ध', ''])) {
         $requestData[$field] = null;
@@ -57,8 +57,8 @@ class UserController extends Controller
       'name' => 'sometimes|required|string|max:255',
       'phone' => 'sometimes|nullable|string|max:20',
       'gender' => 'sometimes|nullable|in:male,female,other,prefer_not_to_say',
-      'dob' => 'sometimes|nullable|date',
-      'pob' => 'sometimes|nullable|string|max:255',
+      'date_of_birth' => 'sometimes|nullable|date',
+      'place_of_birth' => 'sometimes|nullable|string|max:255',
       'birth_time' => 'sometimes|nullable|string',
       'country' => 'sometimes|nullable|string|max:255',
     ]);
