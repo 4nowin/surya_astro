@@ -39,7 +39,7 @@ class UserController extends Controller
         'user_id' => $request->user()->id
       ]);
       $path = $request->file('image')->store('profile_images', 'public');
-      $user->image = asset('storage/' . $path);
+      $user->profile_image = asset('storage/' . $path);
       $user->save(); // Save image change
     }
 
