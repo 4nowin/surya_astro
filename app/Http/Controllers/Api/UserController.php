@@ -18,26 +18,45 @@ class UserController extends Controller
     Log::debug('Request payload:', $request->all());
     $user = $request->user();
 
+    $localizedToEnum = [
+      'पुरुष' => 'male',
+      'महिला' => 'female',
+      'अन्य' => 'other',
+      'नहीं कहना पसंद करते हैं' => 'prefer_not_to_say',
+      'अनुपलब्ध' => null,
+    ];
+
+    $requestData = $request->all();
+
+    // Map gender
+    if (!empty($requestData['gender']) && isset($localizedToEnum[$requestData['gender']])) {
+      $requestData['gender'] = $localizedToEnum[$requestData['gender']];
+    }
+
     // Handle image upload separately
     if ($request->hasFile('image')) {
+      Log::info('Profile update request contains an image.', [
+        'user_id' => $request->user()->id
+      ]);
       $path = $request->file('image')->store('profile_images', 'public');
       $user->image = asset('storage/' . $path);
       $user->save(); // Save image change
     }
 
-    $input = $request->all();
-    foreach (['dob', 'birth_time', 'pob', 'phone', 'country', 'gender'] as $field) {
-      if (isset($input[$field]) && $input[$field] === '') {
-        $input[$field] = null;
+    // Map dob, pob, birth_time, country, etc.
+    $fieldsToNormalize = ['dob', 'pob', 'birth_time', 'phone', 'country', 'gender'];
+    foreach ($fieldsToNormalize as $field) {
+      if (!empty($requestData[$field]) && in_array($requestData[$field], ['अनुपलब्ध', ''])) {
+        $requestData[$field] = null;
       }
     }
-    $request->replace($input);
+    $request->replace($requestData);
 
     // Validate only the fields that are present
     $validated = $request->validate([
       'name' => 'sometimes|required|string|max:255',
       'phone' => 'sometimes|nullable|string|max:20',
-      'gender' => 'sometimes|nullable|string',
+      'gender' => 'sometimes|nullable|in:male,female,other,prefer_not_to_say',
       'dob' => 'sometimes|nullable|date',
       'pob' => 'sometimes|nullable|string|max:255',
       'birth_time' => 'sometimes|nullable|string',
@@ -56,7 +75,10 @@ class UserController extends Controller
       ], 422);
     }
 
-    Log::info('User updated their profile', ['user_id' => $user->id]);
+    Log::info('User updated their profile', [
+      'user_id' => $user->id,
+      'updated_fields' => array_keys($validated)
+    ]);
     return response()->json([
       'success' => true,
       'message' => 'Profile updated successfully',
