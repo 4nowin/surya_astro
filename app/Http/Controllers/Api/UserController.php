@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\Hash;
 use Google_Client;
 use Laravel\Socialite\Facades\Socialite;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
+use Intervention\Image\Facades\Image;
 
 class UserController extends Controller
 {
@@ -35,12 +37,26 @@ class UserController extends Controller
 
     // Handle image upload separately
     if ($request->hasFile('image')) {
-      Log::info('Profile update request contains an image.', [
-        'user_id' => $request->user()->id
-      ]);
-      $path = $request->file('image')->store('profile_images', 'public');
+      Log::info('Profile update request contains an image.', ['user_id' => $user->id]);
+
+      $image = $request->file('image');
+      $filename = uniqid() . '.' . $image->getClientOriginalExtension();
+
+      // Resize and compress (max 300px width, 75% quality)
+      $resized = Image::make($image)
+        ->resize(300, null, function ($constraint) {
+          $constraint->aspectRatio(); // Keep aspect ratio
+          $constraint->upsize();      // Don’t upscale small images
+        })
+        ->encode($image->getClientOriginalExtension(), 75); // 75% quality
+
+      // Save to storage/app/public/profile_images
+      $path = 'profile_images/' . $filename;
+      Storage::disk('public')->put($path, $resized);
+
+      // Save public URL to DB
       $user->profile_image = asset('storage/' . $path);
-      $user->save(); // Save image change
+      $user->save();
     }
 
     // Map dob, pob, birth_time, country, etc.
