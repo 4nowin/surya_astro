@@ -30,7 +30,7 @@ class User extends Authenticatable implements JWTSubject
         'language',
         'wallet_balance',
         'email',
-        'mobile',
+        'phone',
         'gender',
         'birth_time',
         'date_of_birth',
