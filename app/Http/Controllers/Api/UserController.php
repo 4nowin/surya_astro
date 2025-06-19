@@ -102,10 +102,29 @@ class UserController extends Controller
     ]);
   }
 
-  public function userProfile()
-  {
-    return response()->json(auth()->user());
-  }
+ public function userProfile()
+{
+    $user = auth()->user();
+
+    return response()->json([
+        'success' => true,
+        'user' => [
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'profile_image' => $user->profile_image,
+            'phone' => $user->phone,
+            'role' => $user->role,
+            'gender' => $user->gender,
+            'chart_preference' => $user->chart_preference,
+            'place_of_birth' => $user->place_of_birth,
+            'country' => $user->country,
+            'date_of_birth' => $user->date_of_birth,
+            'birth_time' => $user->birth_time,
+            'wallet_balance' => $user->wallet_balance,
+        ]
+    ]);
+}
 
   public function updateFcmToken(Request $request)
   {
