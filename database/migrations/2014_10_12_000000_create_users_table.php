@@ -20,7 +20,7 @@ return new class extends Migration
             $table->decimal('wallet_balance', 10, 2)->default(0);
             $table->string('email')->unique();
             $table->string('mobile', 15)->nullable();
-            $table->enum('gender', ['male', 'female', 'other'])->nullable();
+            $table->enum('gender', ['male', 'female', 'other', 'prefer_not_to_say'])->nullable();
             $table->string("birth_time")->nullable();
             $table->date("date_of_birth")->nullable();
             $table->string("place_of_birth")->nullable();

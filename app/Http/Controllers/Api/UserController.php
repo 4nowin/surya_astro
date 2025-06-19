@@ -8,12 +8,14 @@ use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 use Google_Client;
 use Laravel\Socialite\Facades\Socialite;
+use Illuminate\Support\Facades\Log;
 
 class UserController extends Controller
 {
 
   public function updateProfile(Request $request)
   {
+    Log::debug('Request payload:', $request->all());
     $user = $request->user();
 
     // Handle image upload separately
@@ -22,6 +24,14 @@ class UserController extends Controller
       $user->image = asset('storage/' . $path);
       $user->save(); // Save image change
     }
+
+    $input = $request->all();
+    foreach (['dob', 'birth_time', 'pob', 'phone', 'country', 'gender'] as $field) {
+      if (isset($input[$field]) && $input[$field] === '') {
+        $input[$field] = null;
+      }
+    }
+    $request->replace($input);
 
     // Validate only the fields that are present
     $validated = $request->validate([
@@ -39,6 +49,14 @@ class UserController extends Controller
       $user->update($validated);
     }
 
+    if (empty($validated) && !$request->hasFile('image')) {
+      return response()->json([
+        'success' => false,
+        'message' => 'No data to update'
+      ], 422);
+    }
+
+    Log::info('User updated their profile', ['user_id' => $user->id]);
     return response()->json([
       'success' => true,
       'message' => 'Profile updated successfully',
