@@ -33,7 +33,10 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-Route::post('/hi-horoscope-notification', [SendNotificationController::class, "sendHiHoroscopeNotification"]);
+Route::post('{lang?}/horoscope-notification', [SendNotificationController::class, "sendHoroscopeNotification"]);
+Route::post('{lang?}/pooja-notification', [SendNotificationController::class, "sendPoojaNotification"]);
+Route::post('{lang?}/astrologer-notification', [SendNotificationController::class, "sendAstrologerNotification"]);
+Route::post('{lang?}/donation-notification', [SendNotificationController::class, "sendDonationNotification"]);
 
 
 Route::get('/enquiry', [ApiController::class, "inquiry"]);
