@@ -8,7 +8,7 @@ use App\Services\FirebaseService;
 
 class SendNotificationController extends Controller
 {
-    public function sendHiHoroscopeNotification()
+    public function sendHiHoroscopeNotification(Request $request)
     {
         $firebase = new FirebaseService();
         return $firebase->sendToTopic(

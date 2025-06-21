@@ -30,12 +30,17 @@ class FirebaseService
             'issuer' => $this->clientEmail,
             'signingAlgorithm' => 'RS256',
             'signingKey' => $this->privateKey,
+            'tokenCredentialUri' => 'https://oauth2.googleapis.com/token', // ✅ Add this
             'scope' => 'https://www.googleapis.com/auth/firebase.messaging',
         ]);
 
         $token = $oauth->fetchAuthToken();
 
-        return $token['access_token'] ?? null;
+        if (!isset($token['access_token'])) {
+            throw new \Exception('Unable to fetch Firebase access token');
+        }
+
+        return $token['access_token'];
     }
 
     public function sendNotification($token, $title, $body)
