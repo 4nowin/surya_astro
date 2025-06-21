@@ -15,6 +15,7 @@ use App\Http\Controllers\Api\ChatController;
 use App\Http\Controllers\Api\AstrologerChatController;
 use App\Http\Controllers\Api\FirebaseChatController;
 use App\Http\Controllers\Api\NotificationController;
+use App\Http\Controllers\Api\SendNotificationController;
 use Carbon\Carbon;
 
 /*
@@ -31,6 +32,9 @@ use Carbon\Carbon;
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
+
+Route::post('/hi-horoscope-notification', [SendNotificationController::class, "sendHiHoroscopeNotification"]);
+
 
 Route::get('/enquiry', [ApiController::class, "inquiry"]);
 Route::get('{id}/products', [ApiController::class, "products"]);

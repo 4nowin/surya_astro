@@ -13,10 +13,14 @@ class FirebaseService
 
     public function __construct()
     {
-        $json = json_decode(file_get_contents(storage_path('app/firebase/navgarah-bba2c-firebase-adminsdk-fbsvc-a2292dc6bc.json')), true);
+        $json = json_decode(
+            file_get_contents(storage_path(config('services.firebase.credentials_path'))),
+            true
+        );
+
         $this->clientEmail = $json['client_email'];
-        $this->privateKey = $json['private_key'];
-        $this->projectId = $json['project_id'];
+        $this->privateKey = str_replace("\\n", "\n", $json['private_key']);
+        $this->projectId = config('services.firebase.project_id');
     }
 
     protected function getAccessToken()
@@ -40,19 +44,41 @@ class FirebaseService
 
         $url = "https://fcm.googleapis.com/v1/projects/{$this->projectId}/messages:send";
 
+        $response = Http::withToken($accessToken)->post($url, [
+            'message' => [
+                'token' => $token,
+                'notification' => [
+                    'title' => $title,
+                    'body' => $body,
+                ],
+                'android' => [
+                    'priority' => 'high',
+                ],
+            ]
+        ]);
+
+        return $response->json();
+    }
+
+    public function sendToTopic($topic, $title, $body, $data = [])
+    {
+        $accessToken = $this->getAccessToken();
+
+        $url = "https://fcm.googleapis.com/v1/projects/{$this->projectId}/messages:send";
+
+        $message = [
+            'message' => [
+                'topic' => $topic,
+                'notification' => [
+                    'title' => $title,
+                    'body' => $body,
+                ],
+                'data' => $data,
+            ],
+        ];
+
         $response = Http::withToken($accessToken)
-            ->post($url, [
-                'message' => [
-                    'token' => $token,
-                    'notification' => [
-                        'title' => $title,
-                        'body' => $body,
-                    ],
-                    'android' => [
-                        'priority' => 'high',
-                    ],
-                ]
-            ]);
+            ->post($url, $message);
 
         return $response->json();
     }
