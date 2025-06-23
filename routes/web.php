@@ -200,7 +200,7 @@ Route::get('/know-{id}', [WebController::class, 'index'])
     ->where('id', '[^\-\/]+');
 
 Route::get('/delete-account-request', function () {
-    return view('delete-account-request');
+    return view('Frontend.delete-account-request');
 });
 
 Route::post('/submit-delete-request', [InquiryController::class, 'submitDeleteRequest'])->name('submit-delete-request');
