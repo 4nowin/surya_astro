@@ -18,7 +18,7 @@ class UserSeeder extends Seeder
         User::create([
             'name' => 'Astro User',
             'email' => 'dev@nav.com',
-            'phone' => '9816923441',
+            'phone' => '9876543210',
             'role' => 'premium',
             'email_verified_at' => now(),
             'password' => Hash::make('password'),
