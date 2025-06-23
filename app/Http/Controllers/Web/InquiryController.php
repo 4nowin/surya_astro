@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Inquiry;
+use App\Models\DeleteRequest;
 use App\Models\Payment;
 use App\Models\Promoter;
 use App\Models\Coupon;
@@ -220,5 +221,21 @@ class InquiryController extends Controller
 
     return redirect()->route('enquiry.index')
       ->with('success', 'Enquiry deleted successfully');
+  }
+
+  public function submitDeleteRequest(Request $request)
+  {
+    $identifier = $request->input('identifier');
+    $reason = $request->input('reason');
+    
+    DeleteRequest::create([
+        'identifier' => $request->identifier,
+        'reason' => $request->reason,
+    ]);
+
+    // Save to DB or send via email to your support team
+    \Log::info("Delete request from: $identifier | Reason: $reason");
+
+    return redirect('/delete-account-request')->with('status', 'Your request has been submitted. We will process it shortly.');
   }
 }

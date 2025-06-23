@@ -156,7 +156,7 @@ Route::get('/fetch-token', function () {
     require 'vendor/autoload.php';
 
     $credentialsPath = config('services.firebase.credentials_path');
-       
+
     $client = new Google_Client();
     $client->setAuthConfig($credentialsPath);
     $client->addScope('https://www.googleapis.com/auth/firebase.messaging');
@@ -197,4 +197,10 @@ Route::get('/test-env', function () {
 });
 
 Route::get('/know-{id}', [WebController::class, 'index'])
-     ->where('id', '[^\-\/]+');
+    ->where('id', '[^\-\/]+');
+
+Route::get('/delete-account-request', function () {
+    return view('delete-account-request');
+});
+
+Route::post('/submit-delete-request', [InquiryController::class, 'submitDeleteRequest'])->name('submit-delete-request');
