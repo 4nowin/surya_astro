@@ -19,6 +19,7 @@ class UserSeeder extends Seeder
             'name' => 'Astro User',
             'email' => 'dev@nav.com',
             'phone' => '9816923441',
+            'role' => 'premium',
             'email_verified_at' => now(),
             'password' => Hash::make('password'),
             'remember_token' => Str::random(10),
