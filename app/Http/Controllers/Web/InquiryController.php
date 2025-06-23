@@ -225,17 +225,25 @@ class InquiryController extends Controller
 
   public function submitDeleteRequest(Request $request)
   {
-    $identifier = $request->input('identifier');
-    $reason = $request->input('reason');
-    
-    DeleteRequest::create([
-        'identifier' => $request->identifier,
-        'reason' => $request->reason,
+    // Validate input
+    $request->validate([
+        'identifier' => 'required|string|max:255',
     ]);
 
-    // Save to DB or send via email to your support team
-    \Log::info("Delete request from: $identifier | Reason: $reason");
+    // Extract values
+    $identifier = $request->input('identifier');
+    $reason = $request->input('reason');
 
+    // Save to DB (assuming you have a DeleteRequest model and table)
+    DeleteRequest::create([
+        'identifier' => $identifier,
+        'reason' => $reason,
+    ]);
+
+    // Log for admin tracking
+    \Log::info("Delete request submitted from: $identifier | Reason: $reason");
+
+    // Redirect back with success message
     return redirect('/delete-account-request')->with('status', 'Your request has been submitted. We will process it shortly.');
-  }
+}
 }

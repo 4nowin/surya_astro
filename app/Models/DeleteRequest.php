@@ -8,4 +8,8 @@ use Illuminate\Database\Eloquent\Model;
 class DeleteRequest extends Model
 {
     use HasFactory;
+    protected $fillable = [
+        'identifier',
+        'reason',
+    ];
 }
