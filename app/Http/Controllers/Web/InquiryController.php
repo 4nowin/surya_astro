@@ -227,7 +227,7 @@ class InquiryController extends Controller
   {
     // Validate input
     $request->validate([
-        'identifier' => 'required|string|max:255',
+      'identifier' => 'required|string|max:255',
     ]);
 
     // Extract values
@@ -236,8 +236,8 @@ class InquiryController extends Controller
 
     // Save to DB (assuming you have a DeleteRequest model and table)
     DeleteRequest::create([
-        'identifier' => $identifier,
-        'reason' => $reason,
+      'identifier' => $identifier,
+      'reason' => $reason,
     ]);
 
     // Log for admin tracking
@@ -245,5 +245,5 @@ class InquiryController extends Controller
 
     // Redirect back with success message
     return redirect('/delete-account-request')->with('status', 'Your request has been submitted. We will process it shortly.');
-}
+  }
 }

@@ -35,12 +35,30 @@
                     <h1>Request Account Deletion</h1>
                     <p>If you would like to delete your account and associated data from the Navgarah app, please fill out the form below.</p>
 
+                    @if (session('status'))
+                    <div class="alert alert-success">
+                        {{ session('status') }}
+                    </div>
+                    @endif
+
+                    @if ($errors->any())
+                    <div class="alert alert-danger">
+                        <ul>
+                            @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                            @endforeach
+                        </ul>
+                    </div>
+                    @endif
+
                     <form method="POST" action="{{ route('submit-delete-request') }}">
                         @csrf
                         <label>Email or Phone associated with your account:</label><br>
                         <input type="text" name="identifier" required><br><br>
+
                         <label>Reason for deletion (optional):</label><br>
                         <textarea name="reason"></textarea><br><br>
+
                         <button type="submit">Submit Deletion Request</button>
                     </form>
                 </div>
