@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\Review;
 use Illuminate\Http\Request;
 use App\Models\Chat;
+use App\Models\Order;
 use App\Models\ChatSession;
 
 class AstrologerController extends Controller
@@ -56,5 +57,17 @@ class AstrologerController extends Controller
     $astrologer->save();
 
     return response()->json(['status' => 'token_updated']);
+  }
+
+  public function getConfirmedPoojaBookings()
+  {
+    $orders = Order::with(['payment.user', 'payment', 'pooja']) // Eager load
+      ->whereHas('payment', function ($query) {
+        $query->where('payment_type', 'Pooja')
+          ->where('status', 'CONFIRMED');
+      })
+      ->get();
+
+    return response()->json(['data' => $orders]);
   }
 }

@@ -26,4 +26,14 @@ class Order extends Model
     {
         return $this->belongsTo(Inquiry::class, 'inquiry_id', 'id');
     }
+
+    public function payment()
+    {
+        return $this->belongsTo(Payment::class);
+    }
+
+    public function user()
+    {
+        return $this->payment->user ?? null;
+    }
 }
