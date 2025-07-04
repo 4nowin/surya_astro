@@ -59,7 +59,7 @@ class AstrologerController extends Controller
     return response()->json(['status' => 'token_updated']);
   }
 
-  public function getConfirmedPoojaBookings()
+  public function getBookedPoojas()
   {
     $orders = Order::with(['payment.user', 'payment', 'pooja']) // Eager load
       ->whereHas('payment', function ($query) {
