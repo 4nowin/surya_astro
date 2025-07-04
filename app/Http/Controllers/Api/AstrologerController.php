@@ -61,12 +61,11 @@ class AstrologerController extends Controller
 
   public function getBookedPoojas()
   {
-    $orders = Order::with(['payment.user', 'payment', 'pooja']) // Eager load
+    $orders = Order::with(['payment.user', 'payment'])
       ->whereHas('payment', function ($query) {
         $query->where('payment_type', 'Pooja')
           ->where('status', 'CONFIRMED');
-      })
-      ->get();
+      })->get();
 
     return response()->json(['data' => $orders]);
   }
