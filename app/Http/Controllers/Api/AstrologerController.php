@@ -73,7 +73,7 @@ class AstrologerController extends Controller
 
   public function getDonations()
   {
-    $donations = Payment::where('payment_type', 'Donation')->where('status', 'CONFIRMED')->get();
+    $donations = Payment::with(['user'])->where('payment_type', 'Donation')->where('status', 'CONFIRMED')->get();
 
     return response()->json(['data' => $donations]);
   }
