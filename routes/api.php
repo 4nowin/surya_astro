@@ -68,6 +68,7 @@ Route::prefix('astrologer')->group(function () {
         Route::post('/toggle-online', [AstrologerChatController::class, 'toggleOnline']);
         Route::get('/chat/astrologer/history', [AstrologerChatController::class, 'getAstrologerChats']);
         Route::get('/booked-poojas', [AstrologerController::class, 'getBookedPoojas']);
+        Route::get('/donations', [AstrologerController::class, 'getDonations']);
     });
 });
 

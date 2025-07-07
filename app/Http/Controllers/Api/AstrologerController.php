@@ -9,6 +9,7 @@ use App\Models\Review;
 use Illuminate\Http\Request;
 use App\Models\Chat;
 use App\Models\Order;
+use App\Models\Payment;
 use App\Models\ChatSession;
 
 class AstrologerController extends Controller
@@ -69,4 +70,12 @@ class AstrologerController extends Controller
 
     return response()->json(['data' => $orders]);
   }
+
+  public function getDonations()
+  {
+    $donations = Payment::where('payment_type', 'Donation')->where('status', 'CONFIRMED')->get();
+
+    return response()->json(['data' => $donations]);
+  }
+
 }
