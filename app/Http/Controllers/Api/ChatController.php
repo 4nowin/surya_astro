@@ -59,7 +59,7 @@ class ChatController extends Controller
       }
 
       try {
-        $credentialsPath = config('services.firebase.credentials_path');
+        $credentialsPath = storage_path('app/' . config('services.firebase.credentials_path'));
         if (!$credentialsPath) {
           Log::error("FIREBASE_CREDENTIALS_PATH is not set in config");
           return response()->json(['error' => 'Server misconfiguration.'], 500);

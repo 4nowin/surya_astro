@@ -193,7 +193,7 @@ Route::get('/test-firebase', function () {
 });
 
 Route::get('/test-env', function () {
-    return env('FIREBASE_CREDENTIALS_PATH', 'not found');
+    return config('services.firebase.credentials_path', 'not found');
 });
 
 Route::get('/know-{id}', [WebController::class, 'index'])
