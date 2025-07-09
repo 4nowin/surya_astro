@@ -48,25 +48,25 @@ class HoroscopeController extends Controller
 
         // Define zodiac signs in both English and Hindi
         $zodiacSigns = [
-            1 => ['en' => 'Aries', 'hi' => 'मेष'],
-            2 => ['en' => 'Taurus', 'hi' => 'वृषभ'],
-            3 => ['en' => 'Gemini', 'hi' => 'मिथुन'],
-            4 => ['en' => 'Cancer', 'hi' => 'कर्क'],
-            5 => ['en' => 'Leo', 'hi' => 'सिंह'],
-            6 => ['en' => 'Virgo', 'hi' => 'कन्या'],
-            7 => ['en' => 'Libra', 'hi' => 'तुला'],
-            8 => ['en' => 'Scorpio', 'hi' => 'वृश्चिक'],
-            9 => ['en' => 'Sagittarius', 'hi' => 'धनु'],
-            10 => ['en' => 'Capricorn', 'hi' => 'मकर'],
-            11 => ['en' => 'Aquarius', 'hi' => 'कुंभ'],
-            12 => ['en' => 'Pisces', 'hi' => 'मीन'],
+            1 => 'Aries',
+            2 => 'Taurus',
+            3 => 'Gemini',
+            4 => 'Cancer',
+            5 => 'Leo',
+            6 => 'Virgo',
+            7 => 'Libra',
+            8 => 'Scorpio',
+            9 => 'Sagittarius',
+            10 => 'Capricorn',
+            11 => 'Aquarius',
+            12 => 'Pisces',
         ];
 
         $tagTypes = [
-            1 => ['en' => 'Daily', 'hi' => 'दैनिक'],
-            2 => ['en' => 'Weekly', 'hi' => 'साप्ताहिक'],
-            3 => ['en' => 'Monthly', 'hi' => 'मासिक'],
-            4 => ['en' => 'Yearly', 'hi' => 'वर्षिक'],
+            1 => 'Daily',
+            2 => 'Weekly',
+            3 => 'Monthly',
+            4 => 'Yearly',
         ];
 
         // Get the zodiac sign based on language
@@ -136,25 +136,25 @@ class HoroscopeController extends Controller
 
         // Define zodiac signs in both English and Hindi
         $zodiacSigns = [
-            1 => ['en' => 'Aries', 'hi' => 'मेष'],
-            2 => ['en' => 'Taurus', 'hi' => 'वृषभ'],
-            3 => ['en' => 'Gemini', 'hi' => 'मिथुन'],
-            4 => ['en' => 'Cancer', 'hi' => 'कर्क'],
-            5 => ['en' => 'Leo', 'hi' => 'सिंह'],
-            6 => ['en' => 'Virgo', 'hi' => 'कन्या'],
-            7 => ['en' => 'Libra', 'hi' => 'तुला'],
-            8 => ['en' => 'Scorpio', 'hi' => 'वृश्चिक'],
-            9 => ['en' => 'Sagittarius', 'hi' => 'धनु'],
-            10 => ['en' => 'Capricorn', 'hi' => 'मकर'],
-            11 => ['en' => 'Aquarius', 'hi' => 'कुंभ'],
-            12 => ['en' => 'Pisces', 'hi' => 'मीन'],
+            1 => 'Aries',
+            2 => 'Taurus',
+            3 => 'Gemini',
+            4 => 'Cancer',
+            5 => 'Leo',
+            6 => 'Virgo',
+            7 => 'Libra',
+            8 => 'Scorpio',
+            9 => 'Sagittarius',
+            10 => 'Capricorn',
+            11 => 'Aquarius',
+            12 => 'Pisces',
         ];
 
         $tagTypes = [
-            1 => ['en' => 'Daily', 'hi' => 'दैनिक'],
-            2 => ['en' => 'Weekly', 'hi' => 'साप्ताहिक'],
-            3 => ['en' => 'Monthly', 'hi' => 'मासिक'],
-            4 => ['en' => 'Yearly', 'hi' => 'वर्षिक'],
+            1 => 'Daily',
+            2 => 'Weekly',
+            3 => 'Monthly',
+            4 => 'Yearly',
         ];
 
         // Get the zodiac sign based on language
