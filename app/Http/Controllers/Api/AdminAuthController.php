@@ -14,9 +14,24 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Illuminate\Support\Facades\Auth;
 use Spatie\Permission\Traits\HasRoles;
+use Kreait\Firebase\Auth as FirebaseAuth;
 
 class AdminAuthController extends Controller
 {
+
+  public function astrologerFirebaseToken(Request $request)
+  {
+    $admin = $request->user(); // Authenticated astrologer (admin)
+
+    $uid = 'astrologer_' . $admin->id; // Unique UID for Firebase
+    $auth = app(FirebaseAuth::class);
+
+    $customToken = $auth->createCustomToken($uid);
+
+    return response()->json([
+      'firebase_token' => $customToken->toString(),
+    ]);
+  }
 
   public function me(Request $request)
   {
@@ -55,13 +70,18 @@ class AdminAuthController extends Controller
 
     $token = $admin->createToken('admin-token')->plainTextToken;
 
-    // Load astrologer data
+    // 🔥 Firebase custom token generation
+    $uid = 'astrologer_' . $admin->id;
+    $auth = app(\Kreait\Firebase\Auth::class);
+    $firebaseToken = $auth->createCustomToken($uid)->toString();
+
     $data = Astrologer::where('admin_id', $admin->id)->get();
 
     return response()->json([
       'message' => 'Login successful.',
       'token' => $token,
       'admin' => $admin,
+      'firebase_token' => $firebaseToken,
       'data' => $data
     ]);
   }
