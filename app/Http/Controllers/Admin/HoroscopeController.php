@@ -20,6 +20,11 @@ class HoroscopeController extends Controller
             $query->whereDate('start_date', $request->date);
         }
 
+        // Optional horoscope_type filter
+        if ($request->filled('horoscope_type')) {
+            $query->where('horoscope_type', $request->horoscope_type);
+        }
+
         $horoscopes = $query->latest()->paginate(10);
 
         return view('admin.horoscope.index', compact('horoscopes'));
@@ -48,31 +53,31 @@ class HoroscopeController extends Controller
 
         // Define zodiac signs in both English and Hindi
         $zodiacSigns = [
-            1 => 'Aries',
-            2 => 'Taurus',
-            3 => 'Gemini',
-            4 => 'Cancer',
-            5 => 'Leo',
-            6 => 'Virgo',
-            7 => 'Libra',
-            8 => 'Scorpio',
-            9 => 'Sagittarius',
-            10 => 'Capricorn',
-            11 => 'Aquarius',
-            12 => 'Pisces',
+            1 => ['en' => 'aries', 'hi' => 'मेष'],
+            2 => ['en' => 'taurus', 'hi' => 'वृषभ'],
+            3 => ['en' => 'gemini', 'hi' => 'मिथुन'],
+            4 => ['en' => 'cancer', 'hi' => 'कर्क'],
+            5 => ['en' => 'leo', 'hi' => 'सिंह'],
+            6 => ['en' => 'virgo', 'hi' => 'कन्या'],
+            7 => ['en' => 'libra', 'hi' => 'तुला'],
+            8 => ['en' => 'scorpio', 'hi' => 'वृश्चिक'],
+            9 => ['en' => 'sagittarius', 'hi' => 'धनु'],
+            10 => ['en' => 'capricorn', 'hi' => 'मकर'],
+            11 => ['en' => 'aquarius', 'hi' => 'कुंभ'],
+            12 => ['en' => 'pisces', 'hi' => 'मीन'],
         ];
 
         $tagTypes = [
-            1 => 'Daily',
-            2 => 'Weekly',
-            3 => 'Monthly',
-            4 => 'Yearly',
+            1 => ['en' => 'daily', 'hi' => 'दैनिक'],
+            2 => ['en' => 'weekly', 'hi' => 'साप्ताहिक'],
+            3 => ['en' => 'monthly', 'hi' => 'मासिक'],
+            4 => ['en' => 'yearly', 'hi' => 'वर्षिक'],
         ];
 
         // Get the zodiac sign based on language
         $language = $request->language ?? 'en'; // Default to English if language is not provided
-        $zodiacSign = $zodiacSigns[$request->zodiac_sign][$language] ?? null;
-        $tagTypes = $tagTypes[$request->horoscope_type][$language] ?? null;
+        $zodiacSign = $zodiacSigns[$request->zodiac_sign]['en'] ?? null;
+        $tagTypes = $tagTypes[$request->horoscope_type]['en'] ?? null;
 
         // Merge the zodiac sign into the request
         $request->merge(['zodiac' => $zodiacSign, 'tag' => $tagTypes, 'image' => $image]);
@@ -136,31 +141,31 @@ class HoroscopeController extends Controller
 
         // Define zodiac signs in both English and Hindi
         $zodiacSigns = [
-            1 => 'Aries',
-            2 => 'Taurus',
-            3 => 'Gemini',
-            4 => 'Cancer',
-            5 => 'Leo',
-            6 => 'Virgo',
-            7 => 'Libra',
-            8 => 'Scorpio',
-            9 => 'Sagittarius',
-            10 => 'Capricorn',
-            11 => 'Aquarius',
-            12 => 'Pisces',
+            1 => ['en' => 'aries', 'hi' => 'मेष'],
+            2 => ['en' => 'taurus', 'hi' => 'वृषभ'],
+            3 => ['en' => 'gemini', 'hi' => 'मिथुन'],
+            4 => ['en' => 'cancer', 'hi' => 'कर्क'],
+            5 => ['en' => 'leo', 'hi' => 'सिंह'],
+            6 => ['en' => 'virgo', 'hi' => 'कन्या'],
+            7 => ['en' => 'libra', 'hi' => 'तुला'],
+            8 => ['en' => 'scorpio', 'hi' => 'वृश्चिक'],
+            9 => ['en' => 'sagittarius', 'hi' => 'धनु'],
+            10 => ['en' => 'capricorn', 'hi' => 'मकर'],
+            11 => ['en' => 'aquarius', 'hi' => 'कुंभ'],
+            12 => ['en' => 'pisces', 'hi' => 'मीन'],
         ];
 
         $tagTypes = [
-            1 => 'Daily',
-            2 => 'Weekly',
-            3 => 'Monthly',
-            4 => 'Yearly',
+            1 => ['en' => 'daily', 'hi' => 'दैनिक'],
+            2 => ['en' => 'weekly', 'hi' => 'साप्ताहिक'],
+            3 => ['en' => 'monthly', 'hi' => 'मासिक'],
+            4 => ['en' => 'yearly', 'hi' => 'वर्षिक'],
         ];
 
         // Get the zodiac sign based on language
         $language = $request->language ?? 'en'; // Default to English if language is not provided
-        $zodiacSign = $zodiacSigns[$request->zodiac_sign][$language] ?? $horoscope->zodiac;
-        $tagTypes = $tagTypes[$request->horoscope_type][$language] ?? $horoscope->tag;
+        $zodiacSign = $zodiacSigns[$request->zodiac_sign]['en'] ?? $horoscope->zodiac;
+        $tagTypes = $tagTypes[$request->horoscope_type]['en'] ?? $horoscope->tag;
 
         // Merge the updated zodiac sign into the request
         $request->merge(['zodiac' => $zodiacSign, 'tag' => $tagTypes]);

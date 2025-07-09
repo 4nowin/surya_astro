@@ -64,4 +64,11 @@ return [
     'relaxed' => 'Relaxed',
     'peaceful' => 'Peaceful',
     'mood' => 'Mood',
+    'all' => 'All',
+    'daily' => 'Daily',
+    'weekly' => 'Weekly',
+    'monthly' => 'Monthly',
+    'yearly' => 'Yearly',
+    'filter' => 'Filter',
+    'reset' => 'Reset',
 ];

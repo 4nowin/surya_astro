@@ -20,13 +20,24 @@
 <div class="col-md-12">
 <form method="GET" action="{{ route('horoscope.index') }}" class="mb-3 row g-2">
     <div class="col-auto">
-        <label for="date" class="form-label">Date</label>
+        <label for="date" class="form-label">{{ __('horoscope.date') }}</label>
         <input type="date" name="date" id="date" value="{{ request('date') }}" class="form-control form-control-sm">
     </div>
 
+    <div class="col-auto">
+        <label for="horoscope_type" class="form-label">{{ __('horoscope.type') }}</label>
+        <select name="horoscope_type" id="horoscope_type" class="form-select form-select-sm">
+            <option value="">{{ __('horoscope.all') }}</option>
+            <option value="1" {{ request('horoscope_type') == '1' ? 'selected' : '' }}>{{ __('horoscope.daily') }}</option>
+            <option value="2" {{ request('horoscope_type') == '2' ? 'selected' : '' }}>{{ __('horoscope.weekly') }}</option>
+            <option value="3" {{ request('horoscope_type') == '3' ? 'selected' : '' }}>{{ __('horoscope.monthly') }}</option>
+            <option value="4" {{ request('horoscope_type') == '4' ? 'selected' : '' }}>{{ __('horoscope.yearly') }}</option>
+        </select>
+    </div>
+
     <div class="col-auto align-self-end">
-        <button type="submit" class="btn btn-sm btn-primary">Filter</button>
-        <a href="{{ route('horoscope.index') }}" class="btn btn-sm btn-secondary">Reset</a>
+        <button type="submit" class="btn btn-sm btn-primary">{{ __('horoscope.filter') }}</button>
+        <a href="{{ route('horoscope.index') }}" class="btn btn-sm btn-secondary">{{ __('horoscope.reset') }}</a>
     </div>
 </form>
 </div>
@@ -47,8 +58,8 @@
         <tr>
             <th>{{ $horoscope->id }}</th>
             <td>{{ \Carbon\Carbon::parse($horoscope->start_date)->format('d M Y')}}</td>
-            <td>{{ $horoscope->tag }}</td>
-            <td>{{ $horoscope->zodiac }}</td>
+            <td>{{ __('horoscope.' . $horoscope->tag) }}</td>
+            <td>{{ __('horoscope.' . $horoscope->zodiac) }}</td>
             <td>
                 <a class="btn btn-info btn-sm" href="{{ route('horoscope.show', $horoscope->id) }}">{{ __('horoscope.show') }}</a>
             </td>
