@@ -11,13 +11,19 @@ class HoroscopeController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        // dd(app()->getLocale());
-        $horoscopes = Horoscope::where('language', app()->getLocale())->latest()->paginate(10);
+        $query = Horoscope::where('language', app()->getLocale());
+
+        // Optional date filter
+        if ($request->filled('date')) {
+            $query->whereDate('start_date', $request->date);
+        }
+
+        $horoscopes = $query->latest()->paginate(10);
+
         return view('admin.horoscope.index', compact('horoscopes'));
     }
-
     /**
      * Show the form for creating a new resource.
      */
