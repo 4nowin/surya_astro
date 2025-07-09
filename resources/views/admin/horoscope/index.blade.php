@@ -17,6 +17,29 @@
     @include('admin.layouts.partials.messages')
 </div>
 
+<div class="col-md-12">
+<form method="GET" action="{{ route('horoscope.index') }}" class="mb-3 row g-2">
+    <div class="col-auto">
+        <label for="language" class="form-label">Language</label>
+        <select name="language" id="language" class="form-select form-select-sm">
+            <option value="">All</option>
+            <option value="en" {{ request('language') == 'en' ? 'selected' : '' }}>English</option>
+            <option value="hi" {{ request('language') == 'hi' ? 'selected' : '' }}>Hindi</option>
+        </select>
+    </div>
+
+    <div class="col-auto">
+        <label for="date" class="form-label">Date</label>
+        <input type="date" name="date" id="date" value="{{ request('date') }}" class="form-control form-control-sm">
+    </div>
+
+    <div class="col-auto align-self-end">
+        <button type="submit" class="btn btn-sm btn-primary">Filter</button>
+        <a href="{{ route('horoscope.index') }}" class="btn btn-sm btn-secondary">Reset</a>
+    </div>
+</form>
+</div>
+
 <table class="table">
     <thead>
         <tr>

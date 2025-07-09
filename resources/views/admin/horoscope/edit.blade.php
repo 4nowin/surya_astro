@@ -14,24 +14,54 @@
         <x-image-chooser class="border border-grey p-4 mb-3 hidden-content" height="250px" width="100%" :value="$horoscope->image" name="image">
         </x-image-chooser>
 
-        <div class="row mb-3">
-            <label for="zodiac" class="col-md-4 col-form-label text-md-end">{{ __('horoscope.zodiac') }}</label>
+          <div class="row">
+            <div class="col-md-6">
+
+                <div class="row mb-3">
+                    <label for="zodiac" class="col-md-1 col-form-label text-md-end">{{ __('horoscope.zodiac') }}</label>
+
+                    <div class="col-md-11">
+                        <select id="zodiac" type="text" class="form-select" name="zodiac_sign" value="{{ $horoscope->zodiac_sign }}" required>
+                            <option value="1">{{ __('horoscope.aries') }}</option>
+                            <option value="2">{{ __('horoscope.taurus') }}</option>
+                            <option value="3">{{ __('horoscope.gemini') }}</option>
+                            <option value="4">{{ __('horoscope.cancer') }}</option>
+                            <option value="5">{{ __('horoscope.leo') }}</option>
+                            <option value="6">{{ __('horoscope.virgo') }}</option>
+                            <option value="7">{{ __('horoscope.libra') }}</option>
+                            <option value="8">{{ __('horoscope.scorpio') }}</option>
+                            <option value="9">{{ __('horoscope.sagittarius') }}</option>
+                            <option value="10">{{ __('horoscope.capricorn') }}</option>
+                            <option value="11">{{ __('horoscope.aquarius') }}</option>
+                            <option value="12">{{ __('horoscope.pisces') }}</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
 
             <div class="col-md-6">
-                <select id="zodiac" type="text" class="form-select" name="zodiac_sign" value="{{ $horoscope->zodiac_sign }}" required>
-                    <option value="1">{{ __('horoscope.aries') }}</option>
-                    <option value="2">{{ __('horoscope.taurus') }}</option>
-                    <option value="3">{{ __('horoscope.gemini') }}</option>
-                    <option value="4">{{ __('horoscope.cancer') }}</option>
-                    <option value="5">{{ __('horoscope.leo') }}</option>
-                    <option value="6">{{ __('horoscope.virgo') }}</option>
-                    <option value="7">{{ __('horoscope.libra') }}</option>
-                    <option value="8">{{ __('horoscope.scorpio') }}</option>
-                    <option value="9">{{ __('horoscope.sagittarius') }}</option>
-                    <option value="10">{{ __('horoscope.capricorn') }}</option>
-                    <option value="11">{{ __('horoscope.aquarius') }}</option>
-                    <option value="12">{{ __('horoscope.pisces') }}</option>
-                </select>
+                <div class="row mb-3">
+                    <label for="zodiac" class="col-md-1 col-form-label text-md-end">{{ __('horoscope.mood') }}</label>
+
+                    <div class="col-md-11">
+                        <select id="mood" type="text" class="form-select" name="mood" value="{{ $horoscope->mood }}" required>
+                            <option value="happy">{{ __('horoscope.happy') }}</option>
+                            <option value="excited">{{ __('horoscope.excited') }}</option>
+                            <option value="calm">{{ __('horoscope.calm') }}</option>
+                            <option value="sad">{{ __('horoscope.sad') }}</option>
+                            <option value="angry">{{ __('horoscope.angry') }}</option>
+                            <option value="anxious">{{ __('horoscope.anxious') }}</option>
+                            <option value="confused">{{ __('horoscope.confused') }}</option>
+                            <option value="loving">{{ __('horoscope.loving') }}</option>
+                            <option value="friendly">{{ __('horoscope.friendly') }}</option>
+                            <option value="energetic">{{ __('horoscope.energetic') }}</option>
+                            <option value="relaxed">{{ __('horoscope.relaxed') }}</option>
+                            <option value="peaceful">{{ __('horoscope.peaceful') }}</option>
+                        </select>
+                    </div>
+                </div>
+
             </div>
         </div>
 
