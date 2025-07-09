@@ -28,10 +28,10 @@
         <label for="horoscope_type" class="form-label">{{ __('horoscope.type') }}</label>
         <select name="horoscope_type" id="horoscope_type" class="form-select form-select-sm">
             <option value="">{{ __('horoscope.all') }}</option>
-            <option value="1" {{ request('horoscope_type') == '1' ? 'selected' : '' }}>{{ __('horoscope.daily') }}</option>
-            <option value="2" {{ request('horoscope_type') == '2' ? 'selected' : '' }}>{{ __('horoscope.weekly') }}</option>
-            <option value="3" {{ request('horoscope_type') == '3' ? 'selected' : '' }}>{{ __('horoscope.monthly') }}</option>
-            <option value="4" {{ request('horoscope_type') == '4' ? 'selected' : '' }}>{{ __('horoscope.yearly') }}</option>
+            <option value="daily" {{ request('horoscope_type') == 'daily' ? 'selected' : '' }}>{{ __('horoscope.daily') }}</option>
+            <option value="weekly" {{ request('horoscope_type') == 'weekly' ? 'selected' : '' }}>{{ __('horoscope.weekly') }}</option>
+            <option value="monthly" {{ request('horoscope_type') == 'monthly' ? 'selected' : '' }}>{{ __('horoscope.monthly') }}</option>
+            <option value="yearly" {{ request('horoscope_type') == 'yearly' ? 'selected' : '' }}>{{ __('horoscope.yearly') }}</option>
         </select>
     </div>
 
