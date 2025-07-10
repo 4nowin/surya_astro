@@ -177,10 +177,10 @@ class HoroscopeController extends Controller
             'zodiac_sign',
             'horoscope_type',
             'zodiac',
-            'mood',
             'tag',
             'language',
             'context',
+            'mood',
             'love',
             'career',
             'money',
@@ -188,8 +188,8 @@ class HoroscopeController extends Controller
             'travel',
             'lucky_number',
             'lucky_color',
-            'start_date',
             'lucky_time',
+            'start_date',
             'end_date'
         ]));
 

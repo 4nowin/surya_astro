@@ -71,4 +71,16 @@ return [
     'yearly' => 'Yearly',
     'filter' => 'Filter',
     'reset' => 'Reset',
+    'red' => 'Red',
+    'blue' => 'Blue',
+    'green' => 'green',
+    'yellow' => 'Yellow',
+    'orange' => 'Orange',
+    'purple' => 'Purple',
+    'pink' => 'Pink',
+    'black' => 'Black',
+    'white' => 'White',
+    'gray' => 'Gray',
+    'brown' => 'Brown',
+    'select_color' => 'Select Color'
 ];

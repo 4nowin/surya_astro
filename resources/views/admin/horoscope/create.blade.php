@@ -1,6 +1,11 @@
 @extends('admin.layouts.admin')
 
 @section('content')
+<style>
+.color-option .rounded-circle {
+    display: inline-block;
+}
+</style>
 
 <h4>{{ __('horoscope.new_author') }}</h4>
 <p class="text-muted">{{ __('horoscope.add_horoscope') }}</p>
@@ -112,9 +117,43 @@
 
             <div class="col-md-4">
                 <div class="row mb-3">
-                    <label for="lucky_color" class="col-md-4 col-form-label text-md-end">{{ __('horoscope.lucky_color') }}</label>
+                    <label class="col-md-4 col-form-label text-md-end">
+                        {{ __('horoscope.lucky_color') }}
+                    </label>
                     <div class="col-md-6">
-                        <input id="lucky_color" type="text" class="form-control" name="lucky_color" value="{{ old('lucky_color') }}" required>
+                        <div class="dropdown">
+                            <button class="btn btn-outline-secondary dropdown-toggle w-100 text-start" type="button" id="colorDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                <span id="selectedColorLabel">{{ __('horoscope.select_color') }}</span>
+                            </button>
+                            <ul class="dropdown-menu w-100" aria-labelledby="colorDropdown">
+                                @php
+                                $colors = [
+                                'red' => '#FF0000',
+                                'blue' => '#0000FF',
+                                'green' => '#008000',
+                                'yellow' => '#FFFF00',
+                                'orange' => '#FFA500',
+                                'purple' => '#800080',
+                                'pink' => '#FFC0CB',
+                                'black' => '#000000',
+                                'white' => '#FFFFFF',
+                                'gray' => '#808080',
+                                'brown' => '#A52A2A'
+                                ];
+                                @endphp
+
+                                @foreach ($colors as $colorName => $colorCode)
+                                <li>
+                                    <a class="dropdown-item d-flex align-items-center color-option" href="#" data-value="{{ $colorName }}" data-label="{{ __('horoscope.' . $colorName) }}">
+                                        <span class="rounded-circle me-2" style="width:16px;height:16px;background-color:{{ $colorCode }};border:1px solid #ccc;"></span>
+                                        {{ __('horoscope.' . $colorName) }}
+                                    </a>
+                                </li>
+                                @endforeach
+                            </ul>
+                            <!-- Hidden input to store selected value -->
+                            <input type="hidden" name="lucky_color" id="luckyColorInput" value="{{ old('lucky_color') }}">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -227,6 +266,19 @@
         // Listen for changes in the select dropdown
         selectElement.addEventListener("change", toggleDiv);
     });
+</script>
+
+<script>
+document.querySelectorAll('.color-option').forEach(function(item) {
+    item.addEventListener('click', function(e) {
+        e.preventDefault();
+        const label = this.getAttribute('data-label');
+        const value = this.getAttribute('data-value');
+
+        document.getElementById('selectedColorLabel').textContent = label;
+        document.getElementById('luckyColorInput').value = value;
+    });
+});
 </script>
 
 @endsection

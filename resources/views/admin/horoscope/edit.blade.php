@@ -2,6 +2,12 @@
 
 @section('content')
 
+<style>
+    .color-option .rounded-circle {
+        display: inline-block;
+    }
+</style>
+
 <h4>{{ __('horoscope.edit_horoscope') }}</h4>
 <p class="text-muted">{{ __('horoscope.add_horoscope') }}</p>
 
@@ -14,7 +20,7 @@
         <x-image-chooser class="border border-grey p-4 mb-3 hidden-content" height="250px" width="100%" :value="$horoscope->image" name="image">
         </x-image-chooser>
 
-          <div class="row">
+        <div class="row">
             <div class="col-md-6">
 
                 <div class="row mb-3">
@@ -107,11 +113,55 @@
                 </div>
             </div>
 
+
             <div class="col-md-4">
                 <div class="row mb-3">
-                    <label for="lucky_color" class="col-md-4 col-form-label text-md-end">{{ __('horoscope.lucky_color') }}</label>
+                    <label class="col-md-4 col-form-label text-md-end">
+                        {{ __('horoscope.lucky_color') }}
+                    </label>
                     <div class="col-md-6">
-                        <input id="lucky_color" type="text" class="form-control" name="lucky_color" value="{{$horoscope->lucky_color}}" required>
+                        <div class="dropdown">
+                            @php
+                            $colors = [
+                            'red' => '#FF0000',
+                            'blue' => '#0000FF',
+                            'green' => '#008000',
+                            'yellow' => '#FFFF00',
+                            'orange' => '#FFA500',
+                            'purple' => '#800080',
+                            'pink' => '#FFC0CB',
+                            'black' => '#000000',
+                            'white' => '#FFFFFF',
+                            'gray' => '#808080',
+                            'brown' => '#A52A2A'
+                            ];
+                            $selectedColorKey = old('lucky_color', $horoscope->lucky_color);
+                            $selectedColorLabel = __('horoscope.' . $selectedColorKey);
+                            @endphp
+
+                            <!-- Dropdown button showing selected color -->
+                            <button class="btn btn-outline-secondary dropdown-toggle w-100 text-start" type="button" id="colorDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                                <span id="selectedColorLabel">
+                                    <span class="rounded-circle me-2" style="width:16px;height:16px;background-color:{{ $colors[$selectedColorKey] ?? '#ccc' }};border:1px solid #ccc;"></span>
+                                    {{ $selectedColorLabel }}
+                                </span>
+                            </button>
+
+                            <!-- Dropdown items -->
+                            <ul class="dropdown-menu w-100" aria-labelledby="colorDropdown">
+                                @foreach ($colors as $colorName => $colorCode)
+                                <li>
+                                    <a class="dropdown-item d-flex align-items-center color-option" href="#" data-value="{{ $colorName }}" data-label="{{ __('horoscope.' . $colorName) }}" data-color="{{ $colorCode }}">
+                                        <span class="rounded-circle me-2" style="width:16px;height:16px;background-color:{{ $colorCode }};border:1px solid #ccc;"></span>
+                                        {{ __('horoscope.' . $colorName) }}
+                                    </a>
+                                </li>
+                                @endforeach
+                            </ul>
+
+                            <!-- Hidden input to store selected color -->
+                            <input type="hidden" name="lucky_color" id="luckyColorInput" value="{{ $selectedColorKey }}">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -219,6 +269,25 @@
 
         // Listen for changes in the select dropdown
         selectElement.addEventListener("change", toggleDiv);
+    });
+</script>
+
+<script>
+    document.querySelectorAll('.color-option').forEach(function (item) {
+        item.addEventListener('click', function (e) {
+            e.preventDefault();
+
+            const label = this.getAttribute('data-label');
+            const value = this.getAttribute('data-value');
+            const color = this.getAttribute('data-color');
+
+            // Update dropdown label with circle and name
+            document.getElementById('selectedColorLabel').innerHTML =
+                `<span class="rounded-circle me-2" style="width:16px;height:16px;background-color:${color};border:1px solid #ccc;"></span> ${label}`;
+
+            // Update hidden input
+            document.getElementById('luckyColorInput').value = value;
+        });
     });
 </script>
 
