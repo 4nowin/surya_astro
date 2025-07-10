@@ -23,11 +23,11 @@ return new class extends Migration
             $table->string("zodiac"); 
             $table->string("tag"); 
             $table->text("context"); 
-            $table->string("love"); 
-            $table->string("career"); 
-            $table->string("money"); 
-            $table->string("health"); 
-            $table->string("travel"); 
+            $table->text("love"); 
+            $table->text("career"); 
+            $table->text("money"); 
+            $table->text("health"); 
+            $table->text("travel"); 
             $table->string("mood"); 
             $table->string("lucky_number"); 
             $table->string("lucky_color"); 
