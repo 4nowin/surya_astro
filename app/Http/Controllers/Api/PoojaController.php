@@ -23,6 +23,7 @@ class PoojaController extends Controller
     $data = Pooja::where('active', 1)
       ->where('language', $lang)
       ->whereNull('home_priority')
+      ->latest()
       ->get()
       ->filter(function ($item) use ($today) {
         return empty($item->end_date) || Carbon::parse($item->end_date)->gte($today);
@@ -60,6 +61,7 @@ class PoojaController extends Controller
     $poojas = Pooja::whereNotNull('home_priority')
       ->where('active', true)
       ->where('language', $lang)
+      ->latest()
       ->get()
       ->filter(function ($item) use ($today) {
         return empty($item->end_date) || Carbon::parse($item->end_date)->gte($today);
@@ -71,6 +73,7 @@ class PoojaController extends Controller
     if ($poojas->isEmpty()) {
       $poojas = Pooja::where('active', true)
         ->where('language', $lang)
+        ->latest()
         ->get()
         ->filter(function ($item) use ($today) {
           return empty($item->end_date) || Carbon::parse($item->end_date)->gte($today);

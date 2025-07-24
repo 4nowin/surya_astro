@@ -33,28 +33,42 @@ class PoojaController extends Controller
      */
     public function store(Request $request)
     {
+        $homePriority = $request->input('home_priority');
+
+        // Handle image
         $image = "";
         if ($request->file('image')) {
             $file = $request->file('image');
-            $filename = date('YmdHi') . '.'.$file->extension();
+            $filename = date('YmdHi') . '.' . $file->extension();
             $file->move(public_path('storage/uploads'), $filename);
             $image = $filename;
         }
-        Pooja::create(array_merge($request->only(
-            'title', 
-            'image',
-            'tag', 
-            'language',
-            'excerpt', 
-            'description', 
-            'start_date', 
-            'end_date', 
-            'price', 
-            'original_price', 
-        )));
 
-        return redirect()->route('pooja.index')
-            ->withSuccess(__('Pooja created successfully.'));
+        // Shift other poojas if home_priority is set (1 to 4)
+        if ($homePriority && in_array($homePriority, [1, 2, 3, 4])) {
+            $this->shiftHomePriorities($homePriority);
+        }
+
+        // Create the pooja
+        Pooja::create(array_merge(
+            $request->only(
+                'title',
+                'tag',
+                'language',
+                'excerpt',
+                'description',
+                'start_date',
+                'end_date',
+                'price',
+                'original_price'
+            ),
+            [
+                'image' => $image,
+                'home_priority' => $homePriority ?? null
+            ]
+        ));
+
+        return redirect()->route('pooja.index')->withSuccess(__('Pooja created successfully.'));
     }
 
     /**
@@ -82,21 +96,58 @@ class PoojaController extends Controller
      */
     public function update(Request $request, Pooja $pooja)
     {
-        $pooja->update($request->only(
-            'title', 
-            'tag', 
-            'language',
-            'excerpt', 
-            'description', 
-            'start_date', 
-            'end_date', 
-            'price', 
-            'original_price', 
-            'image',
-        ));
+        $homePriority = $request->input('home_priority');
 
-        return redirect()->route('pooja.index')
-            ->withSuccess(__('Pooja updated successfully.'));
+        // If home_priority is changed, shift others
+        if ($homePriority != $pooja->home_priority && in_array($homePriority, [1, 2, 3, 4])) {
+            $this->shiftHomePriorities($homePriority, $pooja->id);
+        }
+
+
+        $data = $request->only(
+            'title',
+            'tag',
+            'language',
+            'excerpt',
+            'description',
+            'start_date',
+            'end_date',
+            'price',
+            'original_price'
+        );
+
+        if ($request->file('image')) {
+            $file = $request->file('image');
+            $filename = date('YmdHi') . '.' . $file->extension();
+            $file->move(public_path('storage/uploads'), $filename);
+            $data['image'] = $filename;
+        }
+
+        $data['home_priority'] = $homePriority ?? null;
+
+        $pooja->update($data);
+
+        return redirect()->route('pooja.index')->withSuccess(__('Pooja updated successfully.'));
+    }
+
+
+    protected function shiftHomePriorities($startFrom, $excludeId = null)
+    {
+        $conflictingPoojas = Pooja::whereNotNull('home_priority')
+            ->where('home_priority', '>=', $startFrom)
+            ->where('home_priority', '<=', 4)
+            ->when($excludeId, fn($q) => $q->where('id', '!=', $excludeId))
+            ->orderBy('home_priority', 'desc') // important: move from bottom up
+            ->get();
+
+        foreach ($conflictingPoojas as $pooja) {
+            $newPriority = $pooja->home_priority + 1;
+            if ($newPriority > 4) {
+                $pooja->update(['home_priority' => null]);
+            } else {
+                $pooja->update(['home_priority' => $newPriority]);
+            }
+        }
     }
 
     /**
@@ -106,7 +157,7 @@ class PoojaController extends Controller
     {
         $pooja = Pooja::findOrFail($pooja_id);
         $pooja->update(['active' => $request->active_pooja]);
-    
+
         return redirect()->route('pooja.index')->withSuccess(__('Pooja updated successfully.'));
     }
 

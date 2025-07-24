@@ -9,7 +9,7 @@
     <form method="POST" action="{{ route('pooja.update', $pooja->id) }}" enctype="multipart/form-data">
         @csrf
         @method('patch')
-        
+
         <input type="text" class="form-control" name="language" value="{{ Config::get('app.locale') }}" hidden>
         <x-image-chooser class="border border-grey p-4 mb-3" height="250px" width="100%" :value="$pooja->image" name="image">
         </x-image-chooser>
@@ -17,6 +17,17 @@
         <div class="mb-3">
             <label for="title" class="form-label">{{ __('pooja.title') }}</label>
             <input type="text" class="form-control" name="title" placeholder="{{ __('pooja.title') }}" value="{{ $pooja->title }}" required>
+        </div>
+
+        <div class="mb-3">
+            <label for="home_priority" class="form-label">{{ __('pooja.home_priority') }}</label>
+            <select name="home_priority" class="form-control">
+                <option value="" {{ $pooja->home_priority === null ? 'selected' : '' }}>{{ __('pooja.not_shown') }}</option>
+                <option value="1" {{ $pooja->home_priority == 1 ? 'selected' : '' }}>{{ __('pooja.position') }} 1</option>
+                <option value="2" {{ $pooja->home_priority == 2 ? 'selected' : '' }}>{{ __('pooja.position') }} 2</option>
+                <option value="3" {{ $pooja->home_priority == 3 ? 'selected' : '' }}>{{ __('pooja.position') }} 3</option>
+                <option value="4" {{ $pooja->home_priority == 4 ? 'selected' : '' }}>{{ __('pooja.position') }} 4</option>
+            </select>
         </div>
 
         <div class="row">
@@ -30,14 +41,14 @@
             <div class="col-md-4">
                 <div class="mb-3">
                     <label for="start_date" class="form-label">{{ __('pooja.start_date') }}</label>
-                    <input type="date" class="form-control" name="start_date" value="{{$pooja->start_date}}" required>
+                    <input type="date" class="form-control" name="start_date" value="{{$pooja->start_date}}">
                 </div>
             </div>
 
             <div class="col-md-4">
                 <div class="mb-3">
                     <label for="end_date" class="form-label">{{ __('pooja.end_date') }}</label>
-                    <input type="date" class="form-control" name="end_date" value="{{$pooja->end_date}}" required>
+                    <input type="date" class="form-control" name="end_date" value="{{$pooja->end_date}}">
                 </div>
             </div>
         </div>

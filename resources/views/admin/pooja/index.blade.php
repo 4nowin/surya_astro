@@ -23,6 +23,7 @@
             <th width="5%">#</th>
             <th width="5%">{{ __('pooja.image') }}</th>
             <th>{{ __('pooja.name') }}</th>
+            <th>{{ __('pooja.home_priority') }}</th>
             <th>{{ __('pooja.active') }}</th>
             <th width="3%" colspan="3">{{ __('pooja.action') }}</th>
         </tr>
@@ -34,6 +35,13 @@
             <th>{{ $poo->id }}</th>
             <th><img src="{{ $poo->image }}" width="50px" height="auto"></th>
             <td>{{ $poo->title }}</td>
+            <td>
+                @if($poo->home_priority)
+                <span class="badge bg-success">{{ __('pooja.position') }} {{ $poo->home_priority }}</span>
+                @else
+                <span class="text-muted">{{ __('pooja.not_shown') }}</span>
+                @endif
+            </td>
             <td>
                 <div class="form-check form-switch">
                     {!! Form::open(['method' => 'POST', 'route' => ['pooja.active', $poo->id], 'style' => 'display:inline']) !!}

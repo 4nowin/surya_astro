@@ -24,4 +24,7 @@ return [
     'edit' => 'Edit',
     'delete' => 'Delete',
     'of_pooja' => "'s Pooja",
+    'home_priority' => 'Shown on Home',
+    'position' => 'Position',
+    'not_shown' => 'Not Shown',
 ];
