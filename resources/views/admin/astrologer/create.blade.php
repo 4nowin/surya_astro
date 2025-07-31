@@ -18,10 +18,10 @@ Edit
 
         @if(auth()->check() && auth()->id() === 1)
         <div class="mb-3">
-            <label for="user_id" class="form-label">Select User</label>
-            <select name="user_id" id="user_id" class="form-control">
-                @foreach($admins as $user)
-                <option value="{{ $user->id }}">{{ $user->name }} (ID: {{ $user->id }})</option>
+            <label for="admin_id" class="form-label">Select Admin</label>
+            <select name="admin_id" id="admin_id" class="form-control">
+                @foreach($admins as $admin)
+                <option value="{{ $admin->id }}">{{ $admin->name }} (ID: {{ $admin->id }})</option>
                 @endforeach
             </select>
         </div>
@@ -40,9 +40,9 @@ Edit
                     <option value="हिन्दी" {{ collect(old('astrologer_language'))->contains('Hindi') ? 'selected' : '' }}>Hindi (हिन्दी)</option>
                     <option value="English" {{ collect(old('astrologer_language'))->contains('English') ? 'selected' : '' }}>English</option>
                     <option value="ਪੰਜਾਬੀ" {{ collect(old('astrologer_language'))->contains('Punjabi') ? 'selected' : '' }}>Punjabi (ਪੰਜਾਬੀ)</option>
-                    <option value="{{__('language.rajasthani')}}" {{ collect(old('astrologer_language'))->contains(__('language.rajasthani')) ? 'selected' : '' }}>Rajasthani (राजस्थानी)</option>
-                    <option value="{{__('language.bhojpuri')}}" {{ collect(old('astrologer_language'))->contains(__('language.bhojpuri')) ? 'selected' : '' }}>Bhojpuri (भोजपुरी)</option>
-                    <option value="{{__('language.haryanvi')}}" {{ collect(old('astrologer_language'))->contains(__('language.haryanvi')) ? 'selected' : '' }}>Haryanvi (हरियाणवी)</option>
+                    <option value="राजस्थानी" {{ collect(old('astrologer_language'))->contains(__('language.rajasthani')) ? 'selected' : '' }}>Rajasthani (राजस्थानी)</option>
+                    <option value="भोजपुरी" {{ collect(old('astrologer_language'))->contains(__('language.bhojpuri')) ? 'selected' : '' }}>Bhojpuri (भोजपुरी)</option>
+                    <option value="हरियाणवी" {{ collect(old('astrologer_language'))->contains(__('language.haryanvi')) ? 'selected' : '' }}>Haryanvi (हरियाणवी)</option>
                     <option value="বাংলা" {{ collect(old('astrologer_language'))->contains('Bengali') ? 'selected' : '' }}>Bengali (বাংলা)</option>
                     <option value="తెలుగు" {{ collect(old('astrologer_language'))->contains('Telugu') ? 'selected' : '' }}>Telugu (తెలుగు)</option>
                     <option value="मराठी" {{ collect(old('astrologer_language'))->contains('Marathi') ? 'selected' : '' }}>Marathi (मराठी)</option>
@@ -65,7 +65,7 @@ Edit
                     <option value="{{ __('astrologer.vastu') }}" {{ in_array(__('astrologer.vastu'), old('expertise', [])) ? 'selected' : '' }}>{{ __('astrologer.vastu') }}</option>
                     <option value="{{ __('astrologer.face_reading') }}" {{ in_array(__('astrologer.face_reading'), old('expertise', [])) ? 'selected' : '' }}>{{ __('astrologer.face_reading') }}</option>
                     <option value="{{ __('astrologer.astrology') }}" {{ in_array(__('astrologer.astrology'), old('expertise', [])) ? 'selected' : '' }}>{{ __('astrologer.astrology') }}</option>
-                    <option value="{{ __('astrologer.horoscope') }}" {{ in_array(__('astrologer.horoscope'), old('expertise', [])) ? 'selected' : '' }}>{{ __('astrologer.horoscope') }}</option>
+                    <option value="{{ __('astrologer.kundli') }}" {{ in_array(__('astrologer.horoscope'), old('expertise', [])) ? 'selected' : '' }}>{{ __('astrologer.horoscope') }}</option>
                     <option value="{{ __('astrologer.palmistry') }}" {{ in_array(__('astrologer.palmistry'), old('expertise', [])) ? 'selected' : '' }}>{{ __('astrologer.palmistry') }}Palmistry</option>
                     <option value="{{ __('astrologer.tarot_reading') }}" {{ in_array(__('astrologer.tarot_reading'), old('expertise', [])) ? 'selected' : '' }}>{{ __('astrologer.tarot_reading') }}</option>
                     <option value="{{ __('astrologer.western_astrology') }}" {{ in_array(__('astrologer.western_astrology'), old('expertise', [])) ? 'selected' : '' }}>{{ __('astrologer.western_astrology') }}</option>

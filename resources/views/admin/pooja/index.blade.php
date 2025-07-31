@@ -4,6 +4,15 @@
 
 @section('content')
 
+<style>
+    .modal-backdrop.show {
+        z-index: 1040;
+    }
+    .modal.show {
+        z-index: 1050;
+    }
+</style>
+
 <div class="d-flex">
     <div class="flex-grow-1">
         <h2>{{ __('pooja.all_pooja') }}</h2>
@@ -24,6 +33,7 @@
             <th width="5%">{{ __('pooja.image') }}</th>
             <th>{{ __('pooja.name') }}</th>
             <th>{{ __('pooja.home_priority') }}</th>
+            <th>{{ __('pooja.notification') }}</th>
             <th>{{ __('pooja.active') }}</th>
             <th width="3%" colspan="3">{{ __('pooja.action') }}</th>
         </tr>
@@ -52,6 +62,15 @@
                 </div>
             </td>
             <td>
+                <button type="button" class="btn btn-sm btn-primary"
+                    data-bs-toggle="modal"
+                    data-bs-target="#poojaNotifyModal"
+                    data-title="{{ $poo->title }}"
+                    data-excerpt="{{ $poo->excerpt }}">
+                    <i class="fas fa-bell"></i> Notify
+                </button>
+            </td>
+            <td>
                 <a class="btn btn-info btn-sm" href="{{ route('pooja.show', $poo->id) }}">{{ __('pooja.show') }}</a>
             </td>
             <td>
@@ -67,5 +86,12 @@
         @endforeach
     </tbody>
 </table>
+
+<div class="text-center mt-4">
+    {{ $pooja->links('admin.common.pagination') }}
+</div>
+
+
+
 
 @endsection

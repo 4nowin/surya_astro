@@ -25,7 +25,7 @@ class HoroscopeController extends Controller
             $query->where('horoscope_type', $request->horoscope_type);
         }
 
-        $horoscopes = $query->latest()->paginate(10);
+        $horoscopes = $query->latest()->paginate(12);
 
         return view('admin.horoscope.index', compact('horoscopes'));
     }

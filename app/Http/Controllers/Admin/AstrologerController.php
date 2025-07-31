@@ -34,13 +34,12 @@ class AstrologerController extends Controller
      */
     public function store(Request $request)
     {
+
         // Handle image upload
         $image = null;
-        if ($request->hasFile('image')) {
-            $file = $request->file('image');
-            $filename = now()->format('YmdHi') . '.' . $file->getClientOriginalExtension();
-            $file->move(public_path('storage/uploads'), $filename);
-            $image = $filename;
+
+        if ($request->filled('image') && file_exists(public_path($request->input('image')))) {
+            $image = $request->input('image'); // trusted path like 'uploads/abc.jpg'
         }
 
         // Build data array
@@ -57,6 +56,8 @@ class AstrologerController extends Controller
             'call_minutes' => $request->call_minutes,
             'price' => $request->price,
             'original_price' => $request->original_price,
+            'admin_id' => $request->admin_id,
+            'active' => $request->active,
         ];
 
         Astrologer::create($data);
@@ -86,12 +87,17 @@ class AstrologerController extends Controller
     public function edit(Astrologer $astrologer)
     {
         $admins = Admin::all();
-        // Explode the stored comma-separated string into an array
-        $astrologer->astrologer_language = explode(',', $astrologer->astrologer_language);
-        // Convert expertise string to array
-        $astrologer->expertise = $astrologer->expertise
-            ? explode(',', $astrologer->expertise)
+
+        // Explode the stored comma-separated string into an array and trim whitespace
+        $astrologer->astrologer_language = $astrologer->astrologer_language
+            ? array_map('trim', explode(',', $astrologer->astrologer_language))
             : [];
+
+        // Convert expertise string to array and trim whitespace
+        $astrologer->expertise = $astrologer->expertise
+            ? array_map('trim', explode(',', $astrologer->expertise))
+            : [];
+
         return view('admin.astrologer.edit', [
             'astrologer' => $astrologer,
             'admins' => $admins
@@ -103,15 +109,17 @@ class AstrologerController extends Controller
      */
     public function update(Request $request, Astrologer $astrologer)
     {
-        // Handle image update if new image is uploaded
-        if ($request->hasFile('image')) {
-            $file = $request->file('image');
-            $filename = date('YmdHi') . '.' . $file->extension();
-            $file->move(public_path('storage/uploads'), $filename);
-            $astrologer->image = $filename;
+        // Use the image path if provided
+        if ($request->filled('image')) {
+            $imagePath = $request->input('image');
+
+            // Optional: only update if image path is different
+            if ($imagePath !== $astrologer->image && file_exists(public_path($imagePath))) {
+                $astrologer->image = $imagePath;
+            }
         }
 
-        // Build clean update data
+        // Build update data
         $data = [
             'name' => $request->name,
             'language' => is_array($request->language) ? implode(', ', $request->language) : $request->language,
@@ -124,8 +132,11 @@ class AstrologerController extends Controller
             'call_minutes' => $request->call_minutes,
             'price' => $request->price,
             'original_price' => $request->original_price,
+            'admin_id' => $request->admin_id,
+            'active' => $request->active,
         ];
 
+        // Update remaining fields
         $astrologer->update($data);
 
         return redirect()->route('astrologer.index')

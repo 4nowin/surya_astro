@@ -16,11 +16,11 @@
 
         @if(auth()->check() && auth()->id() === 1)
         <div class="mb-3">
-            <label for="user_id" class="form-label">Select User</label>
-            <select name="user_id" id="user_id" class="form-control">
-                @foreach($admins as $user)
-                <option value="{{ $user->id }}" {{ $astrologer->user_id == $user->id ? 'selected' : '' }}>
-                    {{ $user->name }} (ID: {{ $user->id }})
+            <label for="admin_id" class="form-label">Select Admin</label>
+            <select name="admin_id" id="admin_id" class="form-control">
+                @foreach($admins as $admin)
+                <option value="{{ $admin->id }}" {{ $astrologer->admin_id == $admin->id ? 'selected' : '' }}>
+                    {{ $admin->name }} (ID: {{ $admin->id }})
                 </option>
                 @endforeach
             </select>
@@ -36,9 +36,10 @@
             <div class="col-md-4 mb-3">
                 <label for="astrologer_language">{{ __('astrologer.language') }}</label>
                 <select name="astrologer_language[]" class="form-control" multiple required>
-                    @foreach(config('languages.available') as $lang => $label)
-                    <option value="{{ $label }}" {{ collect($astrologer->astrologer_language)->contains($label) ? 'selected' : '' }}>
-                        {{ $label }}
+                    @foreach(config('languages.available') as $lang)
+                    <option value="{{ $lang['code'] }}"
+                        {{ in_array($lang['code'], $astrologer->astrologer_language) ? 'selected' : '' }}>
+                        {{ $lang['label'] }}
                     </option>
                     @endforeach
                 </select>

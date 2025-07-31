@@ -192,6 +192,87 @@
         {{ session('status') }}
     </div>
     @endif
+
+    
+
+    <!-- Notification Modal -->
+<div class="modal fade" id="poojaNotifyModal" tabindex="-1" aria-labelledby="notifyModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <form id="notifyForm">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Send Pooja Notification</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+
+                    <div class="mb-3">
+                        <label for="notify-title" class="form-label">Title</label>
+                        <input type="text" class="form-control" id="notify-title" name="title" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="notify-description" class="form-label">Description</label>
+                        <textarea class="form-control" id="notify-description" name="description" rows="3" required></textarea>
+                    </div>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-success">Send Notification</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+<script>
+    const modal = document.getElementById('poojaNotifyModal');
+    const titleInput = document.getElementById('notify-title');
+    const descInput = document.getElementById('notify-description');
+    const form = document.getElementById('notifyForm');
+
+    const lang = "{{ Config::get('app.locale') ?? 'en' }}";
+
+    modal.addEventListener('show.bs.modal', function(event) {
+        const button = event.relatedTarget;
+        const title = button.getAttribute('data-title');
+        const excerpt = button.getAttribute('data-excerpt');
+
+        titleInput.value = title;
+        descInput.value = excerpt;
+    });
+
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+
+        const payload = {
+            title: titleInput.value,
+            description: descInput.value
+        };
+
+        fetch(`/api/${lang}/pooja-notification`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(data => {
+                alert("Notification sent!");
+                const modalInstance = bootstrap.Modal.getInstance(modal);
+                modalInstance.hide();
+            })
+            .catch(error => {
+                console.error('Notification Error:', error);
+                alert("Failed to send notification.");
+            });
+    });
+</script>
+
 </body>
 <script src="https://cdn.ckeditor.com/ckeditor5/35.1.0/classic/ckeditor.js"></script>
 <script>
@@ -388,5 +469,6 @@
 
     });
 </script>
+
 
 </html>

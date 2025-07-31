@@ -51,7 +51,7 @@
                                     class="fas fa-pencil"></i></a>
                         </td>
                         <td width="1%">
-                            {!! Form::open(['method' => 'DELETE', 'route' => ['users.destroy', $user->id], 'style' => 'display:inline']) !!}
+                            {!! Form::open(['method' => 'DELETE', 'route' => ['admins.destroy', $user->id], 'style' => 'display:inline']) !!}
                             {!! Form::button('<i class="fas fa-trash"></i>', ['class' => 'btn btn-sm btn-danger', 'type' => 'submit']) !!}
                             {!! Form::close() !!}
                         </td>
@@ -60,8 +60,9 @@
             </table>
         </div>
 
-
-        <div class="d-flex mt-4">
-            @include('admin.common.pagination', ['paginator' => $data])
+         <div class="text-center mt-4">
+            {{ $data->links('admin.common.pagination') }}
         </div>
+
+      
     @endsection

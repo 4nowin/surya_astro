@@ -77,4 +77,8 @@
     </tbody>
 </table>
 
+<div class="text-center mt-4">
+    {{ $horoscopes->links('admin.common.pagination') }}
+</div>
+
 @endsection
