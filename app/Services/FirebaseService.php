@@ -84,6 +84,14 @@ class FirebaseService
 
     public function sendToToken($token, $title, $body, $data = [])
     {
+        // Add this log
+        \Log::info('🔔 [LARAVEL] Preparing to send FCM notification', [
+            'token' => $token,
+            'title' => $title,
+            'body' => $body,
+            'data' => $data
+        ]);
+
         $message = [
             'message' => [
                 'token' => $token,
@@ -92,21 +100,62 @@ class FirebaseService
                     'body' => $body,
                 ],
                 'data' => $data,
+                'android' => [
+                    'priority' => 'high',
+                    'notification' => [
+                        'channel_id' => 'chat_channel',
+                        'sound' => 'default',
+                        'priority' => 'high',
+                        'default_sound' => true,
+                        'default_vibrate_timings' => true,
+                    ]
+                ],
+                'apns' => [
+                    'payload' => [
+                        'aps' => [
+                            'sound' => 'default',
+                            'badge' => 1,
+                            'content-available' => 1,
+                        ],
+                    ],
+                ],
             ]
         ];
 
-        return $this->send($message);
+        // Add this log
+        \Log::info('🔔 [LARAVEL] FCM message payload', $message);
+
+        $result = $this->send($message);
+
+        // Add this log
+        \Log::info('🔔 [LARAVEL] FCM response', ['response' => $result]);
+
+        return $result;
     }
 
     protected function send($message)
     {
-        $accessToken = $this->getAccessToken();
+        try {
+            $accessToken = $this->getAccessToken();
+            $url = "https://fcm.googleapis.com/v1/projects/{$this->projectId}/messages:send";
 
-        $url = "https://fcm.googleapis.com/v1/projects/{$this->projectId}/messages:send";
+            // Add these logs
+            \Log::info('🔔 [LARAVEL] FCM request URL: ' . $url);
+            \Log::info('🔔 [LARAVEL] Access token obtained successfully');
+            \Log::info('🔔 [LARAVEL] Sending FCM request', ['message' => $message]);
 
-        $response = Http::withToken($accessToken)
-            ->post($url, $message);
+            $response = Http::withToken($accessToken)
+                ->post($url, $message);
 
-        return $response->json();
+            // Add these logs
+            \Log::info('🔔 [LARAVEL] FCM HTTP response status: ' . $response->status());
+            \Log::info('🔔 [LARAVEL] FCM HTTP response body: ' . $response->body());
+
+            return $response->json();
+        } catch (\Exception $e) {
+            // Add this log
+            \Log::error('🔔 [LARAVEL] Error sending FCM notification: ' . $e->getMessage());
+            throw $e;
+        }
     }
 }

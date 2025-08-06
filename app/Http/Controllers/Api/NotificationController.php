@@ -81,6 +81,9 @@ class NotificationController extends Controller
 
   public function sendToAstrologer(Request $request)
   {
+    // Add this log
+    \Log::info('🔔 [LARAVEL] Received notification request', $request->all());
+
     $request->validate([
       'astrologer_id' => 'required|string',
       'title' => 'required|string',
@@ -90,15 +93,33 @@ class NotificationController extends Controller
 
     $astrologer = Astrologer::find($request->astrologer_id);
     if (!$astrologer || !$astrologer->fcm_token) {
+      // Add this log
+      \Log::warning('🔔 [LARAVEL] Astrologer not found or no FCM token', [
+        'astrologer_id' => $request->astrologer_id,
+        'found' => $astrologer ? true : false,
+        'has_token' => $astrologer && $astrologer->fcm_token ? true : false
+      ]);
+
       return response()->json(['error' => 'Astrologer not found or no token'], 404);
     }
 
+    // Add this log
+    \Log::info('🔔 [LARAVEL] Found astrologer with FCM token', [
+      'astrologer_id' => $astrologer->id,
+      'fcm_token' => $astrologer->fcm_token
+    ]);
+
     $firebase = new FirebaseService();
-    return $firebase->sendToToken(
+    $result = $firebase->sendToToken(
       $astrologer->fcm_token,
       $request->title,
       $request->body,
       $request->data ?? []
     );
+
+    // Add this log
+    \Log::info('🔔 [LARAVEL] FCM result', ['result' => $result]);
+
+    return $result;
   }
 }
