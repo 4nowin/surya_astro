@@ -16,16 +16,23 @@ class NotificationController extends Controller
   public function saveToken(Request $request)
   {
     $request->validate([
-      'astrologer_id' => 'required|string',
+      'astrologer_id' => 'required|integer',
       'fcm_token' => 'required|string',
     ]);
 
-    Astrologer::updateOrInsert(
-      ['id' => $request->astrologer_id],
-      ['fcm_token' => $request->fcm_token, 'updated_at' => now()]
-    );
+    // Find the astrologer
+    $astrologer = Astrologer::find($request->astrologer_id);
 
-    return response()->json(['status' => 'success']);
+    if (!$astrologer) {
+      return response()->json(['error' => 'Astrologer not found'], 404);
+    }
+
+    // Update the FCM token in the admins table
+    $admin = $astrologer->admin;
+    $admin->fcm_token = $request->fcm_token;
+    $admin->save();
+
+    return response()->json(['success' => true, 'message' => 'FCM token saved successfully']);
   }
 
   function getGoogleAccessToken($jsonKey)
@@ -79,11 +86,11 @@ class NotificationController extends Controller
     ]);
   }
 
+  /**
+   * Send notification to astrologer
+   */
   public function sendToAstrologer(Request $request)
   {
-    // Add this log
-    \Log::info('🔔 [LARAVEL] Received notification request', $request->all());
-
     $request->validate([
       'astrologer_id' => 'required|string',
       'title' => 'required|string',
@@ -91,33 +98,38 @@ class NotificationController extends Controller
       'data' => 'sometimes|array',
     ]);
 
+    // Find the astrologer
     $astrologer = Astrologer::find($request->astrologer_id);
-    if (!$astrologer || !$astrologer->fcm_token) {
-      // Add this log
+
+    // Check if astrologer exists and has an admin with an FCM token
+    if (!$astrologer || !$astrologer->admin || !$astrologer->admin->fcm_token) {
       \Log::warning('🔔 [LARAVEL] Astrologer not found or no FCM token', [
         'astrologer_id' => $request->astrologer_id,
         'found' => $astrologer ? true : false,
-        'has_token' => $astrologer && $astrologer->fcm_token ? true : false
+        'has_admin' => $astrologer && $astrologer->admin ? true : false,
+        'has_token' => $astrologer && $astrologer->admin && $astrologer->admin->fcm_token ? true : false
       ]);
 
       return response()->json(['error' => 'Astrologer not found or no token'], 404);
     }
 
-    // Add this log
+    // Get the FCM token from the admin
+    $fcmToken = $astrologer->admin->fcm_token;
+
     \Log::info('🔔 [LARAVEL] Found astrologer with FCM token', [
       'astrologer_id' => $astrologer->id,
-      'fcm_token' => $astrologer->fcm_token
+      'admin_id' => $astrologer->admin->id,
+      'fcm_token' => $fcmToken
     ]);
 
     $firebase = new FirebaseService();
     $result = $firebase->sendToToken(
-      $astrologer->fcm_token,
+      $fcmToken,
       $request->title,
       $request->body,
       $request->data ?? []
     );
 
-    // Add this log
     \Log::info('🔔 [LARAVEL] FCM result', ['result' => $result]);
 
     return $result;
