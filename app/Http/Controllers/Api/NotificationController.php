@@ -8,6 +8,7 @@ use App\Models\Astrologer;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Response;
 use Google\Client as Google_Client;
+use App\Services\FirebaseService;
 
 class NotificationController extends Controller
 {
@@ -78,4 +79,26 @@ class NotificationController extends Controller
     ]);
   }
 
+  public function sendToAstrologer(Request $request)
+  {
+    $request->validate([
+      'astrologer_id' => 'required|string',
+      'title' => 'required|string',
+      'body' => 'required|string',
+      'data' => 'sometimes|array',
+    ]);
+
+    $astrologer = Astrologer::find($request->astrologer_id);
+    if (!$astrologer || !$astrologer->fcm_token) {
+      return response()->json(['error' => 'Astrologer not found or no token'], 404);
+    }
+
+    $firebase = new FirebaseService();
+    return $firebase->sendToToken(
+      $astrologer->fcm_token,
+      $request->title,
+      $request->body,
+      $request->data ?? []
+    );
+  }
 }

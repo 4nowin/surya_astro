@@ -67,9 +67,6 @@ class FirebaseService
 
     public function sendToTopic($topic, $title, $body, $data = [])
     {
-        $accessToken = $this->getAccessToken();
-
-        $url = "https://fcm.googleapis.com/v1/projects/{$this->projectId}/messages:send";
 
         $message = [
             'message' => [
@@ -81,6 +78,31 @@ class FirebaseService
                 'data' => $data,
             ],
         ];
+
+        return $this->send($message);
+    }
+
+    public function sendToToken($token, $title, $body, $data = [])
+    {
+        $message = [
+            'message' => [
+                'token' => $token,
+                'notification' => [
+                    'title' => $title,
+                    'body' => $body,
+                ],
+                'data' => $data,
+            ]
+        ];
+
+        return $this->send($message);
+    }
+
+    protected function send($message)
+    {
+        $accessToken = $this->getAccessToken();
+
+        $url = "https://fcm.googleapis.com/v1/projects/{$this->projectId}/messages:send";
 
         $response = Http::withToken($accessToken)
             ->post($url, $message);

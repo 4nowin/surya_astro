@@ -77,6 +77,7 @@ Route::post('{lang?}/auth/google', [AuthController::class, 'loginWithGoogle']);
 Route::get('/auth/google/redirect', [AuthController::class, 'redirectToGoogle']);
 Route::get('/auth/google/callback', [AuthController::class, 'handleGoogleCallback']);
 Route::get('/fcm-token', [NotificationController::class, 'getAccessToken']);
+Route::post('send-to-astrologer', [NotificationController::class, 'sendToAstrologer']);
 
 
 Route::group(['middleware' => ['auth:sanctum'], 'prefix' => "/{lang?}"], function () {
