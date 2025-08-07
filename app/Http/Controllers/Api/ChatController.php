@@ -28,18 +28,32 @@ class ChatController extends Controller
         'data' => $request->all(),
         'trace' => $e->getTraceAsString(),
       ]);
-
       return response()->json([
         'status' => 'error',
         'message' => 'Invalid astrologer ID or missing data.',
       ], 422);
     }
 
+    Log::info('Start session request received', [
+      'user_id' => Auth::id(),
+      'admin_id' => $request->input('admin_id'),
+      'astrologer_id' => $request->input('astrologer_id'),
+      'all_data' => $request->all(),
+    ]);
+
     try {
       $user = Auth::user();
       $astrologerId = $request->input('astrologer_id');
       $adminId = $request->input('admin_id');
 
+      // Debug: Log the search parameters
+      Log::info('Searching for existing session', [
+        'user_id' => $user->id,
+        'admin_id' => $adminId,
+        'astrologer_id' => $astrologerId,
+      ]);
+
+      // First, check for existing active session in the database
       $existingSession = ChatSession::where('user_id', $user->id)
         ->where('admin_id', $adminId)
         ->where('astrologer_id', $astrologerId)
@@ -47,17 +61,43 @@ class ChatController extends Controller
         ->latest()
         ->first();
 
+      // Debug: Log if we found an existing session
       if ($existingSession) {
-        $chatSession = $existingSession;
+        Log::info('Found existing session', [
+          'session_id' => $existingSession->id,
+          'started_at' => $existingSession->started_at,
+          'ended_at' => $existingSession->ended_at,
+        ]);
       } else {
+        Log::info('No existing session found');
+      }
+
+      $chatSession = null;
+      $isNew = false;
+
+      if ($existingSession) {
+        // Found existing session in database
+        $chatSession = $existingSession;
+        $isNew = false;
+      } else {
+        // No existing session, create new one
         $chatSession = ChatSession::create([
           'user_id' => $user->id,
           'admin_id' => $adminId,
           'astrologer_id' => $astrologerId,
           'started_at' => now(),
         ]);
+        $isNew = true;
+
+        Log::info('Created new session', [
+          'session_id' => $chatSession->id,
+          'user_id' => $user->id,
+          'admin_id' => $adminId,
+          'astrologer_id' => $astrologerId,
+        ]);
       }
 
+      // Now handle Firebase document
       try {
         $credentialsPath = storage_path('app/' . config('services.firebase.credentials_path'));
         if (!$credentialsPath) {
@@ -67,35 +107,49 @@ class ChatController extends Controller
         $factory = (new Factory)->withServiceAccount($credentialsPath);
         $firestore = $factory->createFirestore()->database();
 
-        $firestore->collection('chats')->document((string) $chatSession->id)->set([
-          'text' => '',
-          'user_id' => $user->id,
-          'admin_id' => $adminId,
-          'astrologer_id' => $astrologerId,
-          'user_type' => 'user',
-          'user_name' => $user->name,
-          'timestamp' => now()->toDateTimeString(),
-        ]);
+        // Check if the document exists in Firebase
+        $docRef = $firestore->collection('chats')->document((string) $chatSession->id);
+        $snapshot = $docRef->snapshot();
+
+        if (!$snapshot->exists()) {
+          // Document doesn't exist in Firebase, create it with the original structure
+          $docRef->set([
+            'text' => '',
+            'user_id' => $user->id,
+            'admin_id' => $adminId,
+            'astrologer_id' => $astrologerId,
+            'user_type' => 'user',
+            'user_name' => $user->name,
+            'timestamp' => now()->toDateTimeString(),
+            // Add the fields required by security rules
+            'last_message' => '',
+            'last_updated' => now()->toDateTimeString(),
+          ]);
+
+          Log::info('Created Firebase document for session', [
+            'session_id' => $chatSession->id,
+          ]);
+        }
       } catch (\Throwable $e) {
-        Log::error('Firestore write failed in startSession', [
-          'chat_session_id' => $chatSession->id,
-          'user_id' => $user->id,
-          'admin_id' => $adminId,
-          'astrologer_id' => $astrologerId,
+        Log::error('Failed to check/create Firebase document', [
+          'session_id' => $chatSession->id,
           'error' => $e->getMessage(),
           'trace' => $e->getTraceAsString(),
         ]);
 
-        return response()->json([
-          'status' => 'error',
-          'message' => 'Failed to create Firestore chat metadata.',
-        ], 500);
+        // For existing sessions, we continue even if Firebase fails
+        if ($isNew) {
+          return response()->json([
+            'status' => 'error',
+            'message' => 'Failed to create Firestore chat metadata.',
+          ], 500);
+        }
       }
 
       return response()->json([
-        'status' => $existingSession ? 'existing' : 'new',
+        'status' => $isNew ? 'new' : 'existing',
         'chat_session_id' => $chatSession->id,
-        'message' => $existingSession ? 'Existing chat session resumed' : 'New chat session started',
+        'message' => $isNew ? 'New chat session started' : 'Existing chat session resumed',
       ]);
     } catch (\Throwable $e) {
       Log::error('General error in startSession', [
@@ -104,7 +158,6 @@ class ChatController extends Controller
         'error' => $e->getMessage(),
         'trace' => $e->getTraceAsString(),
       ]);
-
       return response()->json([
         'status' => 'error',
         'message' => 'Something went wrong while starting chat session.',
@@ -160,9 +213,9 @@ class ChatController extends Controller
       ->where('user_id', $user->id)
       ->first();
 
-    if ($session) {
-      $session->update(['ended_at' => now()]);
-    }
+    // if ($session) {
+    //   $session->update(['ended_at' => now()]);
+    // }
 
     return response()->json(['status' => 'ended']);
   }
