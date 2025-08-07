@@ -318,6 +318,8 @@ class PaymentController extends Controller
                         'pooja_id' => (string) $pooja->id,
                         'order_id' => (string) $order->id,
                         'user_id' => (string) $payment->user_id,
+                        'title' => "Pooja Booked",
+                        'body' => $pooja->title,
                     ];
 
                     \Log::info('🔔 [LARAVEL] Sending pooja booking notification', [
