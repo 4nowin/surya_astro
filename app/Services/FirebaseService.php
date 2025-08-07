@@ -97,9 +97,9 @@ class FirebaseService
                     'notification' => [
                         'channel_id' => 'chat_channel',
                         'sound' => 'default',
-                        'priority' => 'high',
                         'default_sound' => true,
                         'default_vibrate_timings' => true,
+                        // Remove priority from here - it's not valid at this level
                     ]
                 ],
                 'apns' => [
