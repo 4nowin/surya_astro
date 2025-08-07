@@ -84,6 +84,12 @@ class FirebaseService
 
     public function sendToToken($token, $title, $body, $data = [])
     {
+        
+        $data['session_id'] = (string) ($data['session_id'] ?? '');
+        $data['user_id'] = (string) ($data['user_id'] ?? '');
+        $data['astrologer_id'] = (string) ($data['astrologer_id'] ?? '');
+        $data['user_name'] = (string) ($data['user_name'] ?? '');
+
         $message = [
             'message' => [
                 'token' => $token,
