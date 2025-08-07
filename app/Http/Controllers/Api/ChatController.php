@@ -34,58 +34,51 @@ class ChatController extends Controller
       ], 422);
     }
 
+    Log::info('Start session request received', [
+      'user_id' => Auth::id(),
+      'admin_id' => $request->input('admin_id'),
+      'astrologer_id' => $request->input('astrologer_id'),
+      'all_data' => $request->all(),
+    ]);
+
     try {
       $user = Auth::user();
       $astrologerId = $request->input('astrologer_id');
       $adminId = $request->input('admin_id');
 
+      // Debug: Log the search parameters
+      Log::info('Searching for existing session', [
+        'user_id' => $user->id,
+        'admin_id' => $adminId,
+        'astrologer_id' => $astrologerId,
+      ]);
+
       // First, check for existing active session in the database
       $existingSession = ChatSession::where('user_id', $user->id)
         ->where('admin_id', $adminId)
         ->where('astrologer_id', $astrologerId)
-        ->whereNull('ended_at')
+        // ->whereNull('ended_at')
         ->latest()
         ->first();
+
+      // Debug: Log if we found an existing session
+      if ($existingSession) {
+        Log::info('Found existing session', [
+          'session_id' => $existingSession->id,
+          'started_at' => $existingSession->started_at,
+          'ended_at' => $existingSession->ended_at,
+        ]);
+      } else {
+        Log::info('No existing session found');
+      }
 
       $chatSession = null;
       $isNew = false;
 
       if ($existingSession) {
-        // Found existing session in database, now check if it exists in Firebase
+        // Found existing session in database
         $chatSession = $existingSession;
         $isNew = false;
-
-        try {
-          $credentialsPath = storage_path('app/' . config('services.firebase.credentials_path'));
-          if (!$credentialsPath) {
-            Log::error("FIREBASE_CREDENTIALS_PATH is not set in config");
-            return response()->json(['error' => 'Server misconfiguration.'], 500);
-          }
-          $factory = (new Factory)->withServiceAccount($credentialsPath);
-          $firestore = $factory->createFirestore()->database();
-
-          // Check if the document exists in Firebase
-          $docRef = $firestore->collection('chats')->document((string) $chatSession->id);
-          $snapshot = $docRef->snapshot();
-
-          if (!$snapshot->exists()) {
-            // Document doesn't exist in Firebase, create it
-            $docRef->set([
-              'last_message' => '',
-              'last_updated' => now()->toDateTimeString(),
-            ]);
-            Log::info('Created missing Firebase document for existing session', [
-              'chat_session_id' => $chatSession->id
-            ]);
-          }
-        } catch (\Throwable $e) {
-          Log::error('Failed to check/create Firebase document for existing session', [
-            'chat_session_id' => $chatSession->id,
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString(),
-          ]);
-          // Continue even if Firebase fails, we still have the session
-        }
       } else {
         // No existing session, create new one
         $chatSession = ChatSession::create([
@@ -96,29 +89,56 @@ class ChatController extends Controller
         ]);
         $isNew = true;
 
-        try {
-          $credentialsPath = storage_path('app/' . config('services.firebase.credentials_path'));
-          if (!$credentialsPath) {
-            Log::error("FIREBASE_CREDENTIALS_PATH is not set in config");
-            return response()->json(['error' => 'Server misconfiguration.'], 500);
-          }
-          $factory = (new Factory)->withServiceAccount($credentialsPath);
-          $firestore = $factory->createFirestore()->database();
+        Log::info('Created new session', [
+          'session_id' => $chatSession->id,
+          'user_id' => $user->id,
+          'admin_id' => $adminId,
+          'astrologer_id' => $astrologerId,
+        ]);
+      }
 
-          // Create document in Firebase
-          $firestore->collection('chats')->document((string) $chatSession->id)->set([
-            'last_message' => '',
-            'last_updated' => now()->toDateTimeString(),
-          ]);
-        } catch (\Throwable $e) {
-          Log::error('Firestore write failed for new session', [
-            'chat_session_id' => $chatSession->id,
+      // Now handle Firebase document
+      try {
+        $credentialsPath = storage_path('app/' . config('services.firebase.credentials_path'));
+        if (!$credentialsPath) {
+          Log::error("FIREBASE_CREDENTIALS_PATH is not set in config");
+          return response()->json(['error' => 'Server misconfiguration.'], 500);
+        }
+        $factory = (new Factory)->withServiceAccount($credentialsPath);
+        $firestore = $factory->createFirestore()->database();
+
+        // Check if the document exists in Firebase
+        $docRef = $firestore->collection('chats')->document((string) $chatSession->id);
+        $snapshot = $docRef->snapshot();
+
+        if (!$snapshot->exists()) {
+          // Document doesn't exist in Firebase, create it with the original structure
+          $docRef->set([
+            'text' => '',
             'user_id' => $user->id,
             'admin_id' => $adminId,
             'astrologer_id' => $astrologerId,
-            'error' => $e->getMessage(),
-            'trace' => $e->getTraceAsString(),
+            'user_type' => 'user',
+            'user_name' => $user->name,
+            'timestamp' => now()->toDateTimeString(),
+            // Add the fields required by security rules
+            'last_message' => '',
+            'last_updated' => now()->toDateTimeString(),
           ]);
+
+          Log::info('Created Firebase document for session', [
+            'session_id' => $chatSession->id,
+          ]);
+        }
+      } catch (\Throwable $e) {
+        Log::error('Failed to check/create Firebase document', [
+          'session_id' => $chatSession->id,
+          'error' => $e->getMessage(),
+          'trace' => $e->getTraceAsString(),
+        ]);
+
+        // For existing sessions, we continue even if Firebase fails
+        if ($isNew) {
           return response()->json([
             'status' => 'error',
             'message' => 'Failed to create Firestore chat metadata.',
