@@ -318,6 +318,9 @@ class PaymentController extends Controller
                         'pooja_id' => (string) $pooja->id,
                         'order_id' => (string) $order->id,
                         'user_id' => (string) $payment->user_id,
+                        'user_name' => $payment->user->name,
+                        'astrologer_id' => (string) $pooja->admin_id,
+                        'session_id' => $request->razorpay_order_id,
                         'title' => "Pooja Booked",
                         'body' => $pooja->title,
                     ];
