@@ -98,10 +98,8 @@ class NotificationController extends Controller
       'data' => 'sometimes|array',
     ]);
 
-    // Find the astrologer
     $astrologer = Astrologer::find($request->astrologer_id);
 
-    // Check if astrologer exists and has an admin with an FCM token
     if (!$astrologer || !$astrologer->admin || !$astrologer->admin->fcm_token) {
       \Log::warning('🔔 [LARAVEL] Astrologer not found or no FCM token', [
         'astrologer_id' => $request->astrologer_id,
@@ -113,7 +111,6 @@ class NotificationController extends Controller
       return response()->json(['error' => 'Astrologer not found or no token'], 404);
     }
 
-    // Get the FCM token from the admin
     $fcmToken = $astrologer->admin->fcm_token;
 
     \Log::info('🔔 [LARAVEL] Found astrologer with FCM token', [
@@ -123,11 +120,18 @@ class NotificationController extends Controller
     ]);
 
     $firebase = new FirebaseService();
+
+    // Ensure the data includes the required fields for navigation
+    $data = $request->data ?? [];
+    $data['type'] = $data['type'] ?? 'chat_message';
+
+    \Log::info('🔔 [LARAVEL] Sending notification with data', $data);
+
     $result = $firebase->sendToToken(
       $fcmToken,
       $request->title,
       $request->body,
-      $request->data ?? []
+      $data
     );
 
     \Log::info('🔔 [LARAVEL] FCM result', ['result' => $result]);

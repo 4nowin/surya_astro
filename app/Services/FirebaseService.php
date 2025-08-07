@@ -84,14 +84,6 @@ class FirebaseService
 
     public function sendToToken($token, $title, $body, $data = [])
     {
-        // Add this log
-        \Log::info('🔔 [LARAVEL] Preparing to send FCM notification', [
-            'token' => $token,
-            'title' => $title,
-            'body' => $body,
-            'data' => $data
-        ]);
-
         $message = [
             'message' => [
                 'token' => $token,
@@ -122,15 +114,9 @@ class FirebaseService
             ]
         ];
 
-        // Add this log
-        \Log::info('🔔 [LARAVEL] FCM message payload', $message);
+        \Log::info('🔔 [LARAVEL] Sending FCM message', $message);
 
-        $result = $this->send($message);
-
-        // Add this log
-        \Log::info('🔔 [LARAVEL] FCM response', ['response' => $result]);
-
-        return $result;
+        return $this->send($message);
     }
 
     protected function send($message)
