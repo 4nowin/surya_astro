@@ -57,7 +57,7 @@ class ChatController extends Controller
       $existingSession = ChatSession::where('user_id', $user->id)
         ->where('admin_id', $adminId)
         ->where('astrologer_id', $astrologerId)
-        // ->whereNull('ended_at')
+        ->whereNull('ended_at')
         ->latest()
         ->first();
 
@@ -213,9 +213,9 @@ class ChatController extends Controller
       ->where('user_id', $user->id)
       ->first();
 
-    if ($session) {
-      $session->update(['ended_at' => now()]);
-    }
+    // if ($session) {
+    //   $session->update(['ended_at' => now()]);
+    // }
 
     return response()->json(['status' => 'ended']);
   }
