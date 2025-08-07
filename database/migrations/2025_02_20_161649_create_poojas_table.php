@@ -14,6 +14,7 @@ return new class extends Migration
         Schema::create('poojas', function (Blueprint $table) {
             $table->id();
             $table->string("image")->nullable();
+            $table->foreignId('admin_id')->constrained()->onDelete('cascade');
             $table->string("title");
             $table->string("language")->default('en');
             $table->string("tag");

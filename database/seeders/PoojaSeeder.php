@@ -15,6 +15,7 @@ class PoojaSeeder extends Seeder
         DB::table('poojas')->insert([
             [
                 'title' => 'Shani Shanti Pooja',
+                'admin_id' => 2,
                 'tag' => 'Saturn Remedies',
                 'language' => 'en',
                 'excerpt' => 'Pacify the malefic effects of Saturn (Shani) in your birth chart.',
@@ -31,6 +32,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'Rudra Abhishek Pooja',
+                'admin_id' => 2,
                 'tag' => 'Shiva Pooja',
                 'language' => 'en',
                 'excerpt' => 'A sacred ritual to please Lord Shiva and remove obstacles from life.',
@@ -47,6 +49,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'Wealth & Prosperity Pooja',
+                'admin_id' => 2,
                 'tag' => 'Wealth & Prosperity',
                 'language' => 'en',
                 'excerpt' => 'Attract abundance and financial growth with this special pooja.',
@@ -63,6 +66,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'Kaal Sarp Dosh Nivaran Pooja',
+                'admin_id' => 2,
                 'tag' => 'Dosh Nivaran',
                 'language' => 'en',
                 'excerpt' => 'Eliminate the effects of Kaal Sarp Dosh and bring stability to life.',
@@ -79,6 +83,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'Pitra Dosh Pooja',
+                'admin_id' => 2,
                 'tag' => 'Ancestral Peace',
                 'language' => 'en',
                 'excerpt' => 'Honor your ancestors and remove ancestral karmic blockages.',
@@ -95,6 +100,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'Career & Job Success Pooja',
+                'admin_id' => 2,
                 'tag' => 'Career Growth',
                 'language' => 'en',
                 'excerpt' => 'Achieve job stability and career growth with divine blessings.',
@@ -111,6 +117,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'Health & Wellness Pooja',
+                'admin_id' => 2,
                 'tag' => 'Health & Healing',
                 'language' => 'en',
                 'excerpt' => 'Promote physical and mental well-being with divine intervention.',
@@ -127,6 +134,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'Manglik Dosh Nivaran Pooja',
+                'admin_id' => 2,
                 'tag' => 'Marriage Remedies',
                 'language' => 'en',
                 'excerpt' => 'Neutralize Manglik Dosh and promote harmonious marital life.',
@@ -143,6 +151,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'Navgraha Shanti Pooja',
+                'admin_id' => 2,
                 'tag' => 'Planetary Peace',
                 'language' => 'en',
                 'excerpt' => 'Pacify malefic planets and strengthen beneficial planetary influences.',
@@ -159,6 +168,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'Marriage & Relationship Harmony Pooja',
+                'admin_id' => 2,
                 'tag' => 'Love & Relationship',
                 'language' => 'en',
                 'excerpt' => 'Restore love, trust, and harmony in relationships.',
@@ -175,6 +185,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'Business Growth Pooja',
+                'admin_id' => 2,
                 'tag' => 'Business Success',
                 'language' => 'en',
                 'excerpt' => 'Boost your business success with divine blessings.',
@@ -191,6 +202,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'Black Magic Protection Pooja',
+                'admin_id' => 2,
                 'tag' => 'Spiritual Protection',
                 'language' => 'en',
                 'excerpt' => 'Safeguard yourself from black magic and evil eye effects.',
@@ -207,6 +219,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'Peace & Harmony Pooja',
+                'admin_id' => 2,
                 'tag' => 'Calm & Clarity',
                 'language' => 'en',
                 'excerpt' => 'Invite peace, mental calmness, and family harmony into your life.',
@@ -223,6 +236,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'Nakshatra Shanti Pooja',
+                'admin_id' => 2,
                 'tag' => 'Birth Chart Remedies',
                 'language' => 'en',
                 'excerpt' => 'Correct harmful nakshatra influences from your birth chart.',
@@ -239,6 +253,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'Graha Dosh Nivaran Pooja',
+                'admin_id' => 2,
                 'tag' => 'Astrological Remedies',
                 'language' => 'en',
                 'excerpt' => 'Balance your planets and nullify doshas in your chart.',
@@ -255,6 +270,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'Child Blessing Pooja',
+                'admin_id' => 2,
                 'tag' => 'Fertility & Children',
                 'language' => 'en',
                 'excerpt' => 'Seek divine blessings for childbirth and healthy offspring.',
@@ -271,6 +287,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'Santan Gopal Pooja',
+                'admin_id' => 2,
                 'tag' => 'Child Blessings',
                 'language' => 'en',
                 'excerpt' => 'A sacred ritual to bless childless couples with progeny.',
@@ -287,6 +304,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'Mahamrityunjaya Jaap',
+                'admin_id' => 2,
                 'tag' => 'Health & Longevity',
                 'language' => 'en',
                 'excerpt' => 'Powerful mantra chanting for protection against untimely death.',
@@ -303,6 +321,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'Chandra Grahan Special Pooja',
+                'admin_id' => 2,
                 'tag' => 'Eclipse Pooja',
                 'language' => 'en',
                 'excerpt' => 'Shield yourself from the adverse effects of lunar eclipses.',
@@ -319,6 +338,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'Mahashivratri Blessings Pooja',
+                'admin_id' => 2,
                 'tag' => 'Shivratri Special',
                 'language' => 'en',
                 'excerpt' => 'Seek divine blessings from Lord Shiva on the sacred occasion of Mahashivratri.',
@@ -335,6 +355,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'Hanuman Jayanti Special Pooja',
+                'admin_id' => 2,
                 'tag' => 'Hanuman Jayanti',
                 'language' => 'en',
                 'excerpt' => 'Gain strength and protection through Lord Hanuman’s blessings.',
@@ -351,6 +372,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'शनि शांति पूजा',
+                'admin_id' => 2,
                 'tag' => 'शनि दोष निवारण',
                 'language' => 'hi',
                 'excerpt' => 'जन्म कुंडली में शनि के अशुभ प्रभावों को शांत करें।',
@@ -367,6 +389,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'रुद्राभिषेक पूजा',
+                'admin_id' => 2,
                 'tag' => 'शिव पूजा',
                 'language' => 'hi',
                 'excerpt' => 'भगवान शिव को प्रसन्न करने और जीवन से बाधाएं दूर करने की एक पवित्र विधि।',
@@ -383,6 +406,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'धन एवं समृद्धि पूजा',
+                'admin_id' => 2,
                 'tag' => 'धन एवं समृद्धि',
                 'language' => 'hi',
                 'excerpt' => 'इस विशेष पूजा से आर्थिक वृद्धि और समृद्धि को आकर्षित करें।',
@@ -399,6 +423,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'कालसर्प दोष निवारण पूजा',
+                'admin_id' => 2,
                 'tag' => 'दोष निवारण',
                 'language' => 'hi',
                 'excerpt' => 'कालसर्प दोष के प्रभावों को समाप्त कर जीवन में स्थिरता लाएं।',
@@ -415,6 +440,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'पितृ दोष पूजा',
+                'admin_id' => 2,
                 'tag' => 'पितृ शांति',
                 'language' => 'hi',
                 'excerpt' => 'अपने पितरों को सम्मान दें और पूर्वजों के कर्म बंधनों को दूर करें।',
@@ -431,6 +457,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'कैरियर और नौकरी सफलता पूजा',
+                'admin_id' => 2,
                 'tag' => 'कैरियर विकास',
                 'language' => 'hi',
                 'excerpt' => 'ईश्वरीय आशीर्वाद से नौकरी की स्थिरता और कैरियर में उन्नति प्राप्त करें।',
@@ -447,6 +474,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'स्वास्थ्य और तंदुरुस्ती पूजा',
+                'admin_id' => 2,
                 'tag' => 'स्वास्थ्य और उपचार',
                 'language' => 'hi',
                 'excerpt' => 'ईश्वरीय कृपा से शारीरिक और मानसिक स्वास्थ्य को बढ़ावा दें।',
@@ -463,6 +491,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'मांगलिक दोष निवारण पूजा',
+                'admin_id' => 2,
                 'tag' => 'विवाह उपाय',
                 'language' => 'hi',
                 'excerpt' => 'मांगलिक दोष को शांत कर सुखमय वैवाहिक जीवन पाएं।',
@@ -479,6 +508,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'नवग्रह शांति पूजा',
+                'admin_id' => 2,
                 'tag' => 'ग्रहों की शांति',
                 'language' => 'hi',
                 'excerpt' => 'अशुभ ग्रहों को शांत कर शुभ प्रभावों को मजबूत करें।',
@@ -495,6 +525,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'विवाह और संबंध सामंजस्य पूजा',
+                'admin_id' => 2,
                 'tag' => 'प्रेम और संबंध',
                 'language' => 'hi',
                 'excerpt' => 'रिश्तों में प्रेम, विश्वास और सामंजस्य को पुनः स्थापित करें।',
@@ -511,6 +542,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'व्यवसाय वृद्धि पूजा',
+                'admin_id' => 2,
                 'tag' => 'व्यवसाय सफलता',
                 'language' => 'hi',
                 'excerpt' => 'ईश्वरीय आशीर्वाद से अपने व्यवसाय में सफलता प्राप्त करें।',
@@ -527,6 +559,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'काला जादू सुरक्षा पूजा',
+                'admin_id' => 2,
                 'tag' => 'आध्यात्मिक सुरक्षा',
                 'language' => 'hi',
                 'excerpt' => 'काले जादू और बुरी नजर के प्रभाव से स्वयं की रक्षा करें।',
@@ -543,6 +576,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'शांति और सौहार्द पूजा',
+                'admin_id' => 2,
                 'tag' => 'शांति और स्पष्टता',
                 'language' => 'hi',
                 'excerpt' => 'अपने जीवन में मानसिक शांति और पारिवारिक सौहार्द लाएं।',
@@ -559,6 +593,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'नक्षत्र शांति पूजा',
+                'admin_id' => 2,
                 'tag' => 'कुंडली उपाय',
                 'language' => 'hi',
                 'excerpt' => 'जन्म नक्षत्र के हानिकारक प्रभावों को शांत करें।',
@@ -575,6 +610,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'ग्रह दोष निवारण पूजा',
+                'admin_id' => 2,
                 'tag' => 'ज्योतिषीय उपाय',
                 'language' => 'hi',
                 'excerpt' => 'ग्रहों का संतुलन करें और कुंडली के दोषों को दूर करें।',
@@ -591,6 +627,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'संतान प्राप्ति पूजा',
+                'admin_id' => 2,
                 'tag' => 'प्रजनन और संतान',
                 'language' => 'hi',
                 'excerpt' => 'संतान प्राप्ति और स्वस्थ संतान के लिए ईश्वरीय आशीर्वाद प्राप्त करें।',
@@ -607,6 +644,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'संतान गोपाल पूजा',
+                'admin_id' => 2,
                 'tag' => 'संतान आशीर्वाद',
                 'language' => 'hi',
                 'excerpt' => 'संतान सुख के लिए एक पवित्र अनुष्ठान।',
@@ -623,6 +661,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'महामृत्युंजय जाप',
+                'admin_id' => 2,
                 'tag' => 'स्वास्थ्य और दीर्घायु',
                 'language' => 'hi',
                 'excerpt' => 'अकाल मृत्यु से रक्षा के लिए शक्तिशाली मंत्र जाप।',
@@ -639,6 +678,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'चंद्र ग्रहण विशेष पूजा',
+                'admin_id' => 2,
                 'tag' => 'ग्रहण पूजा',
                 'language' => 'hi',
                 'excerpt' => 'चंद्र ग्रहण के अशुभ प्रभावों से स्वयं को सुरक्षित रखें।',
@@ -655,6 +695,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'महाशिवरात्रि आशीर्वाद पूजा',
+                'admin_id' => 2,
                 'tag' => 'शिवरात्रि विशेष',
                 'language' => 'hi',
                 'excerpt' => 'महाशिवरात्रि के पवित्र अवसर पर भगवान शिव का दिव्य आशीर्वाद प्राप्त करें।',
@@ -671,6 +712,7 @@ class PoojaSeeder extends Seeder
             ],
             [
                 'title' => 'हनुमान जयंती विशेष पूजा',
+                'admin_id' => 2,
                 'tag' => 'हनुमान जयंती',
                 'language' => 'hi',
                 'excerpt' => 'भगवान हनुमान की कृपा से शक्ति और सुरक्षा प्राप्त करें।',

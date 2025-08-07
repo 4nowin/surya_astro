@@ -22,4 +22,9 @@ class Pooja extends Model
         'active',
         'home_priority',
     ];
+
+    public function admin()
+    {
+        return $this->belongsTo(Admin::class, 'admin_id', 'id');
+    }
 }

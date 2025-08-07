@@ -4,7 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use App\Models\Inquiry;
+use App\Models\Pooja;
+use App\Models\Payment;
 
 class Order extends Model
 {
@@ -22,14 +23,14 @@ class Order extends Model
         'promoter_id',
     ];
 
-    public function inquiry()
+    public function pooja()
     {
-        return $this->belongsTo(Inquiry::class, 'inquiry_id', 'id');
+        return $this->belongsTo(Pooja::class, 'inquiry_id', 'id');
     }
 
     public function payment()
     {
-        return $this->belongsTo(Payment::class);
+        return $this->belongsTo(Payment::class, 'payment_id', 'id');
     }
 
     public function user()

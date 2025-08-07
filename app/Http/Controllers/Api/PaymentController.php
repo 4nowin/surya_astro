@@ -13,6 +13,7 @@ use App\Models\Pooja;
 use App\Models\User;
 use App\Models\Order;
 use App\Models\Astrologer;
+use App\Services\FirebaseService;
 
 class PaymentController extends Controller
 {
@@ -299,6 +300,47 @@ class PaymentController extends Controller
             $user->role = 'premium';
             $user->premium_started_at = now();
             $user->save();
+        }
+
+        if ($payment->payment_type === 'Pooja') {
+            // Ensure order is loaded
+            $order = $payment->order;
+
+            if ($order) {
+                $pooja = $order->pooja;
+
+                if ($pooja && $pooja->admin && $pooja->admin->fcm_token) {
+                    $title = "Pooja Booked";
+                    $body = $pooja->title;
+
+                    $data = [
+                        'type' => 'pooja_booking',
+                        'pooja_id' => (string) $pooja->id,
+                        'order_id' => (string) $order->id,
+                        'user_id' => (string) $payment->user_id,
+                    ];
+
+                    \Log::info('🔔 [LARAVEL] Sending pooja booking notification', [
+                        'admin_id' => $pooja->admin->id,
+                        'fcm_token' => $pooja->admin->fcm_token,
+                        'data' => $data,
+                    ]);
+
+                    $firebase = new FirebaseService();
+                    $firebase->sendToToken(
+                        $pooja->admin->fcm_token,
+                        $title,
+                        $body,
+                        $data
+                    );
+                } else {
+                    \Log::warning('❌ [LARAVEL] Cannot send pooja booking notification — missing pooja/admin/token', [
+                        'pooja_found' => $pooja ? true : false,
+                        'admin_found' => $pooja && $pooja->admin ? true : false,
+                        'fcm_token_exists' => $pooja && $pooja->admin && $pooja->admin->fcm_token ? true : false,
+                    ]);
+                }
+            }
         }
 
 
