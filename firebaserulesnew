@@ -1,0 +1,42 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Chat session metadata (updated)
+    match /chats/{chatId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null &&
+        // Check that we're only updating the allowed fields
+        request.writeFields.size() == 2 &&
+        request.writeFields.hasAll(['last_message', 'last_updated']) &&
+        // Validate the field types
+        request.resource.data.last_message is string &&
+        request.resource.data.last_updated is timestamp;
+    }
+    // Messages subcollection (unchanged)
+    match /chats/{chatId}/messages/{messageId} {
+      allow read: if true;
+      allow create: if (
+        (request.auth != null &&
+         request.auth.uid == "astrologer_" + request.resource.data.admin_id) ||
+        (request.auth == null)
+      ) &&
+      request.resource.data.keys().hasOnly([
+        'text', 'user_id', 'admin_id', 'astrologer_id',
+        'user_type', 'user_name', 'timestamp'
+      ]) &&
+      request.resource.data.text is string &&
+      request.resource.data.user_id is string &&
+      request.resource.data.admin_id is string &&
+      request.resource.data.astrologer_id is string &&
+      request.resource.data.user_type is string &&
+      request.resource.data.user_name is string &&
+      request.resource.data.timestamp is timestamp;
+      allow update, delete: if false;
+    }
+
+    // Add rules for the astrologers collection
+    match /astrologers/{astrologerId} {
+      allow read, write: if request.auth != null && request.auth.uid == "astrologer_" + astrologerId;
+    }
+  }
+}

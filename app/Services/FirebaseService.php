@@ -14,7 +14,7 @@ class FirebaseService
     public function __construct()
     {
         $json = json_decode(
-            file_get_contents(storage_path(config('services.firebase.credentials_path'))),
+            file_get_contents(storage_path('app/' . config('services.firebase.credentials_path'))),
             true
         );
 

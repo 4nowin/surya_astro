@@ -46,7 +46,7 @@ class NotificationController extends Controller
 
   function sendFCMTopicNotification($topic, $title, $body, $data = [])
   {
-    $credentialsPath = config('services.firebase.credentials_path');
+    $credentialsPath = storage_path('app/' . config('services.firebase.credentials_path'));
     if (!$credentialsPath) {
       Log::error("FIREBASE_CREDENTIALS_PATH is not set in config");
       return response()->json(['error' => 'Server misconfiguration.'], 500);
@@ -72,7 +72,7 @@ class NotificationController extends Controller
 
   public function getAccessToken()
   {
-    $path = config('services.firebase.credentials_path');
+    $path = storage_path('app/' . config('services.firebase.credentials_path'));
 
     $client = new Google_Client();
     $client->setAuthConfig($path);
