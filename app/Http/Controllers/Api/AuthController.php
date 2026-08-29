@@ -96,54 +96,47 @@ class AuthController extends Controller
 
   public function loginWithGoogle($lang = 'en', Request $request)
   {
-    \Log::info('Request data for google login', $request->all());
     $request->validate([
       'id_token' => 'required|string',
-      'email' => 'required|email',
-      'name' => 'nullable|string',
-      'photo_url' => 'nullable|string',
     ]);
 
-    $client = new Google_Client(['client_id' => config('services.google.client_id')]);
     try {
+      $client = new Google_Client([
+        'client_id' => config('services.google.client_id'),
+      ]);
+
       $payload = $client->verifyIdToken($request->id_token);
 
       if (!$payload) {
-        \Log::error('Google ID token verification failed', [
-          'google_client_id' => config('services.google.client_id'),
-        ]);
+        \Log::warning('Google ID token verification failed');
 
         return response()->json([
           'success' => false,
-          'message' => 'Invalid Google ID token'
+          'message' => 'Invalid Google ID token',
         ], 401);
       }
-
-      \Log::info('Google ID token verified', [
-        'aud' => $payload['aud'] ?? null,
-        'azp' => $payload['azp'] ?? null,
-        'sub' => $payload['sub'] ?? null,
-        'email' => $payload['email'] ?? null,
-      ]);
     } catch (\Throwable $e) {
-      \Log::error('Google ID token exception', [
-        'message' => $e->getMessage(),
-        'class' => get_class($e),
+
+      \Log::error('Google authentication exception', [
+        'exception' => get_class($e),
       ]);
 
       return response()->json([
         'success' => false,
-        'message' => 'Google authentication failed'
+        'message' => 'Google authentication failed',
       ], 401);
     }
 
-    \Log::info('Google login payload', $payload);
+    // Use data from the verified Google token
+    $email = $payload['email'];
+    $name = $payload['name'] ?? '';
+    $profileImage = $payload['picture'] ?? null;
 
     $user = User::updateOrCreate(
-      ['email' => $request->email],
+      ['email' => $email],
       [
-        'name' => $request->name,
-        'profile_image' => $request->photo_url,
+        'name' => $name,
+        'profile_image' => $profileImage,
         'language' => $lang,
       ]
     );
@@ -154,22 +147,29 @@ class AuthController extends Controller
     }
 
     if ($request->has('referred_by')) {
-      $referrer = User::where('referral_code', $request->input('referred_by'))->first();
+      $referrer = User::where(
+        'referral_code',
+        $request->input('referred_by')
+      )->first();
+
       if ($referrer) {
         $user->referred_by = $referrer->referral_code;
-        $referrer->wallet_balance += 10; // reward
+        $referrer->wallet_balance += 10;
         $referrer->save();
+        $user->save();
       }
     }
 
-    if ($user && $user->status === 'blocked') {
+    if ($user->status === 'blocked') {
       return response()->json([
         'success' => false,
-        'message' => 'Your account has been blocked. Contact support.'
+        'message' => 'Your account has been blocked. Contact support.',
       ], 403);
     }
 
-    $token = $user->createToken('google_token')->plainTextToken;
+    $token = $user
+      ->createToken('google_token')
+      ->plainTextToken;
 
     return $this->authResponse($user, $token);
   }
