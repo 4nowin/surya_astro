@@ -104,7 +104,7 @@ class AuthController extends Controller
       'photo_url' => 'nullable|string',
     ]);
 
-    $client = new Google_Client(['client_id' => env('GOOGLE_CLIENT_ID')]); // Client ID from Google Console
+    $client = new Google_Client(['client_id' => config('services.google.client_id')]);
     $payload = $client->verifyIdToken($request->id_token);
 
     if (!$payload) {
