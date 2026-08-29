@@ -105,12 +105,37 @@ class AuthController extends Controller
     ]);
 
     $client = new Google_Client(['client_id' => config('services.google.client_id')]);
-    $payload = $client->verifyIdToken($request->id_token);
+    try {
+      $payload = $client->verifyIdToken($request->id_token);
 
-    if (!$payload) {
-      return response()->json(['success' => false, 'message' => 'Invalid ID token'], 401);
+      if (!$payload) {
+        \Log::error('Google ID token verification failed', [
+          'google_client_id' => config('services.google.client_id'),
+        ]);
+
+        return response()->json([
+          'success' => false,
+          'message' => 'Invalid Google ID token'
+        ], 401);
+      }
+
+      \Log::info('Google ID token verified', [
+        'aud' => $payload['aud'] ?? null,
+        'azp' => $payload['azp'] ?? null,
+        'sub' => $payload['sub'] ?? null,
+        'email' => $payload['email'] ?? null,
+      ]);
+    } catch (\Throwable $e) {
+      \Log::error('Google ID token exception', [
+        'message' => $e->getMessage(),
+        'class' => get_class($e),
+      ]);
+
+      return response()->json([
+        'success' => false,
+        'message' => 'Google authentication failed'
+      ], 401);
     }
-
 
     \Log::info('Google login payload', $payload);
 
