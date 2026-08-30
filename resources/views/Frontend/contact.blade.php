@@ -40,14 +40,14 @@
                 <div class="ast_contact_info">
                     <span><i class="fa fa-phone" aria-hidden="true"></i></span>
                     <h4>phone</h4>
-                    <p><a href="tel:+91-7018565737">+91-7018565737</a><br><a href="tel:+91-8894876075">+91-8894876075</a></p>
+                    <p><a href="tel:+91-9015955514">+91-9015955514</a><br><a href="tel:+91-9015955514">+91-9015955514</a></p>
                 </div>
             </div>
             <div class="col-lg-4 col-md-4 col-sm-4 col-xs-12">
                 <div class="ast_contact_info">
                     <span><i class="fa fa-envelope-open-o" aria-hidden="true"></i></span>
                     <h4>email</h4>
-                    <p><a href="mailto:asto@navgarah.com">astro@navgarah.com</a></p>
+                    <p><a href="mailto:support@astrosetu.com">support@astrosetu.com</a></p>
                 </div>
             </div>
             <div class="col-lg-4 col-md-4 col-sm-4 col-xs-12">

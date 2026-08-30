@@ -33,7 +33,7 @@
                 <div class="ast_pp_section">
 
                     <h1>Request Account Deletion</h1>
-                    <p>If you would like to delete your account and associated data from the Navgarah app, please fill out the form below.</p>
+                    <p>If you would like to delete your account and associated data from the Astro Setu app, please fill out the form below.</p>
 
                     @if (session('status'))
                     <div class="alert alert-success">

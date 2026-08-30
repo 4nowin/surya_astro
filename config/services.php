@@ -40,7 +40,7 @@ return [
     'facebook' => [
         'client_id' => env('FACEBOOK_CLIENT_ID'),
         'client_secret' => env('FACEBOOK_CLIENT_SECRET'),
-        'redirect' => "https://dev.navgarah.com/api/auth/callback/facebook",
+        'redirect' => "https://astrosetu.cubebitz.com/api/auth/callback/facebook",
     ],
 
     'razorpay' => [

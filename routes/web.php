@@ -60,7 +60,7 @@ Route::post('lang/{locale}/switch', function ($locale) {
 })->name('lang.switch.post');
 
 Route::get('/', function () {
-    return view('welcome')->with(['id' => "Navgarah"]);
+    return view('welcome')->with(['id' => "Astro Setu"]);
 });
 
 Route::get('/pay_online', function () {

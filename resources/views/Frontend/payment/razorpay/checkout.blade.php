@@ -4,7 +4,7 @@
         "key": "{{$key}}", // Enter the Key ID generated from the Dashboard
         "amount": "{{$order_details->amount}}", // Amount is in currency subunits. Default currency is INR. Hence, 50000 refers to 50000 paise
         "currency": "{{$order_details->currency}}",
-        "name": "Navgarah",
+        "name": "Astro Setu",
         "description": "{{$inquiry->name}}",
         "image": "{{url('images/header/fb.jpg')}}",
         "order_id": "{{$order_details->id}}", //This is a sample Order ID. Pass the `id` obtained in the response of Step 1

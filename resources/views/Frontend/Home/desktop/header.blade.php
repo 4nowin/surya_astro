@@ -6,8 +6,8 @@
             <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
                 <div class="ast_contact_details">
                     <ul>
-                        <li><i class="fa fa-phone" aria-hidden="true"></i><a href="tel:+91-7018565737">+91-7018565737</a> </li>
-                        <li><a href="mailto:astro@navgarah.com"><i class="fa fa-envelope-o" aria-hidden="true"></i> astro@navgarah.com</a></li>
+                        <li><i class="fa fa-phone" aria-hidden="true"></i><a href="tel:+91-9015955514">+91-9015955514</a> </li>
+                        <li><a href="mailto:support@astrosetu.com"><i class="fa fa-envelope-o" aria-hidden="true"></i> support@astrosetu.com</a></li>
                     </ul>
                 </div>
                 <div class="ast_autho_wrapper">
@@ -152,7 +152,7 @@
         <div class="row">
             <div class="col-lg-3 col-md-3 col-sm-3 col-xs-12">
                 <div class="ast_logo">
-                    <a href="/"><img src="images/header/logo.png" alt="Logo" title="Logo"></a>
+                    <a href="/"><img src="images/header/logo.png" alt="Logo" title="Logo" height="40px" ></a>
                     <button class="ast_menu_btn"><i class="fa fa-bars" aria-hidden="true"></i></button>
                 </div>
             </div>

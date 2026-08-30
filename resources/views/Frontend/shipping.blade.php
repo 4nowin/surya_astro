@@ -33,7 +33,7 @@
                 <div class="ast_pp_section">
                     <h2>Shipping and Delivery</h2>
 
-                    <p>At Navgarah, we provide our services electronically, which means there are no physical products to be delivered. Our services, such as horoscope, kundli, Matchmaking etc., will be delivered directly to you via digital platforms.</p>
+                    <p>At Astro Setu, we provide our services electronically, which means there are no physical products to be delivered. Our services, such as horoscope, kundli, Matchmaking etc., will be delivered directly to you via digital platforms.</p>
 
                     <h3>Delivery Method</h3>
                     <p>The delivery of our services will primarily be conducted through the following methods:</p>

@@ -35,7 +35,7 @@
     <section id="buy-tickets" class="section-with-bg wow fadeInUp">
       <div class="container">
         <div class="section-header" style="text-align: center;">
-          <h2>Maha Shivratri 2024 Puja</h2>
+          <h2>Maha Shivratri 2026 Puja</h2>
           <p>Below are the puja plans for Maha Shivratri.</p>
         </div>
         <div class="row">
@@ -64,7 +64,7 @@
                       <h5 class="card-header text-white">For payments please use this QR Code</h5>
                     <div class="card-body">
                       <img src="images/page/qrcode.jpg" alt="">
-                      <p>For confirmation please share your payment screenshot with us on the following WhatsApp number +91 70185 65737</p>
+                      <p>For confirmation please share your payment screenshot with us on the following WhatsApp number +91 90159 55514</p>
                     </div>
                   </div> <hr>
                   <div class="card text-white bg-danger mb-3" style="padding: 5px;">

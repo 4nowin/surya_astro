@@ -17,7 +17,7 @@ class AdminSeeder extends Seeder
     {
          $admin = Admin::create([
             'name' => 'Navgrah Admin', 
-            'email' => 'webmaster@navgarah.com',
+            'email' => 'webmaster@astrosetu.com',
             'password' => bcrypt('12345678')
         ]);
 
@@ -34,15 +34,15 @@ class AdminSeeder extends Seeder
         $astrologers = [
             [
                 'name' => 'Ravinder Sharma',
-                'email' => 'ravinder@navgarah.com',
+                'email' => 'ravinder@astrosetu.com',
             ],
             [
                 'name' => 'Yashpal Sharma',
-                'email' => 'yashpal@navgarah.com',
+                'email' => 'yashpal@astrosetu.com',
             ],
             [
                 'name' => 'Suman Sharma',
-                'email' => 'suman@navgarah.com',
+                'email' => 'suman@astrosetu.com',
             ],
         ];
 
