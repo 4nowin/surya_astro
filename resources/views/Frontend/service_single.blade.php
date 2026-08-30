@@ -197,14 +197,14 @@
             <div class="col-lg-8 col-md-8 col-sm-10 col-xs-12 col-lg-offset-2 col-md-offset-2 col-sm-offset-1 col-xs-offset-0">
                 <div class="ast_heading">
                     <h1>Download our <span>Mobile App</span></h1>
-                    <p>There are many variations of passages of Lorem Ipsum available, but the majority have suffered alteration in some form, by injected hummer.</p>
+                    <p>Want us on the go download our mobile app and you are ready to go take your guidance with you wherever you go.</p>
                 </div>
             </div>
             <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12 col-lg-offset-3 col-md-offset-3">
                 <div class="ast_download_box">
                     <ul>
-                        <li><a href="#"><img src="images/content/download1.png" alt="Download" title="Download"></a></li>
-                        <li><a href="#"><img src="images/content/download2.png" alt="Download" title="Download"></a></li>
+                        <li><a href="https://play.google.com/store/apps/details?id=com.cubebitz.navgarah&hl=en_IN"><img src="images/content/download1.png" alt="Download" title="Download"></a></li>
+                        <li><a href="https://play.google.com/store/apps/details?id=com.cubebitz.navgarah&hl=en_IN"><img src="images/content/download2.png" alt="Download" title="Download"></a></li>
                     </ul>
                 </div>
             </div>

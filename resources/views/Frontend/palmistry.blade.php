@@ -200,7 +200,7 @@
             <div class="col-lg-6 col-md-6 col-sm-12 col-xs-12 col-lg-offset-3 col-md-offset-3">
                 <div class="ast_download_box">
                     <ul>
-                        <li><a href="#"><img src="images/content/download2.png" alt="Download" title="Download"></a></li>
+                        <li><a href="https://play.google.com/store/apps/details?id=com.cubebitz.navgarah&hl=en_IN"><img src="images/content/download2.png" alt="Download" title="Download"></a></li>
                     </ul>
                 </div>
             </div>

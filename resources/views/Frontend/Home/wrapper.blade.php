@@ -12,7 +12,7 @@
                 <div class="ast_download_box">
                     <ul>
                         <!-- <li><a href="#"><img src="images/content/download1.png" alt="Download" title="Download"></a></li> -->
-                        <li><a href="#"><img src="images/content/download2.png" alt="Download" title="Download"></a></li>
+                        <li><a href="https://play.google.com/store/apps/details?id=com.cubebitz.navgarah&hl=en_IN"><img src="images/content/download2.png" alt="Download" title="Download"></a></li>
                     </ul>
                 </div>
             </div>
