@@ -162,7 +162,6 @@ return [
         Jenssegers\Agent\AgentServiceProvider::class,
         Spatie\Permission\PermissionServiceProvider::class,
         Tymon\JWTAuth\Providers\LaravelServiceProvider::class,
-        Collective\Html\HtmlServiceProvider::class,
         /*
          * Application Service Providers...
          */
@@ -171,8 +170,6 @@ return [
         // App\Providers\BroadcastServiceProvider::class,
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
-        Intervention\Image\ImageServiceProvider::class,
-        Tymon\JWTAuth\Providers\LaravelServiceProvider::class,
         Monarobase\CountryList\CountryListServiceProvider::class,
     ])->toArray(),
 
@@ -190,9 +187,6 @@ return [
     'aliases' => Facade::defaultAliases()->merge([
         // 'Example' => App\Facades\Example::class,
         'Agent' => Jenssegers\Agent\Facades\Agent::class,
-        'Form' => Collective\Html\FormFacade::class, 
-        'Html' => Collective\Html\HtmlFacade::class,
-        'Image' => Intervention\Image\Facades\Image::class,
         'JWTAuth' => Tymon\JWTAuth\Facades\JWTAuth::class,
         'JWTFactory' => Tymon\JWTAuth\Facades\JWTFactory::class,
         'Countries' => Monarobase\CountryList\CountryListFacade::class,

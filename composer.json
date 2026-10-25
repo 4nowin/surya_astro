@@ -5,41 +5,37 @@
     "keywords": ["laravel", "framework"],
     "license": "MIT",
     "require": {
-        "php": "^8.1",
+        "php": "^8.3",
         "google/apiclient": "^2.18",
         "google/auth": "^1.47",
-        "google/cloud-firestore": "^1.50",
-        "guzzlehttp/guzzle": "^7.9",
-        "intervention/image": "^2.7",
-        "intervention/imagecache": "^2.5",
+        "google/cloud-firestore": "^1.50|^2.0",
+        "guzzlehttp/guzzle": "^7.9|^8.0",
+        "intervention/image": "^3.0|^4.0",
         "jenssegers/agent": "^2.6",
-        "kreait/firebase-php": "^7.10",
-        "laravel/framework": "^10.10",
-        "laravel/sanctum": "^3.3",
-        "laravel/socialite": "^5.11",
-        "laravel/tinker": "^2.8",
+        "kreait/firebase-php": "^8.0|^7.10",
+        "laravel/framework": "^13.0",
+        "laravel/sanctum": "^4.0",
+        "laravel/socialite": "^5.31",
+        "laravel/tinker": "^3.0",
         "laravel/ui": "^4.6",
-        "laravelcollective/html": "^6.4",
-        "lcobucci/jwt": "^4.3.0",
+        "lcobucci/jwt": "^4.3.0|^5.0",
         "mikehaertl/phpwkhtmltopdf": "^2.5",
         "monarobase/country-list": "^3.4",
         "razorpay/razorpay": "^2.9",
         "simplesoftwareio/simple-qrcode": "^4.2",
-        "spatie/laravel-permission": "^6.3",
-        "spatie/laravel-sitemap": "^7.0",
-        "staudenmeir/eloquent-json-relations": "^1.1",
-        "tinymce/tinymce": "^6.8",
-        "tymon/jwt-auth": "^2.0"
+        "spatie/laravel-permission": "^6.25",
+        "spatie/laravel-sitemap": "^8.0|^7.0",
+        "staudenmeir/eloquent-json-relations": "^1.15|^1.1",
+        "tinymce/tinymce": "^7.0|^6.8",
+        "tymon/jwt-auth": "^2.1|^2.0"
     },
     "require-dev": {
-        "fakerphp/faker": "^1.9.1",
-        "laravel/breeze": "^1.27",
-        "laravel/pint": "^1.0",
-        "laravel/sail": "^1.18",
-        "mockery/mockery": "^1.4.4",
-        "nunomaduro/collision": "^7.0",
-        "phpunit/phpunit": "^10.1",
-        "spatie/laravel-ignition": "^2.0"
+        "fakerphp/faker": "^1.23",
+        "laravel/pint": "^1.27",
+        "laravel/sail": "^1.41",
+        "mockery/mockery": "^1.6",
+        "nunomaduro/collision": "^8.6",
+        "phpunit/phpunit": "^12.5.12"
     },
     "autoload": {
         "psr-4": {
@@ -77,6 +73,13 @@
         "optimize-autoloader": true,
         "preferred-install": "dist",
         "sort-packages": true,
+        "platform": {
+            "php": "8.4.26",
+            "ext-grpc": "1.60.0"
+        },
+        "audit": {
+            "block": false
+        },
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true
