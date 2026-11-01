@@ -65,33 +65,32 @@ class NativeEphemerisResolverTest extends TestCase
         $this->assertGreaterThan(1000000, filesize($glibc228));
     }
 
-    public function test_ubuntu22_is_never_returned_by_default_on_linux(): void
+    public function test_windows_binary_exists_at_canonical_location(): void
     {
-        if (PHP_OS_FAMILY !== 'Linux') {
-            $this->markTestSkipped('Linux platform test skipped on ' . PHP_OS_FAMILY);
-        }
+        $libs = NativeEphemerisResolver::getLibsBasePath();
+        $winDll = $libs . '/jme-windows-x64-2022/jme.dll';
 
-        $resolved = NativeEphemerisResolver::resolve();
-        $this->assertStringNotContainsString('ubuntu22', $resolved, 'Ubuntu 22 binary must NEVER be selected on Linux Hostinger!');
-        $this->assertStringContainsString('jme-linux-x64-glibc228', $resolved);
-        $this->assertFileExists($resolved);
+        $this->assertFileExists($winDll, 'Windows x64 binary must exist in libs/jme-windows-x64-2022/jme.dll');
+        $this->assertGreaterThan(500000, filesize($winDll));
     }
 
-    public function test_windows_resolution_returns_valid_dll_on_windows(): void
+    public function test_automatic_platform_resolution(): void
     {
-        if (PHP_OS_FAMILY !== 'Windows') {
-            $this->markTestSkipped('Windows platform test skipped on ' . PHP_OS_FAMILY);
-        }
-
         $resolved = NativeEphemerisResolver::resolve();
-        $this->assertStringContainsString('jme-windows-x64-2022', $resolved);
-        $this->assertStringEndsWith('jme.dll', $resolved);
         $this->assertFileExists($resolved);
+
+        if (PHP_OS_FAMILY === 'Linux') {
+            $this->assertStringNotContainsString('ubuntu22', $resolved, 'Ubuntu 22 binary must NEVER be selected on Linux Hostinger!');
+            $this->assertStringContainsString('jme-linux-x64-glibc228', $resolved);
+        } elseif (PHP_OS_FAMILY === 'Windows') {
+            $this->assertStringContainsString('jme-windows-x64-2022', $resolved);
+            $this->assertStringEndsWith('jme.dll', $resolved);
+        }
     }
 
     public function test_panchang_service_provider_preserves_bound_instance(): void
     {
-        $dummy = $this->createMock(JmeEphFFI::class);
+        $dummy = (new \ReflectionClass(JmeEphFFI::class))->newInstanceWithoutConstructor();
         $this->app->instance(JmeEphFFI::class, $dummy);
 
         $provider = new PanchangServiceProvider($this->app);

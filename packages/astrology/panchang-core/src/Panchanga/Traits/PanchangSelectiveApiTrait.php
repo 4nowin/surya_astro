@@ -481,7 +481,7 @@ trait PanchangSelectiveApiTrait
                     'sankranti_rashi' => $ctx['sankranti']['rashi'],
                     'sankranti_jd' => $ctx['sankranti']['jd'] ?? null,
                 ],
-                'Yoga_Windows' => array_map(
+                'Yoga_Windows' => $skipFestivals ? [] : array_map(
                     fn(array $interval): array => $this->formatTransitionWindow($interval, 'yoga', $tz),
                     $this->intervalTracker->collectYogaIntervals($ctx['jds']['sunrise'], $ctx['jds']['next_sunrise']),
                 ),
