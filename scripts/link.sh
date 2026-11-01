@@ -1,4 +1,4 @@
-cd /home/u736464956/domains/cubebitz.com/public_html/kiraya_mitra_web || exit 1
+cd /home/u736464956/domains/cubebitz.com/public_html/astrosetu_web || exit 1
 
 SHARED="/home/u736464956/shared-laravel/vendor"
 BACKUP="vendor_backup_$(date +%Y%m%d_%H%M%S)"
