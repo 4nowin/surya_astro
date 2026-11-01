@@ -43,7 +43,9 @@ final class JmeEphServiceProvider extends ServiceProvider
         );
 
         $this->app->singleton('jmeeph', function ($app) {
-            $libraryPath = $app->make('config')->get('jmeeph.library_path');
+            $libraryPath = $app->make('config')->get('jmeeph.library_path')
+                ?? $app->make('config')->get('panchang.library_path')
+                ?? (class_exists(\App\Services\Astrology\NativeEphemerisResolver::class) ? \App\Services\Astrology\NativeEphemerisResolver::resolve() : null);
             $ffi = new JmeEphFFI($libraryPath);
             $ephemerisPath = $app->make('config')->get('jmeeph.ephemeris_path');
             $engine = strtoupper((string) $app->make('config')->get('jmeeph.engine', $app->make('config')->get('jmeeph.calculation_path', 'AUTO')));

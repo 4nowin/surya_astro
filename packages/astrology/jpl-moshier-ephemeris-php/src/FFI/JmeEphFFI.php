@@ -1053,6 +1053,29 @@ CDEF;
 
     private function defaultLibraryPath(): string
     {
+        // 1. Astro Setu central authoritative resolver
+        if (class_exists(\App\Services\Astrology\NativeEphemerisResolver::class)) {
+            try {
+                return \App\Services\Astrology\NativeEphemerisResolver::resolve();
+            } catch (\Throwable $e) {
+                // If central resolver failed (e.g. in standalone package test), proceed to package fallback
+            }
+        }
+
+        // 2. Laravel config overrides
+        if (function_exists('config')) {
+            $configPath = config('panchang.library_path') ?? config('jmeeph.library_path');
+            if (is_string($configPath) && $configPath !== '' && file_exists($configPath)) {
+                return $configPath;
+            }
+        }
+
+        // 3. Environment variable override
+        $envPath = getenv('JME_LIBRARY_PATH') ?: ($_ENV['JME_LIBRARY_PATH'] ?? null);
+        if (is_string($envPath) && $envPath !== '' && file_exists($envPath)) {
+            return $envPath;
+        }
+
         $family = PHP_OS_FAMILY;
         $arch = strtolower(php_uname('m'));
         $arch = match (true) {
@@ -1067,6 +1090,7 @@ CDEF;
             default => 'libjme.so',
         };
 
+        $libsDir = dirname(__DIR__, 2) . '/libs';
         $dir = '';
         if ($family === 'Windows') {
             $dir = 'jme-windows-x64-2022';
@@ -1076,7 +1100,6 @@ CDEF;
                 $majorDarwin = (int) explode('.', $darwinRelease)[0];
                 $version = ($majorDarwin >= 24) ? '15' : '14';
                 $dir = 'jme-macos-arm64-' . $version;
-                $libsDir = dirname(__DIR__, 2) . '/libs';
                 if (!file_exists($libsDir . '/' . $dir)) {
                     $dir = ($version === '15') ? 'jme-macos-arm64-14' : 'jme-macos-arm64-15';
                 }
@@ -1085,6 +1108,11 @@ CDEF;
             }
         } else {
             // Linux / other Unix
+            // Priority 1: Check glibc 2.28 compatible standalone binary (Hostinger CloudLinux / CentOS 8)
+            if ($arch === 'x64' && file_exists($libsDir . '/jme-linux-x64-glibc228/libjme.so')) {
+                return $libsDir . '/jme-linux-x64-glibc228/libjme.so';
+            }
+
             $glibcVersion = null;
             if (function_exists('shell_exec')) {
                 $output = @shell_exec('getconf GNU_LIBC_VERSION 2>&1');
@@ -1116,17 +1144,24 @@ CDEF;
                 }
             }
 
+            // On Hostinger or other glibc < 2.35 systems, refuse silent fallback to ubuntu22
+            if ($glibcVersion !== null && $glibcVersion < 2.35) {
+                throw new \RuntimeException(
+                    "Detected glibc version {$glibcVersion} (below 2.35). Ubuntu 22/24 binaries require glibc 2.35+ and cannot load. " .
+                    "The glibc 2.28 compatible library at 'libs/jme-linux-x64-glibc228/libjme.so' was not found."
+                );
+            }
+
             $suffix = ($glibcVersion !== null && $glibcVersion >= 2.39) ? 'ubuntu24' : 'ubuntu22';
             $dir = 'jme-linux-' . $arch . '-' . $suffix;
 
             // Check fallback if dir does not exist
-            $libsDir = dirname(__DIR__, 2) . '/libs';
             if (!file_exists($libsDir . '/' . $dir)) {
                 $dir = 'jme-linux-' . $arch . '-' . ($suffix === 'ubuntu24' ? 'ubuntu22' : 'ubuntu24');
             }
         }
 
-        return dirname(__DIR__, 2) . '/libs/' . $dir . '/' . $file;
+        return $libsDir . '/' . $dir . '/' . $file;
     }
 
     private function prepareLibraryDirectory(string $libraryPath): void

@@ -57,23 +57,29 @@ class PanchangServiceProvider extends ServiceProvider
         // Core services (no dependencies)
         $this->app->singleton(AstroCore::class);
 
-        // JME FFI
-        $this->app->singleton(JmeEphFFI::class, function ($app): JmeEphFFI {
-            $jme = new JmeEphFFI;
+        // JME FFI (preserve pre-bound instance if already registered)
+        if (!$this->app->bound(JmeEphFFI::class)) {
+            $this->app->singleton(JmeEphFFI::class, function ($app): JmeEphFFI {
+                $libraryPath = config('panchang.library_path')
+                    ?? config('jmeeph.library_path')
+                    ?? (class_exists(\App\Services\Astrology\NativeEphemerisResolver::class) ? \App\Services\Astrology\NativeEphemerisResolver::resolve() : null);
 
-            // Configure ephemeris path from config
-            $ephePath = config('panchang.ephe_path');
-            if (is_string($ephePath) && $ephePath !== '' && file_exists($ephePath)) {
-                $jme->jme_set_ephemeris_path($ephePath);
-            }
+                $jme = new JmeEphFFI($libraryPath);
 
-            $nativeEngine = JmeRuntime::nativeEngineName((string) config('panchang.jme_settings.mode', 'jpl'));
-            $jme->configureEngine($nativeEngine, is_string($ephePath) && $ephePath !== '' ? $ephePath : null);
-            JmeRuntime::assertSunMoonEngine($jme, $nativeEngine);
-            JmeRuntime::setTrueCitra($jme);
+                // Configure ephemeris path from config
+                $ephePath = config('panchang.ephe_path');
+                if (is_string($ephePath) && $ephePath !== '' && file_exists($ephePath)) {
+                    $jme->jme_set_ephemeris_path($ephePath);
+                }
 
-            return $jme;
-        });
+                $nativeEngine = JmeRuntime::nativeEngineName((string) config('panchang.jme_settings.mode', 'jpl'));
+                $jme->configureEngine($nativeEngine, is_string($ephePath) && $ephePath !== '' ? $ephePath : null);
+                JmeRuntime::assertSunMoonEngine($jme, $nativeEngine);
+                JmeRuntime::setTrueCitra($jme);
+
+                return $jme;
+            });
+        }
 
         // Astronomy layer
         $this->app->singleton(AstronomyService::class, fn($app): AstronomyService => new AstronomyService($app->make(JmeEphFFI::class)));

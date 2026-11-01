@@ -245,20 +245,32 @@ The command will bind to `packages/astrology/jpl-moshier-ephemeris-php/libs/jme-
 
 ---
 
-## 6. Verification Status Matrix
+## 6. Central Native Library Resolver (`NativeEphemerisResolver`)
+
+During Hostinger deployment testing, direct planetary calculations succeeded with `jme-linux-x64-glibc228/libjme.so`, but the subsequent Panchang calculation failed because `PanchangServiceProvider` instantiated `new JmeEphFFI` without arguments, triggering `defaultLibraryPath()` in `JmeEphFFI.php` which hardcoded a fallback to `jme-linux-x64-ubuntu22/libjme.so`.
+
+To eliminate competing loaders:
+1. Created `App\Services\Astrology\NativeEphemerisResolver` as the single authoritative resolver.
+2. Updated `PanchangServiceProvider` to preserve pre-bound instances and resolve `$libraryPath` from `NativeEphemerisResolver`.
+3. Patched `JmeEphFFI::defaultLibraryPath()` on Linux to strictly prioritize `jme-linux-x64-glibc228` and forbid fallback to Ubuntu 22 on glibc < 2.35.
+
+---
+
+## 7. Verification Status Matrix
 
 | Component / Task | Status | Environment & Verification Method |
 | :--- | :--- | :--- |
 | **glibc 2.28 Baseline Inspection** | **INSPECTED & CONFIRMED** | Hostinger SSH: `ldd --version` and `getconf GNU_LIBC_VERSION` returned 2.28. |
 | **Option B Binary Build (`libjme.so`)** | **BUILT & LOCALLY VERIFIED** | Compiled with `zig cc -target x86_64-linux-gnu.2.28`; verified with `readelf -V` (max `GLIBC_2.16`) and executed via `test_jme.c` in Linux. |
 | **Option A Binary Build (+ CALCEPH)** | **BUILT & LOCALLY VERIFIED** | Compiled CALCEPH 5.0.1 and `libjme.so` with `$ORIGIN` RUNPATH; verified with `readelf -d` and `readelf -V` (max `GLIBC_2.28`). |
+| **Central Resolver (`NativeEphemerisResolver`)** | **IMPLEMENTED & LOCALLY TESTED** | Enforces glibc 2.28 binary on Linux; verified via `tests/Unit/Astrology/NativeEphemerisResolverTest.php`. |
+| **Panchang Provider Singleton Fix** | **IMPLEMENTED & LOCALLY TESTED** | Preserves pre-bound instance and binds resolved library path; verified via unit test. |
 | **Festival Bypass in Panchang Core** | **IMPLEMENTED & VERIFIED** | Added `skip_festivals` option to `PanchangSelectiveApiTrait`; skips expensive `resolveFestivalsForDate` for sub-second execution. |
-| **POC Command glibc 2.28 Binding** | **IMPLEMENTED & VERIFIED** | Updated `TestAstrologyPoc.php` to strictly load `libs/jme-linux-x64-glibc228/libjme.so` on Linux without silent fallbacks. |
 | **Hostinger Deployment & Runtime Test**| **PENDING HOSTINGER RUN** | Awaiting git push, SSH git pull, and execution of `php artisan astrology:poc` on Hostinger. |
 
 ---
 
-## 7. Diagnostic Matrix & Failure Triage
+## 8. Diagnostic Matrix & Failure Triage
 
 | Symptom / Error | Root Cause | Resolution Strategy |
 | :--- | :--- | :--- |

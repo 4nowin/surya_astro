@@ -45,19 +45,17 @@ class AstrologyEngineAccuracyTest extends TestCase
             $loader->register();
         }
 
-        // Determine library
-        $isWindows = PHP_OS_FAMILY === 'Windows';
-        if ($isWindows) {
-            $this->activeLibraryPath = base_path('packages/astrology/jpl-moshier-ephemeris-php/libs/jme-windows-x64-2022/jme.dll');
-            $this->activeLibraryTier = 'Windows x64 Native DLL';
-        } else {
-            $this->activeLibraryPath = base_path('packages/astrology/jpl-moshier-ephemeris-php/libs/jme-linux-x64-glibc228/libjme.so');
-            $this->activeLibraryTier = 'Linux x86_64 glibc 2.28 Standalone Moshier';
-        }
+        // Determine library using central resolver
+        $this->activeLibraryPath = \App\Services\Astrology\NativeEphemerisResolver::resolve();
+        $this->activeLibraryTier = PHP_OS_FAMILY === 'Windows'
+            ? 'Windows x64 Native DLL'
+            : 'Linux x86_64 glibc 2.28 Standalone Moshier';
 
-        if (!file_exists($this->activeLibraryPath)) {
-            $this->markTestSkipped("Required native binary not found at: {$this->activeLibraryPath}");
-        }
+        config([
+            'panchang.library_path' => $this->activeLibraryPath,
+            'jmeeph.library_path' => $this->activeLibraryPath,
+            'panchang.jme_settings.mode' => 'moshier',
+        ]);
 
         $this->jme = new JmeEphFFI($this->activeLibraryPath);
         $this->jme->configureEngine('MOSHIER');

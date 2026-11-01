@@ -90,39 +90,27 @@ class TestAstrologyPoc extends Command
         // 2. Load Native Ephemeris Library via FFI
         $this->info('1. Loading Native Ephemeris Library...');
         try {
-            $isWindows = PHP_OS_FAMILY === 'Windows';
             $customLib = (string) $this->option('lib');
             $useCalceph = (bool) $this->option('calceph');
 
-            if ($customLib !== '' && file_exists($customLib)) {
-                $targetLib = $customLib;
-                $libTier = 'User-specified via --lib';
-            } elseif ($isWindows) {
-                $targetLib = base_path('packages/astrology/jpl-moshier-ephemeris-php/libs/jme-windows-x64-2022/jme.dll');
-                $libTier = 'Windows x64 Native DLL';
-            } else {
-                // Linux resolution: Strictly target Hostinger glibc 2.28 compatible builds
-                $glibc228Lib = base_path('packages/astrology/jpl-moshier-ephemeris-php/libs/jme-linux-x64-glibc228/libjme.so');
-                $glibc228CalcephLib = base_path('packages/astrology/jpl-moshier-ephemeris-php/libs/jme-linux-x64-glibc228-calceph/libjme.so');
+            $targetLib = \App\Services\Astrology\NativeEphemerisResolver::resolve(
+                $customLib !== '' ? $customLib : null,
+                $useCalceph
+            );
 
-                if ($useCalceph) {
-                    if (!file_exists($glibc228CalcephLib)) {
-                        throw new \RuntimeException("Option A requested (--calceph) but binary not found at: {$glibc228CalcephLib}");
-                    }
-                    $targetLib = $glibc228CalcephLib;
-                    $libTier = 'Hostinger glibc 2.28 + CALCEPH 5.0.1 (Option A)';
-                } else {
-                    if (!file_exists($glibc228Lib)) {
-                        throw new \RuntimeException("glibc 2.28 standalone Moshier library not found at: {$glibc228Lib}");
-                    }
-                    $targetLib = $glibc228Lib;
-                    $libTier = 'Hostinger glibc 2.28 standalone Moshier (Option B - max glibc 2.16)';
-                }
-            }
+            $libTier = match (true) {
+                $customLib !== '' => 'User-specified via --lib',
+                PHP_OS_FAMILY === 'Windows' => 'Windows x64 Native DLL',
+                $useCalceph => 'Hostinger glibc 2.28 + CALCEPH 5.0.1 (Option A)',
+                default => 'Hostinger glibc 2.28 standalone Moshier (Option B - max glibc 2.16)',
+            };
 
-            if (!file_exists($targetLib)) {
-                throw new \RuntimeException("Selected library not found at: {$targetLib}");
-            }
+            // Set global config so all service providers and sub-services use this exact library
+            config([
+                'panchang.library_path' => $targetLib,
+                'jmeeph.library_path' => $targetLib,
+                'panchang.jme_settings.mode' => 'moshier',
+            ]);
 
             $jme = new JmeEphFFI($targetLib);
             $buf = $jme->getFFI()->new('char[128]');
@@ -390,14 +378,18 @@ class TestAstrologyPoc extends Command
 
         $report['execution_metrics'] = [
             'total_execution_time_ms' => round($overallElapsed, 2),
+            'planetary_time_ms' => round($planetElapsed, 2),
+            'panchang_time_ms' => isset($panchangElapsed) ? round($panchangElapsed, 2) : null,
             'memory_used_mb' => round(($memEnd - $memStart) / 1024 / 1024, 2),
             'memory_peak_mb' => round($memPeak / 1024 / 1024, 2),
         ];
 
         $this->line('');
         $this->alert(sprintf(
-            "POC EXECUTION COMPLETE — Total Time: %.2f ms | Peak Memory: %.2f MB",
+            "POC EXECUTION COMPLETE\nTotal Time: %.2f ms | Panchang Time: %.2f ms | Planetary Time: %.2f ms | Peak Memory: %.2f MB",
             $overallElapsed,
+            $panchangElapsed ?? 0.0,
+            $planetElapsed,
             $memPeak / 1024 / 1024
         ));
 
