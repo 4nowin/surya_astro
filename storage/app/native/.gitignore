@@ -1,0 +1,11 @@
+# Ignore compiled native binaries across platforms
+*.so
+*.dll
+*.dylib
+*.o
+*.a
+
+# Do not ignore source or readme
+!test_lib.c
+!.gitignore
+!README.md

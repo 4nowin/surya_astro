@@ -141,6 +141,10 @@ Route::group([
     Route::post('/fcm/send', [NotificationController::class, 'send'])->name('fcm.send');
 
     Route::post('settings/inline-edit', [SettingsController::class, "inlineEdit"]);
+
+    // Temporary FFI / Astrology Engine Diagnostics (Protected by auth:admin)
+    Route::get('/diagnostics/astrology-engine', [App\Http\Controllers\Admin\AstrologyDiagnosticController::class, 'index'])->name('admin.diagnostics.astrology');
+    Route::get('/diagnostics/astrology-engine/export', [App\Http\Controllers\Admin\AstrologyDiagnosticController::class, 'export'])->name('admin.diagnostics.astrology.export');
 });
 
 Route::get('/clear-cache', function () {
