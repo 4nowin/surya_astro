@@ -487,17 +487,23 @@ trait PanchangSelectiveApiTrait
                 ),
             ];
 
-            $nextDay = $date->addDay();
-            $tomorrowSnapshot = $this->getFestivalSnapshot($nextDay, $lat, $lon, $tz, $elevation, null, $calendarType, false);
-            $yesterdaySnapshot = $this->getFestivalSnapshot($date->subDay(), $lat, $lon, $tz, $elevation, null, $calendarType, false);
-            $festivals = $this->festivalService->resolveFestivalsForDate(
-                $date,
-                $todaySnapshot,
-                $tomorrowSnapshot,
-                $yesterdaySnapshot,
-                fn(CarbonImmutable $historicalDate): array => $this->getFestivalSnapshot($historicalDate, $lat, $lon, $tz, $elevation, null, $calendarType, false),
-            );
-            $festivals = $this->retainFestivalsForDate($festivals, $date->toDateString());
+            $skipFestivals = !empty($options['skip_festivals']) || (!empty($defaultConfig['skip_festivals']) && !isset($options['skip_festivals']));
+
+            if ($skipFestivals) {
+                $festivals = [];
+            } else {
+                $nextDay = $date->addDay();
+                $tomorrowSnapshot = $this->getFestivalSnapshot($nextDay, $lat, $lon, $tz, $elevation, null, $calendarType, false);
+                $yesterdaySnapshot = $this->getFestivalSnapshot($date->subDay(), $lat, $lon, $tz, $elevation, null, $calendarType, false);
+                $festivals = $this->festivalService->resolveFestivalsForDate(
+                    $date,
+                    $todaySnapshot,
+                    $tomorrowSnapshot,
+                    $yesterdaySnapshot,
+                    fn(CarbonImmutable $historicalDate): array => $this->getFestivalSnapshot($historicalDate, $lat, $lon, $tz, $elevation, null, $calendarType, false),
+                );
+                $festivals = $this->retainFestivalsForDate($festivals, $date->toDateString());
+            }
 
             $isth = $this->calculateIshtkaal($relSunrise, $ctx['time']['birth_at'], $tz, $sunset, $nextSunrise);
             $panchanga = [
@@ -684,7 +690,7 @@ trait PanchangSelectiveApiTrait
                 'Mahadiksha_Guidance' => $this->buildMahadikshaGuidance($hinduMonth, $sunLon),
                 'Day_Night_Measures' => $this->buildDayNightMeasures($relSunrise, $sunset, $ctx['sun']['next_sunrise']),
                 'Festivals' => $festivals,
-                'Daily_Observances' => $this->festivalService->getDailyObservances($todaySnapshot),
+                'Daily_Observances' => $skipFestivals ? [] : $this->festivalService->getDailyObservances($todaySnapshot),
                 'Units' => $this->buildDayDetailsUnits(),
             ];
 

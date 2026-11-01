@@ -28,6 +28,9 @@ class TestAstrologyPoc extends Command
                             {--lat=28.6139 : Geographic Latitude (default: New Delhi)}
                             {--lon=77.2090 : Geographic Longitude (default: New Delhi)}
                             {--tz=Asia/Kolkata : Timezone identifier}
+                            {--lib= : Custom path to libjme shared library}
+                            {--calceph : Use CALCEPH-enabled glibc 2.28 build instead of standalone Moshier}
+                            {--with-festivals : Include full annual festival scan (adds ~25s computation)}
                             {--json : Output report as raw JSON}';
 
     /**
@@ -88,31 +91,55 @@ class TestAstrologyPoc extends Command
         $this->info('1. Loading Native Ephemeris Library...');
         try {
             $isWindows = PHP_OS_FAMILY === 'Windows';
-            $defaultLib = $isWindows
-                ? base_path('packages/astrology/jpl-moshier-ephemeris-php/libs/jme-windows-x64-2022/jme.dll')
-                : base_path('packages/astrology/jpl-moshier-ephemeris-php/libs/jme-linux-x64-ubuntu22/libjme.so');
+            $customLib = (string) $this->option('lib');
+            $useCalceph = (bool) $this->option('calceph');
 
-            // Fallback for newer Linux kernels if ubuntu22 is not present
-            if (!$isWindows && !file_exists($defaultLib)) {
-                $altLib = base_path('packages/astrology/jpl-moshier-ephemeris-php/libs/jme-linux-x64-ubuntu24/libjme.so');
-                if (file_exists($altLib)) {
-                    $defaultLib = $altLib;
+            if ($customLib !== '' && file_exists($customLib)) {
+                $targetLib = $customLib;
+                $libTier = 'User-specified via --lib';
+            } elseif ($isWindows) {
+                $targetLib = base_path('packages/astrology/jpl-moshier-ephemeris-php/libs/jme-windows-x64-2022/jme.dll');
+                $libTier = 'Windows x64 Native DLL';
+            } else {
+                // Linux resolution: Strictly target Hostinger glibc 2.28 compatible builds
+                $glibc228Lib = base_path('packages/astrology/jpl-moshier-ephemeris-php/libs/jme-linux-x64-glibc228/libjme.so');
+                $glibc228CalcephLib = base_path('packages/astrology/jpl-moshier-ephemeris-php/libs/jme-linux-x64-glibc228-calceph/libjme.so');
+
+                if ($useCalceph) {
+                    if (!file_exists($glibc228CalcephLib)) {
+                        throw new \RuntimeException("Option A requested (--calceph) but binary not found at: {$glibc228CalcephLib}");
+                    }
+                    $targetLib = $glibc228CalcephLib;
+                    $libTier = 'Hostinger glibc 2.28 + CALCEPH 5.0.1 (Option A)';
+                } else {
+                    if (!file_exists($glibc228Lib)) {
+                        throw new \RuntimeException("glibc 2.28 standalone Moshier library not found at: {$glibc228Lib}");
+                    }
+                    $targetLib = $glibc228Lib;
+                    $libTier = 'Hostinger glibc 2.28 standalone Moshier (Option B - max glibc 2.16)';
                 }
             }
 
-            $jme = new JmeEphFFI($defaultLib);
+            if (!file_exists($targetLib)) {
+                throw new \RuntimeException("Selected library not found at: {$targetLib}");
+            }
+
+            $jme = new JmeEphFFI($targetLib);
             $buf = $jme->getFFI()->new('char[128]');
             $jme->jme_version($buf, 128);
             $nativeVersion = FFI::string($buf);
 
             $report['native_library'] = [
                 'status' => 'SUCCESS',
-                'library_path' => $defaultLib,
+                'library_path' => $targetLib,
+                'library_tier' => $libTier,
+                'library_size_bytes' => filesize($targetLib),
                 'engine_version' => $nativeVersion,
             ];
 
-            $this->line("   <info>✓</info> Native C Library loaded successfully: version {$nativeVersion}");
-            $this->line("   <comment>→</comment> Path: {$defaultLib}");
+            $this->line("   <info>✓</info> Native C Library loaded: version {$nativeVersion}");
+            $this->line("   <comment>→</comment> Path: {$targetLib}");
+            $this->line("   <comment>→</comment> Tier: {$libTier} (" . round(filesize($targetLib) / 1024 / 1024, 2) . " MB)");
         } catch (Throwable $e) {
             $this->error("   ✗ Failed to load native ephemeris library: " . $e->getMessage());
             $report['native_library'] = [
@@ -262,7 +289,19 @@ class TestAstrologyPoc extends Command
             $panchangService = app()->make(PanchangService::class);
             $calcDate = CarbonImmutable::parse($dateStr, $tz);
 
-            $panchanga = $panchangService->getPanchanga($calcDate, $lat, $lon, $tz);
+            $withFestivals = (bool) $this->option('with-festivals');
+            $options = ['skip_festivals' => !$withFestivals];
+
+            $panchanga = $panchangService->getPanchanga(
+                $calcDate,
+                $lat,
+                $lon,
+                $tz,
+                0.0,
+                null,
+                \JayeshMepani\PanchangCore\Core\Enums\CalendarType::Amanta,
+                $options
+            );
             $rahuKaalData = $panchangService->getSection($calcDate, $lat, $lon, $tz, 'Rahu_Kaal_Gulika_Yamaganda');
 
             // Format Panchang attributes
@@ -333,6 +372,8 @@ class TestAstrologyPoc extends Command
                     'gulika' => $rahuKaalData['Gulika'] ?? null,
                     'yamaganda' => $rahuKaalData['Yamaganda'] ?? null,
                 ],
+                'festivals_calculated' => $withFestivals,
+                'festivals' => $withFestivals ? ($panchanga['Festivals'] ?? []) : [],
             ];
         } catch (Throwable $e) {
             $this->error("   ✗ Failed to calculate Panchang: " . $e->getMessage());
