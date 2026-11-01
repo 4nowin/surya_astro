@@ -448,6 +448,11 @@ trait PanchangSelectiveApiTrait
             $calculationAt = $ctx['time']['calculation_at'];
             $moonriseJd = $moonrise instanceof CarbonImmutable ? $this->toJulianDayFromCarbon($moonrise, $tz) : null;
 
+            $yogaWindows = $skipFestivals ? [] : array_map(
+                fn(array $interval): array => $this->formatTransitionWindow($interval, 'yoga', $tz),
+                $this->intervalTracker->collectYogaIntervals($ctx['jds']['sunrise'], $ctx['jds']['next_sunrise']),
+            );
+
             $todaySnapshot = [
                 'Tithi' => $tithi,
                 'Nakshatra' => ['name' => $ctx['panchanga']['nakshatra']['name']],
@@ -484,11 +489,9 @@ trait PanchangSelectiveApiTrait
                     'observer_timezone' => $tz,
                     'sankranti_rashi' => $ctx['sankranti']['rashi'],
                     'sankranti_jd' => $ctx['sankranti']['jd'] ?? null,
+                    'Yoga_Windows' => $yogaWindows,
                 ],
-                'Yoga_Windows' => $skipFestivals ? [] : array_map(
-                    fn(array $interval): array => $this->formatTransitionWindow($interval, 'yoga', $tz),
-                    $this->intervalTracker->collectYogaIntervals($ctx['jds']['sunrise'], $ctx['jds']['next_sunrise']),
-                ),
+                'Yoga_Windows' => $yogaWindows,
             ];
 
             if ($skipFestivals) {
@@ -636,6 +639,7 @@ trait PanchangSelectiveApiTrait
                     'Calendar_Type' => $calendarType->value,
                 ],
                 'Resolution_Context' => $todaySnapshot['Resolution_Context'],
+                'Yoga_Windows' => $todaySnapshot['Yoga_Windows'],
                 'Chart_Auxiliary' => [
                     'Sun_Sign' => Rasi::from(AstroCore::getSign($currentSunLon))->getName(),
                     'Moon_Sign' => Rasi::from(AstroCore::getSign($currentMoonLon))->getName(),

@@ -352,6 +352,7 @@ class AstrologyEngineAccuracyTest extends TestCase
         $this->assertNotEmpty($basic['Panchanga']['Sunset']);
 
         // 2. Festival-only Yoga intervals are bypassed
+        $this->assertEmpty($basic['Yoga_Windows']);
         $this->assertEmpty($basic['Resolution_Context']['Yoga_Windows']);
 
         // 3. Festival resolution and daily observances are bypassed
@@ -392,6 +393,7 @@ class AstrologyEngineAccuracyTest extends TestCase
         $basic = $selected['Basic_Details'];
 
         // 1. Yoga interval calculation is NOT skipped
+        $this->assertNotEmpty($basic['Yoga_Windows']);
         $this->assertNotEmpty($basic['Resolution_Context']['Yoga_Windows']);
 
         // 2. Core Panchanga fields remain intact
@@ -429,6 +431,7 @@ class AstrologyEngineAccuracyTest extends TestCase
         $basic = $selected['Basic_Details'];
 
         // Default behavior preserves normal Yoga interval calculations
+        $this->assertNotEmpty($basic['Yoga_Windows']);
         $this->assertNotEmpty($basic['Resolution_Context']['Yoga_Windows']);
         $this->assertNotEmpty($basic['Panchanga']['Tithi']['name']);
     }
