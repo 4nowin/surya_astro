@@ -402,6 +402,10 @@ trait PanchangSelectiveApiTrait
                 return $ctx['basic'];
             }
 
+            $skipFestivals = array_key_exists('skip_festivals', $options)
+                ? (bool) $options['skip_festivals']
+                : (bool) ($defaultConfig['skip_festivals'] ?? false);
+
             $ensureSun();
             $ensureTimeContext();
             $ensureLongitudes();
@@ -486,8 +490,6 @@ trait PanchangSelectiveApiTrait
                     $this->intervalTracker->collectYogaIntervals($ctx['jds']['sunrise'], $ctx['jds']['next_sunrise']),
                 ),
             ];
-
-            $skipFestivals = !empty($options['skip_festivals']) || (!empty($defaultConfig['skip_festivals']) && !isset($options['skip_festivals']));
 
             if ($skipFestivals) {
                 $festivals = [];

@@ -308,4 +308,128 @@ class AstrologyEngineAccuracyTest extends TestCase
         // Target: < 750 ms on shared hosting multi-tenant CPU quotas (Hostinger observed 554 ms).
         $this->assertLessThan(750.0, $elapsedMs, sprintf('Panchang calculation took %.2f ms (exceeded 750ms SLA)', $elapsedMs));
     }
+
+    /**
+     * Test 8: Festival bypass enabled contract verification.
+     * Verifies that when skip_festivals=true:
+     * - Calculation completes with zero undefined variable errors.
+     * - Yoga_Windows in Resolution_Context is empty (bypassing heavy bisections).
+     * - Festivals and Daily_Observances are empty arrays.
+     * - Core Panchanga attributes (Tithi, Nakshatra, Vara, Sunrise, Sunset) remain fully populated.
+     */
+    public function test_panchang_festival_bypass_enabled(): void
+    {
+        app()->instance(JmeEphFFI::class, $this->jme);
+        config(['panchang.jme_settings.mode' => 'moshier']);
+
+        $provider = new PanchangServiceProvider(app());
+        $provider->register();
+
+        /** @var PanchangService $panchangService */
+        $panchangService = app()->make(PanchangService::class);
+        $date = CarbonImmutable::parse('2026-11-01', 'Asia/Kolkata');
+
+        $selected = $panchangService->getSelectedDetails(
+            $date,
+            28.6139,
+            77.2090,
+            'Asia/Kolkata',
+            ['Basic_Details'],
+            0.0,
+            null,
+            CalendarType::Amanta,
+            ['skip_festivals' => true]
+        );
+
+        $this->assertArrayHasKey('Basic_Details', $selected);
+        $basic = $selected['Basic_Details'];
+
+        // 1. Core Panchang fields remain available
+        $this->assertNotEmpty($basic['Panchanga']['Tithi']['name']);
+        $this->assertNotEmpty($basic['Panchanga']['Nakshatra']['name']);
+        $this->assertSame('Sunday', $basic['Panchanga']['Vara']['name']);
+        $this->assertNotEmpty($basic['Panchanga']['Sunrise']);
+        $this->assertNotEmpty($basic['Panchanga']['Sunset']);
+
+        // 2. Festival-only Yoga intervals are bypassed
+        $this->assertEmpty($basic['Resolution_Context']['Yoga_Windows']);
+
+        // 3. Festival resolution and daily observances are bypassed
+        $this->assertEmpty($basic['Festivals']);
+        $this->assertEmpty($basic['Daily_Observances']);
+    }
+
+    /**
+     * Test 9: Festival bypass disabled contract verification.
+     * Verifies that when skip_festivals=false:
+     * - Normal festival-related path remains enabled.
+     * - Yoga_Windows is calculated and not empty.
+     */
+    public function test_panchang_festival_bypass_disabled(): void
+    {
+        app()->instance(JmeEphFFI::class, $this->jme);
+        config(['panchang.jme_settings.mode' => 'moshier']);
+
+        $provider = new PanchangServiceProvider(app());
+        $provider->register();
+
+        /** @var PanchangService $panchangService */
+        $panchangService = app()->make(PanchangService::class);
+        $date = CarbonImmutable::parse('2026-11-01', 'Asia/Kolkata');
+
+        $selected = $panchangService->getSelectedDetails(
+            $date,
+            28.6139,
+            77.2090,
+            'Asia/Kolkata',
+            ['Basic_Details'],
+            0.0,
+            null,
+            CalendarType::Amanta,
+            ['skip_festivals' => false]
+        );
+
+        $basic = $selected['Basic_Details'];
+
+        // 1. Yoga interval calculation is NOT skipped
+        $this->assertNotEmpty($basic['Resolution_Context']['Yoga_Windows']);
+
+        // 2. Core Panchanga fields remain intact
+        $this->assertNotEmpty($basic['Panchanga']['Tithi']['name']);
+    }
+
+    /**
+     * Test 10: Default behavior when skip_festivals is omitted.
+     * Verifies that default behavior preserves normal festival path.
+     */
+    public function test_panchang_festival_bypass_default_behavior(): void
+    {
+        app()->instance(JmeEphFFI::class, $this->jme);
+        config(['panchang.jme_settings.mode' => 'moshier']);
+
+        $provider = new PanchangServiceProvider(app());
+        $provider->register();
+
+        /** @var PanchangService $panchangService */
+        $panchangService = app()->make(PanchangService::class);
+        $date = CarbonImmutable::parse('2026-11-01', 'Asia/Kolkata');
+
+        $selected = $panchangService->getSelectedDetails(
+            $date,
+            28.6139,
+            77.2090,
+            'Asia/Kolkata',
+            ['Basic_Details'],
+            0.0,
+            null,
+            CalendarType::Amanta,
+            []
+        );
+
+        $basic = $selected['Basic_Details'];
+
+        // Default behavior preserves normal Yoga interval calculations
+        $this->assertNotEmpty($basic['Resolution_Context']['Yoga_Windows']);
+        $this->assertNotEmpty($basic['Panchanga']['Tithi']['name']);
+    }
 }
