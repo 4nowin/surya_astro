@@ -1,0 +1,64 @@
+name: Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: PHP ${{ matrix.php }} on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macos-latest
+        php:
+          - '8.3'
+          - '8.4'
+          - '8.5'
+
+    env:
+      JME_SKIP_DOWNLOAD: '1'
+      JME_SOURCE_PATH: ${{ github.workspace }}/native
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Checkout native JME
+        uses: actions/checkout@v4
+        with:
+          repository: jayeshmepani/jpl-ephemeris
+          ref: main
+          path: native
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: ffi, fileinfo
+          coverage: none
+
+      - name: Prepare macOS runtime library aliases
+        if: runner.os == 'macOS'
+        run: |
+          for dir in libs/macos-*; do
+            if [ -f "$dir/libcalceph.dylib" ] && [ ! -e "$dir/libcalceph.2.0.5.dylib" ]; then
+              ln -s libcalceph.dylib "$dir/libcalceph.2.0.5.dylib"
+            fi
+          done
+
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress
+
+      - name: Run quality checks
+        run: composer quality

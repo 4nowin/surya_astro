@@ -1,0 +1,131 @@
+{
+    "name": "jayeshmepani/jpl-moshier-ephemeris-php",
+    "description": "PHP FFI wrapper for the JME native ephemeris library with direct jme_* API access and bundled runtime library support",
+    "type": "library",
+    "keywords": [
+        "astrology",
+        "astronomy",
+        "ffi",
+        "ephemeris",
+        "php-ffi",
+        "vedic-astrology",
+        "jyotish",
+        "horoscope",
+        "kundli",
+        "astrology-api",
+        "birth-chart",
+        "planetary-positions",
+        "ayanamsa",
+        "sidereal",
+        "tropical",
+        "houses",
+        "eclipse",
+        "laravel-package",
+        "php-library"
+    ],
+    "homepage": "https://jayeshmepani.github.io/jpl-ephemeris/#lang-php",
+    "readme": "README.md",
+    "license": "MIT AND CECILL-B",
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "authors": [
+        {
+            "name": "Jayesh Mepani (Jayesh Patel)",
+            "email": "jayeshmepani777@gmail.com",
+            "homepage": "https://github.com/jayeshmepani",
+            "role": "Developer"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/jayeshmepani/jpl-moshier-ephemeris-php/issues",
+        "source": "https://github.com/jayeshmepani/jpl-moshier-ephemeris-php",
+        "docs": "https://jayeshmepani.github.io/jpl-ephemeris/#lang-php",
+        "email": "jayeshmepani777@gmail.com"
+    },
+    "funding": [
+        {
+            "type": "github",
+            "url": "https://github.com/sponsors/jayeshmepani"
+        }
+    ],
+    "require": {
+        "php": "^8.3",
+        "ext-ffi": "*"
+    },
+    "require-dev": {
+        "driftingly/rector-laravel": "^2.5",
+        "laravel/pint": "^1.29",
+        "mockery/mockery": "^1.6",
+        "nunomaduro/collision": "^8.9",
+        "orchestra/testbench": "^9.0 || ^10.0",
+        "phpstan/extension-installer": "^1.4",
+        "phpstan/phpstan": "^2.1",
+        "phpunit/phpunit": "^11.5",
+        "rector/rector": "2.5.9"
+    },
+    "conflict": {
+        "php": "<8.3"
+    },
+    "autoload": {
+        "psr-4": {
+            "JmeEph\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "JmeEph\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "JmeEph\\Service\\JmeEphServiceProvider"
+            ],
+            "aliases": {
+                "JmeEph": "JmeEph\\Service\\JmeEphFacade"
+            }
+        }
+    },
+    "config": {
+        "sort-packages": true,
+        "platform": {
+            "php": "8.3.0"
+        },
+        "allow-plugins": {
+            "php-http/discovery": true,
+            "phpstan/extension-installer": true
+        }
+    },
+    "scripts": {
+        "build": [
+            "Composer\\Config::disableProcessTimeout",
+            "php build/build.php"
+        ],
+        "verify:surface": "php build/verify-wrapper-surface.php",
+        "jme:fetch-libs": "php build/fetch-prebuilt.php",
+        "post-install-cmd": [
+            "@jme:fetch-libs"
+        ],
+        "post-update-cmd": [
+            "@jme:fetch-libs"
+        ],
+        "test": "phpunit",
+        "phpstan": "phpstan analyse --memory-limit=2G --debug",
+        "lint": [
+            "pint"
+        ],
+        "test:lint": [
+            "pint --test"
+        ],
+        "quality": [
+            "@lint:check",
+            "@verify:surface",
+            "@phpstan",
+            "@test"
+        ],
+        "rector": "rector process",
+        "lint:fix": "pint",
+        "lint:check": "pint --test",
+        "rector:dry": "rector process --dry-run"
+    }
+}

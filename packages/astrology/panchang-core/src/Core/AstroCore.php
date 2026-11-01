@@ -1,0 +1,303 @@
+<?php
+
+declare(strict_types=1);
+
+namespace JayeshMepani\PanchangCore\Core;
+
+use Carbon\CarbonImmutable;
+use DateTimeInterface;
+use Exception;
+
+/**
+ * Core Astrological Calculations.
+ *
+ * Provides fundamental functions for Vedic astrology calculations:
+ * - Angle normalization (0-360°)
+ * - Angular distance calculation
+ * - Sign determination
+ * - House calculation
+ */
+final readonly class AstroCore
+{
+    /**
+     * Normalize angle to 0-360° range and apply configured precision.
+     *
+     * @param float $x Input angle in degrees
+     *
+     * @return float Normalized angle (0.0 <= x < 360.0)
+     */
+    public static function normalize(float $x): float
+    {
+        $val = fmod($x, 360.0);
+        if ($val < 0) {
+            $val += 360.0;
+        }
+
+        return $val;
+    }
+
+    /**
+     * Get angular distance between two longitudes.
+     *
+     * @param float $a First longitude
+     * @param float $b Second longitude
+     *
+     * @return float Angular distance (0.0 <= x <= 180.0)
+     */
+    public static function getAngularDistance(float $a, float $b): float
+    {
+        $diff = abs($a - $b);
+        if ($diff > 180.0) {
+            return 360.0 - $diff;
+        }
+
+        return $diff;
+    }
+
+    /**
+     * Get zodiac sign from longitude.
+     *
+     * @param float $lon Longitude in degrees
+     *
+     * @return int Sign number (0-11, where 0=Aries, 1=Taurus, etc.)
+     */
+    public static function getSign(float $lon): int
+    {
+        return ZodiacDivision::rashiIndex($lon);
+    }
+
+    /**
+     * Get longitude within sign.
+     *
+     * @param float $lon Longitude in degrees
+     *
+     * @return float Longitude within sign (0.0 <= x < 30.0)
+     */
+    public static function getSignLon(float $lon): float
+    {
+        $val = fmod($lon, 30.0);
+        if ($val < 0) {
+            $val += 30.0;
+        }
+
+        return $val;
+    }
+
+    /**
+     * Count signs between two positions.
+     *
+     * @param int $targetSign Target sign (0-11)
+     * @param int $startSign Starting sign (0-11)
+     * @param bool $forward Direction (true=forward, false=backward)
+     *
+     * @return int Distance in signs (1-12)
+     */
+    public static function countSigns(int $targetSign, int $startSign, bool $forward = true): int
+    {
+        if ($forward) {
+            return (($targetSign - $startSign) % 12 + 12) % 12 + 1;
+        }
+
+        return (($startSign - $targetSign) % 12 + 12) % 12 + 1;
+    }
+
+    /**
+     * Get house number from lagna.
+     *
+     * @param int $signIdx Sign index (0-11)
+     * @param int $ascSignIdx Ascendant sign index (0-11)
+     *
+     * @return int House number (1-12)
+     */
+    public static function getHouseNumFromLagna(int $signIdx, int $ascSignIdx): int
+    {
+        return self::countSigns($signIdx, $ascSignIdx);
+    }
+
+    /**
+     * Get precise time difference in minutes.
+     *
+     * @param DateTimeInterface $target Target datetime
+     * @param DateTimeInterface $reference Reference datetime
+     *
+     * @return float Time difference in minutes
+     */
+    public static function getTimeDiffMinutesPrecise(DateTimeInterface $target, DateTimeInterface $reference): float
+    {
+        $diffSeconds = ($target->getTimestamp() - $reference->getTimestamp());
+        if ($diffSeconds < 0) {
+            $diffSeconds += 86400.0;
+        }
+
+        return $diffSeconds / 60.0;
+    }
+
+    /**
+     * Convert decimal degrees to DMS string.
+     *
+     * @param float $deg Decimal degrees
+     *
+     * @return string DMS string (e.g., "23° 26' 12"")
+     */
+    public static function toDms(float $deg): string
+    {
+        $d = (int) floor($deg);
+        $m = (int) floor(($deg - $d) * 60.0);
+        $s = ($deg - $d - $m / 60.0) * 3600.0;
+
+        return sprintf('%d° %d\' %s"', $d, $m, $s);
+    }
+
+    /** Get global configuration value. */
+    public static function getConfig(string $key, mixed $default = null): mixed
+    {
+        if (function_exists('config')) {
+            try {
+                return config($key, $default);
+            } catch (Exception) {
+                return $default;
+            }
+        }
+
+        return $default;
+    }
+
+    /** Format a Carbon datetime string according to global config. */
+    public static function formatDateTime(CarbonImmutable $time): string
+    {
+        $format = self::getConfig('panchang.defaults.date_time_format', 'indian_12h');
+
+        return match ($format) {
+            'indian_12h' => $time->format('d/m/Y h:i:s A'),
+            'indian_24h' => $time->format('d/m/Y H:i:s'),
+            'iso8601' => $time->toIso8601String(),
+            default => $time->format('d/m/Y h:i:s A'),
+        };
+    }
+
+    /** Format a Carbon time string according to global config. */
+    public static function formatTime(CarbonImmutable $time): string
+    {
+        $notation = self::getConfig('panchang.defaults.time_notation', '12h');
+
+        if ($notation === '24h') {
+            return self::localizeTimeDisplay($time->format('H:i:s'));
+        }
+
+        // 12h by default
+        return self::localizeTimeDisplay($time->format('h:i:s A'));
+    }
+
+    /** Format an angle according to global config (degree vs dms). */
+    public static function formatAngle(float $angle): float|string
+    {
+        $unit = self::getConfig('panchang.defaults.angle_unit', 'degree');
+
+        if ($unit === 'dms') {
+            return self::toDms($angle);
+        }
+
+        return $angle;
+    }
+
+    /** Format coordinate according to global config (decimal vs dms). */
+    public static function formatCoordinate(float $coordinate): float|string
+    {
+        $unit = self::getConfig('panchang.defaults.coordinate_format', 'decimal');
+
+        if ($unit === 'dms') {
+            return self::toDms($coordinate);
+        }
+
+        return $coordinate;
+    }
+
+    /** Format a duration (in minutes or hours) according to global config. */
+    public static function formatDuration(float $minutes): float|string
+    {
+        $format = self::getConfig('panchang.defaults.duration_format', 'mixed');
+
+        if ($format === 'mixed') {
+            $hours = (int) floor($minutes / 60.0);
+            $mins = (int) floor(fmod($minutes, 60.0));
+            $secs = fmod($minutes * 60.0, 60.0);
+            $locale = (string) self::getConfig('panchang.defaults.locale', 'en');
+            [$hourUnit, $minuteUnit, $secondUnit] = match ($locale) {
+                'hi' => ['घं', 'मि', 'से'],
+                'gu' => ['ક', 'મિ', 'સે'],
+                default => ['h', 'm', 's'],
+            };
+
+            if ($hours > 0) {
+                return Localization::localizeNumber(sprintf('%d%s %d%s %s%s', $hours, $hourUnit, $mins, $minuteUnit, $secs, $secondUnit), $locale);
+            }
+
+            return Localization::localizeNumber(sprintf('%d%s %s%s', $mins, $minuteUnit, $secs, $secondUnit), $locale);
+        }
+
+        if ($format === 'hours') {
+            return $minutes / 60.0;
+        }
+
+        if ($format === 'seconds') {
+            return $minutes * 60.0;
+        }
+
+        return $minutes;
+    }
+
+    public static function toJulianDay(CarbonImmutable $time): float
+    {
+        return ($time->getTimestamp() + $time->micro / 1_000_000.0) / 86400.0 + 2440587.5;
+    }
+
+    /**
+     * Extract integer ghati, pala, vipala from a fractional ghati value (0 <= totalGhati < 60).
+     *
+     * @return array{ghati: int, pala: int, vipala: int, formatted: string}
+     */
+    public static function extractGhatiParts(float $totalGhati): array
+    {
+        $norm = fmod($totalGhati, 60.0);
+        if ($norm < 0.0) {
+            $norm += 60.0;
+        }
+
+        $gh = (int) floor($norm);
+        $remGh = $norm - $gh;
+        $totalPala = $remGh * 60.0;
+        $pl = (int) floor($totalPala);
+        $remPl = $totalPala - $pl;
+        $vp = (int) round($remPl * 60.0);
+        if ($vp >= 60) {
+            $vp = 0;
+            $pl++;
+        }
+
+        if ($pl >= 60) {
+            $pl = 0;
+            $gh = ($gh + 1) % 60;
+        }
+
+        return [
+            'ghati' => $gh,
+            'pala' => $pl,
+            'vipala' => $vp,
+            'formatted' => sprintf('%02d:%02d:%02d', $gh, $pl, $vp),
+        ];
+    }
+
+    /** Localize display-formatted times without changing parseable date-time fields. */
+    private static function localizeTimeDisplay(string $value): string
+    {
+        $locale = (string) self::getConfig('panchang.defaults.locale', 'en');
+
+        $value = match ($locale) {
+            'hi' => str_replace(['AM', 'PM'], ['पूर्वाह्न', 'अपराह्न'], $value),
+            'gu' => str_replace(['AM', 'PM'], ['પૂર્વાહ્ન', 'અપરાહ્ન'], $value),
+            default => $value,
+        };
+
+        return Localization::localizeNumber($value, $locale);
+    }
+}

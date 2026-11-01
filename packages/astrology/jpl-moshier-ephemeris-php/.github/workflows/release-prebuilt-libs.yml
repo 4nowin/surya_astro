@@ -1,0 +1,259 @@
+name: Release Prebuilt Runtime Libraries
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Release tag to create or update
+        required: true
+        default: prebuilt-libs
+      native_ref:
+        description: jpl-ephemeris commit/branch to build
+        required: false
+        default: main
+        type: string
+      publish:
+        description: Publish a GitHub release (false = CI artifacts only)
+        required: false
+        default: false
+        type: boolean
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-prebuilt-libs
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build ${{ matrix.asset }}
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # ── Ubuntu 24.04 (current) ──────────────────────────────────────
+          - runner: ubuntu-24.04
+            triplet: x64-linux-dynamic
+            asset: jme-linux-x64-ubuntu24.tar.gz
+            stage: linux-x64-ubuntu24
+
+          - runner: ubuntu-24.04-arm
+            triplet: arm64-linux-dynamic
+            asset: jme-linux-arm64-ubuntu24.tar.gz
+            stage: linux-arm64-ubuntu24
+
+          # ── Ubuntu 22.04 (LTS) ─────────────────────────────────────────
+          - runner: ubuntu-22.04
+            triplet: x64-linux-dynamic
+            asset: jme-linux-x64-ubuntu22.tar.gz
+            stage: linux-x64-ubuntu22
+
+          - runner: ubuntu-22.04-arm
+            triplet: arm64-linux-dynamic
+            asset: jme-linux-arm64-ubuntu22.tar.gz
+            stage: linux-arm64-ubuntu22
+
+          # ── macOS 15 / Intel (only free x64 macOS runner, until Aug 2027) ──
+          - runner: macos-15-intel
+            triplet: x64-osx-dynamic
+            asset: jme-macos-x64-15.tar.gz
+            stage: macos-x64-15
+
+          # ── macOS 15 / Apple Silicon (current) ─────────────────────────
+          - runner: macos-15
+            triplet: arm64-osx-dynamic
+            asset: jme-macos-arm64-15.tar.gz
+            stage: macos-arm64-15
+
+          # ── macOS 14 / Apple Silicon (older) ───────────────────────────
+          - runner: macos-14
+            triplet: arm64-osx-dynamic
+            asset: jme-macos-arm64-14.tar.gz
+            stage: macos-arm64-14
+
+          # ── Windows 2022 ────────────────────────────────────────────────
+          - runner: windows-2022
+            triplet: x64-windows
+            asset: jme-windows-x64-2022.zip
+            stage: windows-x64-2022
+
+    steps:
+      - name: Checkout wrapper
+        uses: actions/checkout@v4
+
+      - name: Checkout native JME
+        uses: actions/checkout@v4
+        with:
+          repository: jayeshmepani/jpl-ephemeris
+          ref: ${{ inputs.native_ref || 'main' }}
+          path: native
+
+      - name: Prepare vcpkg
+        shell: pwsh
+        run: |
+          $root = $env:VCPKG_INSTALLATION_ROOT
+          if (-not $root -or -not (Test-Path $root)) {
+              $root = Join-Path $env:RUNNER_TEMP 'vcpkg'
+              git clone --depth 1 https://github.com/microsoft/vcpkg.git $root
+          }
+
+          if ($IsWindows) {
+              & (Join-Path $root 'bootstrap-vcpkg.bat')
+              $exe = Join-Path $root 'vcpkg.exe'
+          } else {
+              & (Join-Path $root 'bootstrap-vcpkg.sh') -disableMetrics
+              $exe = Join-Path $root 'vcpkg'
+          }
+
+          "VCPKG_ROOT=$root" >> $env:GITHUB_ENV
+          "VCPKG_EXE=$exe" >> $env:GITHUB_ENV
+
+      - name: Install CALCEPH
+        shell: pwsh
+        run: |
+          & $env:VCPKG_EXE install "calceph:${{ matrix.triplet }}"
+
+      - name: Build JME with CALCEPH
+        shell: pwsh
+        run: |
+          $rpathArgs = @()
+          if ($IsLinux) {
+              $rpathArgs += '-DCMAKE_BUILD_RPATH=$ORIGIN'
+              $rpathArgs += '-DCMAKE_INSTALL_RPATH=$ORIGIN'
+          } elseif ($IsMacOS) {
+              $rpathArgs += '-DCMAKE_BUILD_RPATH=@loader_path'
+              $rpathArgs += '-DCMAKE_INSTALL_RPATH=@loader_path'
+          }
+
+          cmake -S native -B native/build `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DJME_BUILD_TESTS=OFF `
+            -DJME_REQUIRE_CALCEPH=ON `
+            -DCMAKE_TOOLCHAIN_FILE="$env:VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" `
+            -DVCPKG_TARGET_TRIPLET="${{ matrix.triplet }}" `
+            @rpathArgs
+
+          cmake --build native/build --config Release --parallel
+
+      - name: Package runtime libraries
+        shell: pwsh
+        run: |
+          $stage = Join-Path 'dist' '${{ matrix.stage }}'
+          New-Item -ItemType Directory -Force -Path $stage | Out-Null
+
+          $jme = Get-ChildItem -Path native/build -Recurse -File |
+              Where-Object { $_.Name -in @('jme.dll', 'libjme.so', 'libjme.dylib') } |
+              Select-Object -First 1
+          if (-not $jme) {
+              throw 'JME shared library was not produced.'
+          }
+          Copy-Item -LiteralPath $jme.FullName -Destination $stage -Force
+
+          $calcephRoot = Join-Path $env:VCPKG_ROOT 'installed/${{ matrix.triplet }}'
+          $calcephFiles = Get-ChildItem -Path $calcephRoot -Recurse -File |
+              Where-Object {
+                  $_.Name -match '^(lib)?calceph(\.dll|\.so(\..*)?|(\..*)?\.dylib)$'
+              }
+          if (-not $calcephFiles) {
+              throw 'CALCEPH runtime library was not found.'
+          }
+          foreach ($file in $calcephFiles) {
+              Copy-Item -LiteralPath $file.FullName -Destination $stage -Force
+          }
+
+          $notices = Join-Path $stage 'notices'
+          New-Item -ItemType Directory -Force -Path $notices | Out-Null
+          foreach ($f in @('LICENSE', 'NOTICE.md', 'THIRD_PARTY_NOTICES.md', 'src/erfa/vendor/LICENSE.ERFA', 'docs/permissions/MOSHIER_PERMISSION.md')) {
+              Copy-Item -LiteralPath (Join-Path native $f) -Destination $notices -Force
+          }
+          git -C native rev-parse HEAD | Out-File -Encoding ascii (Join-Path $notices 'JME_NATIVE_COMMIT.txt')
+
+          Get-ChildItem -Path $stage | Format-Table Name, Length
+
+          New-Item -ItemType Directory -Force -Path dist/assets | Out-Null
+          if ($IsWindows) {
+              Compress-Archive -Path (Join-Path $stage '*') -DestinationPath "dist/assets/${{ matrix.asset }}" -Force
+          } else {
+              tar -czf "dist/assets/${{ matrix.asset }}" -C $stage .
+          }
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.asset }}
+          path: dist/assets/${{ matrix.asset }}
+          if-no-files-found: error
+
+  release:
+    name: Publish release
+    needs: build
+    if: github.event_name == 'push' || inputs.publish == true || inputs.publish == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout wrapper
+        uses: actions/checkout@v4
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Write release notes
+        run: |
+          cat > release-notes.md <<'EOF'
+          Prebuilt runtime libraries for the PHP FFI wrapper.
+
+          Each archive contains:
+
+          - JME shared library: `jme.dll`, `libjme.so`, or `libjme.dylib`
+          - CALCEPH runtime library for the same platform
+
+          ## Linux
+
+          | Asset | Runner | Notes |
+          |---|---|---|
+          | `jme-linux-x64-ubuntu24.tar.gz` | ubuntu-24.04 | glibc 2.39 |
+          | `jme-linux-x64-ubuntu22.tar.gz` | ubuntu-22.04 | glibc 2.35 |
+          | `jme-linux-arm64-ubuntu24.tar.gz` | ubuntu-24.04-arm | glibc 2.39 |
+          | `jme-linux-arm64-ubuntu22.tar.gz` | ubuntu-22.04-arm | glibc 2.35 |
+
+          ## macOS
+
+          | Asset | Runner | Notes |
+          |---|---|---|
+          | `jme-macos-x64-15.tar.gz` | macos-15-intel | macOS 15, x86_64 (Intel) |
+          | `jme-macos-arm64-15.tar.gz` | macos-15 | macOS 15, Apple Silicon |
+          | `jme-macos-arm64-14.tar.gz` | macos-14 | macOS 14, Apple Silicon |
+
+          ## Windows
+
+          | Asset | Runner | Notes |
+          |---|---|---|
+          | `jme-windows-x64-2022.zip` | windows-2022 | MSVC 2022 runtime |
+
+          JPL BSP kernels are not included. Download kernels from the native JME kernel release when using the JPL/CALCEPH backend.
+          EOF
+
+      - name: Create or update release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release_tag || github.ref_name }}
+        run: |
+          set -euo pipefail
+
+          if gh release view "$RELEASE_TAG" >/dev/null 2>&1; then
+            gh release upload "$RELEASE_TAG" dist/* --clobber
+            gh release edit "$RELEASE_TAG" \
+              --title "Prebuilt Runtime Libraries" \
+              --notes-file release-notes.md
+          else
+            gh release create "$RELEASE_TAG" dist/* \
+              --title "Prebuilt Runtime Libraries" \
+              --notes-file release-notes.md
+          fi

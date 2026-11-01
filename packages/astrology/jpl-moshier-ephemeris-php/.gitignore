@@ -1,0 +1,30 @@
+# Dependencies and tooling
+/vendor/
+/.phpunit.cache/
+/.phpstan/
+/.phpunit.result.cache
+
+# Local/build artifacts
+/build/native/
+/tmp/
+*.log
+*.tmp
+*.bak
+*.zip
+*.7z
+*.rar
+*.tar
+*.tar.gz
+
+# Keep shipped runtime libraries explicit
+!/libs/
+!/libs/**/
+!/libs/**/*.dll
+!/libs/**/*.so
+!/libs/**/*.dylib
+!/libs/**/.gitkeep
+
+# Editor noise
+.idea/
+.vscode/
+

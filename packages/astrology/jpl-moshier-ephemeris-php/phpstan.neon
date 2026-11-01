@@ -1,0 +1,10 @@
+parameters:
+    level: 5
+    paths:
+        - src/
+        - config/
+        - examples/
+    excludePaths:
+        - tests/
+    stubFiles:
+        - stubs/FFI.stub

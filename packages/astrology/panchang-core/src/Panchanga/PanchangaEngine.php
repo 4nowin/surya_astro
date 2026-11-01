@@ -1,0 +1,642 @@
+<?php
+
+declare(strict_types=1);
+
+namespace JayeshMepani\PanchangCore\Panchanga;
+
+use Carbon\CarbonImmutable;
+use DateTimeInterface;
+use JayeshMepani\PanchangCore\Astronomy\AstronomyService;
+use JayeshMepani\PanchangCore\Astronomy\BrihaspatiSamvatsaraService;
+use JayeshMepani\PanchangCore\Astronomy\SunService;
+use JayeshMepani\PanchangCore\Core\AstroCore;
+use JayeshMepani\PanchangCore\Core\Enums\Karana;
+use JayeshMepani\PanchangCore\Core\Enums\Masa;
+use JayeshMepani\PanchangCore\Core\Enums\Nakshatra;
+use JayeshMepani\PanchangCore\Core\Enums\Ritu;
+use JayeshMepani\PanchangCore\Core\Enums\Samvatsara;
+use JayeshMepani\PanchangCore\Core\Enums\Tithi;
+use JayeshMepani\PanchangCore\Core\Enums\Vara;
+use JayeshMepani\PanchangCore\Core\Enums\Yoga;
+use JayeshMepani\PanchangCore\Core\Localization;
+use JayeshMepani\PanchangCore\Core\ZodiacDivision;
+
+class PanchangaEngine
+{
+    public function getNakshatraInfo(float $longitude): array
+    {
+        $nakshatra = Nakshatra::fromLongitude($longitude);
+
+        return [
+            $nakshatra->getName(),
+            Nakshatra::getPada($longitude),
+            $nakshatra->getRulingPlanet(),
+        ];
+    }
+
+    public function getKarana(float $sunLon, float $moonLon): array
+    {
+        $angle = AstroCore::normalize($moonLon - $sunLon);
+
+        return $this->getKaranaAtAngle($angle);
+    }
+
+    public function getKaranaAtAngle(float $angle): array
+    {
+        $angle = AstroCore::normalize($angle);
+        $num = min(60, (int) floor($angle / 6.0) + 1);
+
+        $tithiIndex = (int) floor($angle / 12.0) + 1;
+        $fraction = fmod($angle, 12.0) / 12.0;
+        $karana = Karana::fromTithi($tithiIndex, $fraction);
+
+        return [$karana->getName(), $num];
+    }
+
+    public function calculateTithi(float $sunLon, float $moonLon): array
+    {
+        return $this->calculateTithiAtAngle(AstroCore::normalize($moonLon - $sunLon));
+    }
+
+    public function calculateTithiAtAngle(float $angle): array
+    {
+        $tithi = Tithi::fromAngle($angle);
+
+        return [
+            'index' => $tithi->value,
+            'name' => $tithi->getName(),
+            'paksha' => $tithi->getPaksha()->getRawName(),
+            'paksha_name' => $tithi->getPaksha()->getName(),
+            'fraction_left' => Tithi::getFractionRemainingAtAngle($angle),
+        ];
+    }
+
+    public function calculateYoga(float $sunLon, float $moonLon): array
+    {
+        return $this->calculateYogaAtAngle(AstroCore::normalize($sunLon + $moonLon));
+    }
+
+    public function calculateYogaAtAngle(float $angle): array
+    {
+        $yoga = Yoga::fromAngle($angle);
+
+        return [
+            'index' => $yoga->value + 1, // original code used 1-based index
+            'name' => $yoga->getName(),
+        ];
+    }
+
+    public function calculateVara(array $birth, SunService $sunService): array
+    {
+        [$sunrise] = $sunService->getSunriseSunset($birth);
+        $dt = $sunService->getBirthDatetime($birth);
+
+        $actual = $dt;
+        // Compare using integer timestamps to avoid sub-second precision issues
+        // when birth time equals or is very close to sunrise time.
+        if ($dt->timestamp < $sunrise->timestamp) {
+            $actual = $dt->subDay();
+        }
+
+        $vIdx = ((int) $actual->format('N')) % 7;
+        $vara = Vara::from($vIdx);
+
+        return [
+            'index' => $vara->value,
+            'name' => $vara->getName(),
+        ];
+    }
+
+    /**
+     * Stable machine key for solar ayana from ecliptic longitude.
+     *
+     * Uttarayana: Sun in Capricorn→Gemini sector (0°–90° and 270°–360°).
+     * Dakshinayana: Sun in Cancer→Sagittarius sector (90°–270°).
+     *
+     * Works for both nirayana (sidereal) and sayana (tropical) longitudes.
+     */
+    public function getAyanaKey(float $sunLon): string
+    {
+        $normalized = fmod($sunLon, 360.0);
+        if ($normalized < 0.0) {
+            $normalized += 360.0;
+        }
+
+        return ($normalized >= 90.0 && $normalized < 270.0)
+            ? 'Dakshinayana'
+            : 'Uttarayana';
+    }
+
+    /** Localized ayana display name (Uttarayana / Dakshinayana). */
+    public function getAyana(float $sunLon): string
+    {
+        return $this->getAyanaKey($sunLon) === 'Dakshinayana'
+            ? Localization::translate('Ayana', 1)
+            : Localization::translate('Ayana', 0);
+    }
+
+    /** Stable machine key for ṛtu (Vasanta…Shishira) from solar longitude. */
+    public function getRituKey(float $sunLon): string
+    {
+        return Ritu::fromSunLongitude($sunLon)->name;
+    }
+
+    /** Localized ṛtu display name. */
+    public function getRitu(float $sunLon): string
+    {
+        return Ritu::fromSunLongitude($sunLon)->getName();
+    }
+
+    /**
+     * Nirayana (sidereal / constellation-based) and Sayana (tropical / seasonal)
+     * ayana + ṛtu payload block for Hindu_Calendar.
+     *
+     * BC short keys Ayana / Ritu remain the nirayana values.
+     * Explicit Nirayana_* / Sayana_* keys make the dual systems unambiguous.
+     * *_Key fields are locale-stable machine identifiers for matching/rules.
+     *
+     * @return array{
+     *   Ayana:string,
+     *   Ritu:string,
+     *   Ayana_Key:string,
+     *   Ritu_Key:string,
+     *   Nirayana_Ayana:string,
+     *   Nirayana_Ritu:string,
+     *   Nirayana_Ayana_Key:string,
+     *   Nirayana_Ritu_Key:string,
+     *   Sayana_Ayana:string,
+     *   Sayana_Ritu:string,
+     *   Sayana_Ayana_Key:string,
+     *   Sayana_Ritu_Key:string,
+     *   Ayana_System:string,
+     *   Ritu_System:string,
+     *   Sayana_Ayana_System:string,
+     *   Sayana_Ritu_System:string
+     * }
+     */
+    public function buildAyanaRituCalendarFields(float $nirayanaSunLon, float $sayanaSunLon): array
+    {
+        $nirayanaAyanaKey = $this->getAyanaKey($nirayanaSunLon);
+        $nirayanaRituKey = $this->getRituKey($nirayanaSunLon);
+        $sayanaAyanaKey = $this->getAyanaKey($sayanaSunLon);
+        $sayanaRituKey = $this->getRituKey($sayanaSunLon);
+
+        $nirayanaAyana = $this->getAyana($nirayanaSunLon);
+        $nirayanaRitu = $this->getRitu($nirayanaSunLon);
+        $sayanaAyana = $this->getAyana($sayanaSunLon);
+        $sayanaRitu = $this->getRitu($sayanaSunLon);
+
+        $nirayanaSystem = Localization::translate('String', 'Nirayana (Sidereal)');
+        $sayanaSystem = Localization::translate('String', 'Sayana (Tropical)');
+
+        return [
+            // BC short keys = nirayana (sidereal / constellation-based)
+            'Ayana' => $nirayanaAyana,
+            'Ritu' => $nirayanaRitu,
+            'Ayana_Key' => $nirayanaAyanaKey,
+            'Ritu_Key' => $nirayanaRituKey,
+
+            // Explicit nirayana naming
+            'Nirayana_Ayana' => $nirayanaAyana,
+            'Nirayana_Ritu' => $nirayanaRitu,
+            'Nirayana_Ayana_Key' => $nirayanaAyanaKey,
+            'Nirayana_Ritu_Key' => $nirayanaRituKey,
+
+            // Sayana (tropical / seasonal)
+            'Sayana_Ayana' => $sayanaAyana,
+            'Sayana_Ritu' => $sayanaRitu,
+            'Sayana_Ayana_Key' => $sayanaAyanaKey,
+            'Sayana_Ritu_Key' => $sayanaRituKey,
+
+            // System labels (localized)
+            'Ayana_System' => $nirayanaSystem,
+            'Ritu_System' => $nirayanaSystem,
+            'Sayana_Ayana_System' => $sayanaSystem,
+            'Sayana_Ritu_System' => $sayanaSystem,
+        ];
+    }
+
+    /**
+     * Civil Gregorian approximation of Vikram/Śaka years (month ≥ April).
+     *
+     * Prefer {@see resolveEraYearsFromAmantaContext()} for day/month Hindu_Calendar
+     * payloads so era years match Chaitra/Kartika Śukla Pratipadā calendar-period windows.
+     */
+    public function getSamvat(int $year, int $month): array
+    {
+        $adj = $month >= 4 ? 0 : -1;
+
+        return [
+            'Vikram_Samvat' => $year + 57 + $adj,
+            'Saka_Samvat' => $year - 78 + $adj,
+        ];
+    }
+
+    /**
+     * Chaitradi Vikram Samvat from the current Amānta month start (local).
+     *
+     * Same rule as calendar-period windows: for Māgha–Phālguna (index ≥ 9) whose
+     * lunar-month start falls in Jan–Mar of the civil year, use year+56; otherwise
+     * year+57. Chaitra Śukla Pratipadā therefore opens the new Vikram year.
+     */
+    public function resolveChaitradiVikramSamvat(
+        DateTimeInterface $amantaMonthStartLocal,
+        int $amantaIndex,
+    ): int {
+        $start = $amantaMonthStartLocal instanceof CarbonImmutable
+            ? $amantaMonthStartLocal
+            : CarbonImmutable::instance($amantaMonthStartLocal);
+
+        if ($amantaIndex >= 9 && $start->month <= 3) {
+            return $start->year + 56;
+        }
+
+        return $start->year + 57;
+    }
+
+    /**
+     * Full era-year block for day/month Hindu_Calendar (period-window parity).
+     *
+     * @return array{
+     *   Vikram_Samvat: int,
+     *   Saka_Samvat: int,
+     *   Kali_Samvat: int,
+     *   Gujarati_Samvat: int
+     * }
+     */
+    public function resolveEraYearsFromAmantaContext(
+        DateTimeInterface $amantaMonthStartLocal,
+        int $amantaIndex,
+    ): array {
+        $vikram = $this->resolveChaitradiVikramSamvat($amantaMonthStartLocal, $amantaIndex);
+
+        return [
+            'Vikram_Samvat' => $vikram,
+            'Saka_Samvat' => $vikram - 135,
+            'Kali_Samvat' => $this->getKaliSamvat($vikram),
+            'Gujarati_Samvat' => $this->getGujaratiSamvat($vikram, $amantaIndex),
+        ];
+    }
+
+    /**
+     * Southern continuous 60-name Saṃvatsara (Shaka / Ugadi-linked).
+     *
+     * Advances exactly one name per traditional southern year. For Vikram 2083 /
+     * Shaka 1948 this is Parabhava (#40). Prefer {@see getSamvatsaraSouth()} in
+     * new code; this method remains the canonical bare-name API used by festival
+     * rules and older clients.
+     */
+    public function getSamvatsara(int $vikramSamvat): string
+    {
+        return $this->getSamvatsaraSouth($vikramSamvat);
+    }
+
+    /**
+     * Southern continuous 60-name cycle (same as {@see getSamvatsara()}).
+     * Explicit regional alias for Shaka / Telugu-Kannada / Tamil-style year names.
+     */
+    public function getSamvatsaraSouth(int $vikramSamvat): string
+    {
+        // Equivalent to (Saka + 11) % 60 because Vikram − Saka = 135.
+        $idx = (($vikramSamvat - 135 + 11) % 60 + 60) % 60;
+
+        return Samvatsara::from($idx)->getName();
+    }
+
+    public function getHinduMonth(float $sunLon, float $moonLon, string $paksha = 'Shukla'): array
+    {
+        $base = (ZodiacDivision::rashiIndex($sunLon) + 1) % 12;
+        $am = $paksha === 'Shukla' ? $base : ($base - 1 + 12) % 12;
+
+        return [
+            'Amanta' => Masa::from($am)->getName(),
+            'Purnimanta' => Masa::from($base)->getName(),
+            'Amanta_Index' => $am,
+            'Purnimanta_Index' => $base,
+        ];
+    }
+
+    public function getKaliSamvat(int $vikramSamvat): int
+    {
+        return $vikramSamvat + 3044;
+    }
+
+    public function getGujaratiSamvat(int $vikramSamvat, int $monthIndex): int
+    {
+        return $monthIndex < 7 ? $vikramSamvat - 1 : $vikramSamvat;
+    }
+
+    /**
+     * Northern Chaitradi Vikram era-linked Saṃvatsara name.
+     *
+     * Fixed mapping from the Vikram year number (no mid-year mean-Jovian shift).
+     * For Vikram 2083 this is Siddharthi (#53).
+     */
+    public function getSamvatsaraNorth(int $vikramSamvat): string
+    {
+        $idx = (($vikramSamvat + 9) % 60 + 60) % 60;
+
+        return Samvatsara::from($idx)->getName();
+    }
+
+    /**
+     * Gujarati Kartika-New-Year Saṃvatsara name from Gujarati Vikram year.
+     *
+     * For Gujarati Samvat 2082 (until Bestu Varash / Kartak Sud Padvo) this is
+     * Pingala (#51); Gujarati 2083 becomes Kalayukti.
+     */
+    public function getSamvatsaraGujarati(int $gujaratiSamvat): string
+    {
+        $idx = (($gujaratiSamvat + 8) % 60 + 60) % 60;
+
+        return Samvatsara::from($idx)->getName();
+    }
+
+    /**
+     * Bārhaspatya Saṃvatsara name for a civil date.
+     *
+     * Default: package/config strategy via BrihaspatiSamvatsaraService::defaultModel()
+     * (canonical classical_ss unless config overrides).
+     *
+     * Supported timing models (opt-in Strategy):
+     * - MODEL_CLASSICAL_SS — canonical default
+     * - MODEL_GRAHALAGHAVA — experimental
+     * - MODEL_MAKARANDA — experimental
+     * - MODEL_MODERN_EPHEMERIS — astronomical comparator (needs AstronomyService)
+     *
+     * @param string|null $model null → {@see BrihaspatiSamvatsaraService::defaultModel()}
+     */
+    public function getSamvatsaraBrihaspati(
+        DateTimeInterface $date,
+        ?string $model = null,
+        ?AstronomyService $astronomy = null,
+    ): string {
+        return (new BrihaspatiSamvatsaraService($astronomy))
+            ->getSamvatsaraBrihaspati($date, $model);
+    }
+
+    /**
+     * Compare classical Bārhaspatya timing with Graha-lāghava, Makaranda,
+     * and modern sidereal-Jupiter timing projections at one civil date.
+     *
+     * @return array<string, mixed>
+     */
+    public function compareSamvatsaraBrihaspatiModels(
+        DateTimeInterface $date,
+        AstronomyService $astronomy,
+    ): array {
+        return (new BrihaspatiSamvatsaraService($astronomy))
+            ->compareModels($date);
+    }
+
+    /**
+     * Full regional Saṃvatsara block for Hindu_Calendar payloads.
+     *
+     * @return array{
+     *   Samvatsara: string,
+     *   Samvatsara_South: string,
+     *   Samvatsara_South_Prefix: string,
+     *   Samvatsara_North: string,
+     *   Samvatsara_Brihaspati: ?string,
+     *   Samvatsara_Brihaspati_Model: string,
+     *   Samvatsara_Brihaspati_Model_Status: string,
+     *   Samvatsara_North_Display: string,
+     *   Samvatsara_Gujarati: string,
+     *   Samvatsara_Systems: array<string, array<string, mixed>>
+     * }
+     */
+    public function buildSamvatsaraCalendarFields(
+        int $vikramSamvat,
+        int $sakaSamvat,
+        int $gujaratiSamvat,
+        ?DateTimeInterface $date = null,
+    ): array {
+        $south = $this->getSamvatsaraSouth($vikramSamvat);
+        $north = $this->getSamvatsaraNorth($vikramSamvat);
+        $gujarati = $this->getSamvatsaraGujarati($gujaratiSamvat);
+        $brihaspatiModel = BrihaspatiSamvatsaraService::defaultModel();
+        $brihaspati = $date instanceof DateTimeInterface
+            ? $this->getSamvatsaraBrihaspati($date, $brihaspatiModel)
+            : null;
+        $northDisplay = ($brihaspati !== null && $north !== $brihaspati)
+            ? $north . ' / ' . $brihaspati
+            : $north;
+
+        $brihaspatiCatalogue = BrihaspatiSamvatsaraService::supportedModels()[$brihaspatiModel]
+            ?? BrihaspatiSamvatsaraService::supportedModels()[BrihaspatiSamvatsaraService::DEFAULT_MODEL];
+
+        return [
+            // Bare southern name kept for festival matchers and older clients.
+            'Samvatsara' => $south,
+            'Samvatsara_South' => $south,
+            'Samvatsara_South_Prefix' => 'South',
+            // Chaitradi Vikram era-linked northern name.
+            'Samvatsara_North' => $north,
+            // Default Bārhaspatya name (config/package strategy; null if no date).
+            'Samvatsara_Brihaspati' => $brihaspati,
+            'Samvatsara_Brihaspati_Model' => $brihaspatiModel,
+            'Samvatsara_Brihaspati_Model_Status' => (string) ($brihaspatiCatalogue['status'] ?? BrihaspatiSamvatsaraService::STATUS_CANONICAL),
+            // Dual label when era-linked northern and Bārhaspatya names differ.
+            'Samvatsara_North_Display' => $northDisplay,
+            'Samvatsara_Gujarati' => $gujarati,
+            'Samvatsara_Systems' => [
+                'south_shaka' => [
+                    'region' => 'South',
+                    'era' => 'Shaka',
+                    'era_year' => $sakaSamvat,
+                    'name' => $south,
+                    'system' => 'south_lunisolar_continuous',
+                    'note' => 'Southern continuous 60-name cycle (Ugadi / Shaka-linked traditional panchanga).',
+                ],
+                'north_vikram' => [
+                    'region' => 'North',
+                    'era' => 'Vikram_Chaitradi',
+                    'era_year' => $vikramSamvat,
+                    'name' => $north,
+                    'system' => 'north_lunisolar',
+                    'note' => 'Chaitradi Vikram era-linked 60-name mapping (e.g. VS 2083 → Siddharthi).',
+                ],
+                'north_brihaspati' => [
+                    'region' => 'North/Classical',
+                    'era' => 'Barhaspatya_Mean_Sign',
+                    'era_year' => null,
+                    'name' => $brihaspati,
+                    'system' => 'barhaspatya_mean_sign',
+                    'model' => $brihaspatiModel,
+                    'model_status' => (string) ($brihaspatiCatalogue['status'] ?? BrihaspatiSamvatsaraService::STATUS_CANONICAL),
+                    'model_family' => (string) ($brihaspatiCatalogue['model_family'] ?? BrihaspatiSamvatsaraService::FAMILY_TRADITIONAL_BARHASPATYA),
+                    'note' => 'Package-default Bārhaspatya Saṃvatsara strategy (canonical classical_ss unless config overrides).',
+                ],
+                'gujarati_vikram' => [
+                    'region' => 'Gujarat',
+                    'era' => 'Gujarati_Vikram',
+                    'era_year' => $gujaratiSamvat,
+                    'name' => $gujarati,
+                    'system' => 'gujarati_lunisolar',
+                    'note' => 'Gujarati Kartika New Year year-name (e.g. Gujarati 2082 → Pingala until Bestu Varash).',
+                ],
+            ],
+        ];
+    }
+
+    public function calculatePanchakaRahita(int $tithiNum, int $varaNum, int $nakNum, int $lagnaNum): array
+    {
+        $total = $tithiNum + $varaNum + $nakNum + $lagnaNum;
+        $r = $total % 9;
+
+        $doshas = [
+            1 => 'Mrityu Panchaka',
+            2 => 'Agni Panchaka',
+            4 => 'Raja Panchaka',
+            6 => 'Chora Panchaka',
+            8 => 'Roga Panchaka',
+        ];
+
+        if (isset($doshas[$r])) {
+            $name = $doshas[$r];
+            $isGood = false;
+        } elseif ($r === 0) {
+            $name = 'Nish-Panchaka';
+            $isGood = true;
+        } else {
+            $name = 'Shubha Panchaka';
+            $isGood = true;
+        }
+
+        return [
+            'sum' => $total,
+            'remainder' => $r,
+            'panchaka_name' => Localization::translate('Panchaka', $name),
+            'is_auspicious' => $isGood,
+        ];
+    }
+
+    public function calculateKundaLagna(float $ascLon): array
+    {
+        $kundaVal = fmod($ascLon * 81.0, 360.0);
+        if ($kundaVal < 0) {
+            $kundaVal += 360.0;
+        }
+
+        [$nakName, $pada, $lord] = $this->getNakshatraInfo($kundaVal);
+
+        return [
+            'kunda_longitude' => $kundaVal,
+            'nakshatra' => $nakName,
+            'pada' => $pada,
+            'lord' => $lord,
+            'formula' => '(Asc * 81) % 360',
+        ];
+    }
+
+    public function getPanchanga(
+        float $sunLon,
+        float $moonLon,
+        array $birth,
+        SunService $sunService,
+        AstronomyService $astronomy,
+    ): array {
+        $tithi = $this->calculateTithi($sunLon, $moonLon);
+        $vara = $this->calculateVara($birth, $sunService);
+        $yoga = $this->calculateYoga($sunLon, $moonLon);
+        [$karanaName, $karanaIdx] = $this->getKarana($sunLon, $moonLon);
+        [$nakName, $nakPada, $nakLord] = $this->getNakshatraInfo($moonLon);
+
+        [$sunrise, $sunset] = $sunService->getSunriseSunset($birth);
+        $dt = $sunService->getBirthDatetime($birth);
+        $relSunrise = $sunrise;
+        $relSunset = $sunset;
+        $nextSr = null;
+        if ($dt->lessThan($sunrise)) {
+            $prev = CarbonImmutable::create($dt->year, $dt->month, $dt->day, 0, 0, 0, $birth['timezone'])->subDay();
+            $prevBirth = [
+                'year' => $prev->year,
+                'month' => $prev->month,
+                'day' => $prev->day,
+                'hour' => 0,
+                'minute' => 0,
+                'second' => 0,
+                'timezone' => $birth['timezone'],
+                'latitude' => $birth['latitude'],
+                'longitude' => $birth['longitude'],
+            ];
+            [$relSunrise, $relSunset] = $sunService->getSunriseSunset($prevBirth);
+            $nextSr = $sunrise;
+        } else {
+            $next = CarbonImmutable::create($dt->year, $dt->month, $dt->day, 0, 0, 0, $birth['timezone'])->addDay();
+            $nextBirth = [
+                'year' => $next->year,
+                'month' => $next->month,
+                'day' => $next->day,
+                'hour' => 0,
+                'minute' => 0,
+                'second' => 0,
+                'timezone' => $birth['timezone'],
+                'latitude' => $birth['latitude'],
+                'longitude' => $birth['longitude'],
+            ];
+            [$nextSr] = $sunService->getSunriseSunset($nextBirth);
+        }
+
+        // 1. Dynamic 30-Ghati Clock
+        if ($dt->lessThanOrEqualTo($relSunset)) {
+            $dinamana = abs($relSunset->diffInSeconds($relSunrise, false));
+            $elapsed = abs($dt->diffInSeconds($relSunrise, false));
+            $total30 = $dinamana > 0 ? (30.0 * ($elapsed / $dinamana)) : 0.0;
+        } else {
+            $ratrimana = abs($nextSr->diffInSeconds($relSunset, false));
+            $elapsed = abs($dt->diffInSeconds($relSunset, false));
+            $total30 = $ratrimana > 0 ? (30.0 + 30.0 * ($elapsed / $ratrimana)) : 30.0;
+        }
+
+        // 2. Dynamic 60-Ghati Clock
+        $ahoratri = abs($nextSr->diffInSeconds($relSunrise, false));
+        $elapsedAhoratri = abs($dt->diffInSeconds($relSunrise, false));
+        $total60 = $ahoratri > 0 ? (60.0 * ($elapsedAhoratri / $ahoratri)) : 0.0;
+
+        $parts30 = AstroCore::extractGhatiParts($total30);
+        $parts60 = AstroCore::extractGhatiParts($total60);
+
+        $srBirth = [
+            'year' => (int) $relSunrise->format('Y'),
+            'month' => (int) $relSunrise->format('m'),
+            'day' => (int) $relSunrise->format('d'),
+            'hour' => (int) $relSunrise->format('H'),
+            'minute' => (int) $relSunrise->format('i'),
+            'second' => (int) $relSunrise->format('s'),
+            'timezone' => $birth['timezone'],
+            'latitude' => $birth['latitude'],
+            'longitude' => $birth['longitude'],
+        ];
+        $srPlanets = $astronomy->getPlanets($srBirth);
+        $sunAtSunrise = $srPlanets['Sun'] ?? 0.0;
+        $moonAtSunrise = $srPlanets['Moon'] ?? 0.0;
+
+        return [
+            'Tithi' => $tithi,
+            'Vara' => $vara,
+            'Nakshatra' => ['name' => $nakName, 'pada' => $nakPada, 'lord' => $nakLord],
+            'Yoga' => $yoga,
+            'Karana' => ['name' => $karanaName, 'index' => $karanaIdx],
+            'Sunrise' => AstroCore::formatTime($relSunrise),
+            'Sunset' => AstroCore::formatTime($relSunset),
+            'Ishtkaal' => $parts30['formatted'],
+            'Ishtkaal_30' => $parts30['formatted'],
+            'Ishtkaal_30_Parts' => ['ghati' => $parts30['ghati'], 'pala' => $parts30['pala'], 'vipala' => $parts30['vipala']],
+            'Ishtkaal_60' => $parts60['formatted'],
+            'Ishtkaal_60_Parts' => ['ghati' => $parts60['ghati'], 'pala' => $parts60['pala'], 'vipala' => $parts60['vipala']],
+            'Ishtkaal_Parts' => ['ghati' => $parts30['ghati'], 'pala' => $parts30['pala'], 'vipala' => $parts30['vipala']],
+            'sun_sunrise_lon' => AstroCore::formatAngle($sunAtSunrise),
+            'moon_sunrise_lon' => AstroCore::formatAngle($moonAtSunrise),
+            'sunrise_hm' => [(int) $relSunrise->format('H'), (int) $relSunrise->format('i')],
+            'sunrise_dt' => $relSunrise,
+        ];
+    }
+
+    public function isVishtiKarana(float $sunLon, float $moonLon): bool
+    {
+        [, $idx] = $this->getKarana($sunLon, $moonLon);
+
+        return in_array($idx, [8, 15, 22, 29, 36, 43, 50, 57], true); // Vishti/Bhadra occurs in these specific 1-60 indices
+    }
+}
