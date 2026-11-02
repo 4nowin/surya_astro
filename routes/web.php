@@ -147,6 +147,10 @@ Route::group([
     Route::get('/diagnostics/astrology-engine/export', [App\Http\Controllers\Admin\AstrologyDiagnosticController::class, 'export'])->name('admin.diagnostics.astrology.export');
 });
 
+// Temporary Protected Hostinger FFI Web Runtime Compatibility Test (Admin Session OR Secure Key)
+Route::get('/admin/diagnostics/ffi-compatibility', [App\Http\Controllers\Admin\AstrologyDiagnosticController::class, 'ffiCompatibilityTest'])
+    ->name('admin.diagnostics.ffi_compatibility');
+
 Route::get('/clear-cache', function () {
     Artisan::call('config:clear');
     Artisan::call('cache:clear');

@@ -581,4 +581,226 @@ class FfiDiagnosticService
 
         return implode("\n", $out);
     }
+
+    /**
+     * Dedicated, safe diagnostic test for web runtime FFI capability (Hostinger Compatibility).
+     *
+     * Reports:
+     * 1. PHP version
+     * 2. PHP SAPI
+     * 3. Whether FFI extension is loaded
+     * 4. ini_get('ffi.enable')
+     * 5. Whether FFI::cdef() can execute in web request (safe core C test)
+     * 6. Whether JME native library loads through existing project configuration
+     * 7. Any exception class and sanitized message if a check fails
+     *
+     * Distinguishes outcomes:
+     * Outcome A: FFI extension unavailable
+     * Outcome B: FFI extension loaded, but web requests are blocked by ffi.enable
+     * Outcome C: FFI calls are permitted, but JME native library loading fails
+     * Outcome D: FFI and JME library initialization both succeed
+     */
+    public function testHostingerFfiCompatibility(): array
+    {
+        $phpVersion = PHP_VERSION;
+        $phpSapi = php_sapi_name();
+        $isWebSapi = $phpSapi !== 'cli';
+        $ffiExtensionLoaded = extension_loaded('ffi');
+        $ffiClassExists = class_exists('FFI');
+        $rawFfiEnable = (string) ini_get('ffi.enable');
+
+        $coreFfiResult = [
+            'attempted' => false,
+            'success' => false,
+            'function_tested' => 'abs(-42) via standard C library',
+            'return_value' => null,
+            'exception_class' => null,
+            'exception_message' => null,
+        ];
+
+        $jmeResult = [
+            'attempted' => false,
+            'success' => false,
+            'library_configured' => null,
+            'library_file_found' => false,
+            'sample_calculation' => null,
+            'exception_class' => null,
+            'exception_message' => null,
+        ];
+
+        // 1. Extension presence check (Outcome A check)
+        if (!$ffiExtensionLoaded || !$ffiClassExists) {
+            return [
+                'outcome' => 'A',
+                'outcome_label' => 'FFI extension unavailable',
+                'outcome_summary' => 'The PHP FFI extension (ext-ffi) is not installed or enabled in this PHP runtime.',
+                'runtime' => [
+                    'php_version' => $phpVersion,
+                    'php_sapi' => $phpSapi,
+                    'is_web_sapi' => $isWebSapi,
+                    'ffi_extension_loaded' => $ffiExtensionLoaded,
+                    'ffi_class_exists' => $ffiClassExists,
+                    'ffi_enable_directive' => $rawFfiEnable === '' ? '(empty / default)' : $rawFfiEnable,
+                ],
+                'core_ffi_test' => $coreFfiResult,
+                'jme_library_test' => $jmeResult,
+                'timestamp' => now()->toIso8601String(),
+            ];
+        }
+
+        // 2. Harmless Core C FFI Test
+        $coreFfiResult['attempted'] = true;
+        try {
+            $isWin = PHP_OS_FAMILY === 'Windows';
+            $cLib = $isWin ? 'msvcrt.dll' : 'libc.so.6';
+
+            try {
+                $ffi = \FFI::cdef("int abs(int value);", $cLib);
+            } catch (\Throwable $fallbackEx) {
+                $ffi = \FFI::cdef("int abs(int value);");
+            }
+
+            $val = $ffi->abs(-42);
+            if ($val === 42) {
+                $coreFfiResult['success'] = true;
+                $coreFfiResult['return_value'] = 42;
+            } else {
+                $coreFfiResult['success'] = false;
+                $coreFfiResult['return_value'] = $val;
+                $coreFfiResult['exception_message'] = "abs(-42) returned unexpected value: " . var_export($val, true);
+            }
+        } catch (\Throwable $e) {
+            $coreFfiResult['success'] = false;
+            $coreFfiResult['exception_class'] = get_class($e);
+            $coreFfiResult['exception_message'] = $this->sanitizePath($e->getMessage());
+        }
+
+        // If core FFI failed due to ffi.enable restriction (Outcome B check)
+        if (!$coreFfiResult['success']) {
+            $msg = strtolower($coreFfiResult['exception_message'] ?? '');
+            $isBlockedByIni = str_contains($msg, 'ffi.enable')
+                || str_contains($msg, 'restricted')
+                || (strtolower($rawFfiEnable) === 'preload' && $isWebSapi);
+
+            return [
+                'outcome' => $isBlockedByIni ? 'B' : 'A',
+                'outcome_label' => $isBlockedByIni
+                    ? 'FFI extension loaded, but web requests are blocked by ffi.enable'
+                    : 'FFI call execution failed',
+                'outcome_summary' => $isBlockedByIni
+                    ? "PHP FFI is loaded, but execution is blocked by php.ini directive ffi.enable='{$rawFfiEnable}' on {$phpSapi} web runtime."
+                    : "PHP FFI failed to execute basic C function: {$coreFfiResult['exception_message']}",
+                'runtime' => [
+                    'php_version' => $phpVersion,
+                    'php_sapi' => $phpSapi,
+                    'is_web_sapi' => $isWebSapi,
+                    'ffi_extension_loaded' => $ffiExtensionLoaded,
+                    'ffi_class_exists' => $ffiClassExists,
+                    'ffi_enable_directive' => $rawFfiEnable === '' ? '(empty / default)' : $rawFfiEnable,
+                ],
+                'core_ffi_test' => $coreFfiResult,
+                'jme_library_test' => $jmeResult,
+                'timestamp' => now()->toIso8601String(),
+            ];
+        }
+
+        // 3. JME Native Library Initialization Test (Outcome C vs D check)
+        $jmeResult['attempted'] = true;
+        try {
+            $libPath = \App\Services\Astrology\NativeEphemerisResolver::resolve();
+            $jmeResult['library_configured'] = basename($libPath);
+            $jmeResult['library_file_found'] = file_exists($libPath);
+
+            $jme = new \JmeEph\FFI\JmeEphFFI($libPath);
+            $dow = $jme->jme_day_of_week(2460000.5);
+
+            $jmeResult['success'] = true;
+            $jmeResult['sample_calculation'] = [
+                'function' => 'jme_day_of_week(2460000.5)',
+                'result_day' => $dow,
+                'valid' => ($dow === 6),
+            ];
+        } catch (\Throwable $e) {
+            $jmeResult['success'] = false;
+            $jmeResult['exception_class'] = get_class($e);
+            $jmeResult['exception_message'] = $this->sanitizePath($e->getMessage());
+
+            if (str_contains(strtolower($e->getMessage()), 'ffi.enable') || str_contains(strtolower($e->getMessage()), 'restricted')) {
+                return [
+                    'outcome' => 'B',
+                    'outcome_label' => 'FFI extension loaded, but web requests are blocked by ffi.enable',
+                    'outcome_summary' => "JME initialization failed because ffi.enable restricts FFI in this web runtime.",
+                    'runtime' => [
+                        'php_version' => $phpVersion,
+                        'php_sapi' => $phpSapi,
+                        'is_web_sapi' => $isWebSapi,
+                        'ffi_extension_loaded' => $ffiExtensionLoaded,
+                        'ffi_class_exists' => $ffiClassExists,
+                        'ffi_enable_directive' => $rawFfiEnable === '' ? '(empty / default)' : $rawFfiEnable,
+                    ],
+                    'core_ffi_test' => $coreFfiResult,
+                    'jme_library_test' => $jmeResult,
+                    'timestamp' => now()->toIso8601String(),
+                ];
+            }
+
+            return [
+                'outcome' => 'C',
+                'outcome_label' => 'FFI calls are permitted, but JME native library loading fails',
+                'outcome_summary' => "Standard C FFI calls succeed, but the JME native shared library could not be loaded or executed: {$jmeResult['exception_message']}",
+                'runtime' => [
+                    'php_version' => $phpVersion,
+                    'php_sapi' => $phpSapi,
+                    'is_web_sapi' => $isWebSapi,
+                    'ffi_extension_loaded' => $ffiExtensionLoaded,
+                    'ffi_class_exists' => $ffiClassExists,
+                    'ffi_enable_directive' => $rawFfiEnable === '' ? '(empty / default)' : $rawFfiEnable,
+                ],
+                'core_ffi_test' => $coreFfiResult,
+                'jme_library_test' => $jmeResult,
+                'timestamp' => now()->toIso8601String(),
+            ];
+        }
+
+        // 4. Outcome D: Success
+        return [
+            'outcome' => 'D',
+            'outcome_label' => 'FFI and JME library initialization both succeed',
+            'outcome_summary' => "PHP FFI and the JME native library ({$jmeResult['library_configured']}) are both fully operational in this {$phpSapi} web runtime.",
+            'runtime' => [
+                'php_version' => $phpVersion,
+                'php_sapi' => $phpSapi,
+                'is_web_sapi' => $isWebSapi,
+                'ffi_extension_loaded' => $ffiExtensionLoaded,
+                'ffi_class_exists' => $ffiClassExists,
+                'ffi_enable_directive' => $rawFfiEnable === '' ? '(empty / default)' : $rawFfiEnable,
+            ],
+            'core_ffi_test' => $coreFfiResult,
+            'jme_library_test' => $jmeResult,
+            'timestamp' => now()->toIso8601String(),
+        ];
+    }
+
+    /**
+     * Sanitize server filesystem paths from diagnostic output to protect server privacy.
+     */
+    public function sanitizePath(string $message): string
+    {
+        if (function_exists('base_path')) {
+            $base = base_path();
+            $message = str_replace([$base, str_replace('/', '\\', $base), str_replace('\\', '/', $base)], '[APP_ROOT]', $message);
+        }
+        if (function_exists('storage_path')) {
+            $storage = storage_path();
+            $message = str_replace([$storage, str_replace('/', '\\', $storage), str_replace('\\', '/', $storage)], '[STORAGE_ROOT]', $message);
+        }
+
+        // Redact Linux home directory patterns (e.g. /home/u736464956/...)
+        $message = preg_replace('#/home/[^/\s"\']+(?:/[^:\s"\']*)?#', '[REDACTED_PATH]', $message);
+
+        // Redact Windows absolute path patterns (e.g. C:\wamp64\...)
+        $message = preg_replace('#[A-Za-z]:\\\\[^:\s"\']*#', '[REDACTED_PATH]', $message);
+
+        return $message;
+    }
 }

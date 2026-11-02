@@ -24,21 +24,34 @@ class DailyPanchangController extends Controller
     {
         $validated = $request->validated();
 
-        $data = $this->panchangService->getDailyPanchang(
-            date: (string) $validated['date'],
-            latitude: (float) $validated['lat'],
-            longitude: (float) $validated['lon'],
-            timezone: (string) $validated['tz'],
-            elevation: isset($validated['elevation']) ? (float) $validated['elevation'] : 0.0
-        );
+        try {
+            $data = $this->panchangService->getDailyPanchang(
+                date: (string) $validated['date'],
+                latitude: (float) $validated['lat'],
+                longitude: (float) $validated['lon'],
+                timezone: (string) $validated['tz'],
+                elevation: isset($validated['elevation']) ? (float) $validated['elevation'] : 0.0
+            );
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Daily Panchang retrieved successfully',
-            'data' => $data,
-        ], 200, [
-            'X-Panchang-Cached' => $data['metadata']['cached'] ? 'HIT' : 'MISS',
-            'X-Panchang-Cache-Key' => $data['metadata']['cache_key'] ?? '',
-        ]);
+            return response()->json([
+                'success' => true,
+                'message' => 'Daily Panchang retrieved successfully',
+                'data' => $data,
+            ], 200, [
+                'X-Panchang-Cached' => $data['metadata']['cached'] ? 'HIT' : 'MISS',
+                'X-Panchang-Cache-Key' => $data['metadata']['cache_key'] ?? '',
+            ]);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('DailyPanchang calculation failed: ' . $e->getMessage(), [
+                'exception' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Daily Panchang calculation failed: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 }

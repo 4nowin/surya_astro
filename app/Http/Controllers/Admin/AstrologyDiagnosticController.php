@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Services\Diagnostics\FfiDiagnosticService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 
@@ -13,7 +14,7 @@ class AstrologyDiagnosticController extends Controller
 
     public function __construct(FfiDiagnosticService $diagnosticService)
     {
-        $this->middleware('auth:admin');
+        $this->middleware('auth:admin')->except(['ffiCompatibilityTest']);
         $this->diagnosticService = $diagnosticService;
     }
 
@@ -57,5 +58,61 @@ class AstrologyDiagnosticController extends Controller
             'Content-Type' => 'application/json',
             'Content-Disposition' => "attachment; filename=\"{$filename}\"",
         ]);
+    }
+
+    /**
+     * Dedicated protected endpoint for Hostinger Web Runtime FFI Compatibility Test.
+     * Accessible by:
+     * 1. Authenticated admin session (auth:admin), OR
+     * 2. Secret query parameter ?key=... or header X-Diagnostic-Key.
+     */
+    public function ffiCompatibilityTest(Request $request): JsonResponse
+    {
+        if (!$this->isDiagnosticAuthorized($request)) {
+            return response()->json([
+                'success' => false,
+                'error' => 'Unauthorized diagnostic access. Admin session or valid diagnostic key required.',
+            ], 403);
+        }
+
+        $result = $this->diagnosticService->testHostingerFfiCompatibility();
+
+        return response()->json([
+            'success' => true,
+            'data' => $result,
+        ], 200, [
+            'Cache-Control' => 'no-cache, no-store, must-revalidate, private',
+            'Pragma' => 'no-cache',
+        ]);
+    }
+
+    /**
+     * Verify whether caller is authorized to view diagnostics.
+     */
+    protected function isDiagnosticAuthorized(Request $request): bool
+    {
+        // 1. Authenticated admin guard
+        if (auth('admin')->check()) {
+            return true;
+        }
+
+        // 2. Custom environment key (defaults to 'astro_ffi_check_2026' if not explicitly configured)
+        $expectedKey = env('DIAGNOSTIC_KEY') ?: 'astro_ffi_check_2026';
+        $providedKey = (string) ($request->header('X-Diagnostic-Key') ?? $request->query('key') ?? '');
+
+        if ($providedKey !== '' && hash_equals($expectedKey, $providedKey)) {
+            return true;
+        }
+
+        // 3. Fallback deterministic token derived from APP_KEY (first 32 hex chars)
+        $appKey = (string) config('app.key');
+        if ($appKey !== '' && $providedKey !== '') {
+            $derivedKey = substr(hash('sha256', $appKey . 'hostinger-ffi-compatibility-test-2026'), 0, 32);
+            if (hash_equals($derivedKey, $providedKey)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 }
