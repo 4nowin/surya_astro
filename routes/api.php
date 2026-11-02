@@ -19,6 +19,7 @@ use App\Http\Controllers\Api\SendNotificationController;
 use App\Http\Controllers\Api\AstrologyProfileController;
 use App\Http\Controllers\Api\CalculationStatusController;
 use App\Http\Controllers\Api\DailyPanchangController;
+use App\Http\Controllers\Api\DailyHoroscopeApiController;
 use App\Http\Controllers\Api\GeoController;
 use Carbon\Carbon;
 
@@ -128,6 +129,8 @@ Route::prefix('v1')->group(function () {
     Route::get('/geo/cities', [GeoController::class, 'cities']);
     Route::get('/panchang/daily', [DailyPanchangController::class, 'daily']);
     Route::get('/calculations/{jobId}', [CalculationStatusController::class, 'show']);
+    Route::get('/horoscope/daily', [DailyHoroscopeApiController::class, 'daily']);
+    Route::get('/horoscope/daily/{sign}', [DailyHoroscopeApiController::class, 'show']);
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('/astrology/profiles', AstrologyProfileController::class);

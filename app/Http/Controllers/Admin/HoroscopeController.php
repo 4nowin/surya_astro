@@ -3,11 +3,25 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Models\Horoscope;
+use App\Services\Horoscope\DailyHoroscopeService;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 
 class HoroscopeController extends Controller
 {
+    /**
+     * Map numeric / string zodiac values to database enum and lowercase slug.
+     */
+    protected const SIGN_MAP = [
+        1 => 'Aries', 2 => 'Taurus', 3 => 'Gemini', 4 => 'Cancer',
+        5 => 'Leo', 6 => 'Virgo', 7 => 'Libra', 8 => 'Scorpio',
+        9 => 'Sagittarius', 10 => 'Capricorn', 11 => 'Aquarius', 12 => 'Pisces',
+    ];
+
+    protected const TYPE_MAP = [
+        1 => 'daily', 2 => 'weekly', 3 => 'monthly', 4 => 'yearly',
+    ];
+
     /**
      * Display a listing of the resource.
      */
@@ -51,36 +65,27 @@ class HoroscopeController extends Controller
             $image = $filename;
         }
 
-        // Define zodiac signs in both English and Hindi
-        $zodiacSigns = [
-            1 => ['en' => 'aries', 'hi' => 'मेष'],
-            2 => ['en' => 'taurus', 'hi' => 'वृषभ'],
-            3 => ['en' => 'gemini', 'hi' => 'मिथुन'],
-            4 => ['en' => 'cancer', 'hi' => 'कर्क'],
-            5 => ['en' => 'leo', 'hi' => 'सिंह'],
-            6 => ['en' => 'virgo', 'hi' => 'कन्या'],
-            7 => ['en' => 'libra', 'hi' => 'तुला'],
-            8 => ['en' => 'scorpio', 'hi' => 'वृश्चिक'],
-            9 => ['en' => 'sagittarius', 'hi' => 'धनु'],
-            10 => ['en' => 'capricorn', 'hi' => 'मकर'],
-            11 => ['en' => 'aquarius', 'hi' => 'कुंभ'],
-            12 => ['en' => 'pisces', 'hi' => 'मीन'],
-        ];
+        // Normalize zodiac sign enum and slug
+        $rawSign = $request->zodiac_sign;
+        $signEnum = is_numeric($rawSign) ? (self::SIGN_MAP[(int)$rawSign] ?? 'Aries') : ucfirst(strtolower((string)$rawSign));
+        $signSlug = strtolower($signEnum);
 
-        $tagTypes = [
-            1 => ['en' => 'daily', 'hi' => 'दैनिक'],
-            2 => ['en' => 'weekly', 'hi' => 'साप्ताहिक'],
-            3 => ['en' => 'monthly', 'hi' => 'मासिक'],
-            4 => ['en' => 'yearly', 'hi' => 'वर्षिक'],
-        ];
+        // Normalize horoscope type enum
+        $rawType = $request->horoscope_type;
+        $typeEnum = is_numeric($rawType) ? (self::TYPE_MAP[(int)$rawType] ?? 'daily') : strtolower((string)$rawType);
 
-        // Get the zodiac sign based on language
-        $language = $request->language ?? 'en'; // Default to English if language is not provided
-        $zodiacSign = $zodiacSigns[$request->zodiac_sign]['en'] ?? null;
-        $tagTypes = $tagTypes[$request->horoscope_type]['en'] ?? null;
+        // Language
+        $language = $request->language ?? 'en';
 
-        // Merge the zodiac sign into the request
-        $request->merge(['zodiac' => $zodiacSign, 'tag' => $tagTypes, 'image' => $image]);
+        // Merge normalized attributes into the request
+        $request->merge([
+            'zodiac_sign' => $signEnum,
+            'horoscope_type' => $typeEnum,
+            'zodiac' => $signSlug,
+            'tag' => $typeEnum,
+            'image' => $image,
+            'language' => $language,
+        ]);
 
         Horoscope::create($request->only([
             'image',
@@ -102,6 +107,8 @@ class HoroscopeController extends Controller
             'start_date',
             'end_date'
         ]));
+
+        DailyHoroscopeService::invalidateCache();
 
         return redirect()->route('horoscope.index')
             ->withSuccess(__('Horoscope created successfully.'));
@@ -140,36 +147,22 @@ class HoroscopeController extends Controller
             $request->merge(['image' => $filename]);
         }
 
-        // Define zodiac signs in both English and Hindi
-        $zodiacSigns = [
-            1 => ['en' => 'aries', 'hi' => 'मेष'],
-            2 => ['en' => 'taurus', 'hi' => 'वृषभ'],
-            3 => ['en' => 'gemini', 'hi' => 'मिथुन'],
-            4 => ['en' => 'cancer', 'hi' => 'कर्क'],
-            5 => ['en' => 'leo', 'hi' => 'सिंह'],
-            6 => ['en' => 'virgo', 'hi' => 'कन्या'],
-            7 => ['en' => 'libra', 'hi' => 'तुला'],
-            8 => ['en' => 'scorpio', 'hi' => 'वृश्चिक'],
-            9 => ['en' => 'sagittarius', 'hi' => 'धनु'],
-            10 => ['en' => 'capricorn', 'hi' => 'मकर'],
-            11 => ['en' => 'aquarius', 'hi' => 'कुंभ'],
-            12 => ['en' => 'pisces', 'hi' => 'मीन'],
-        ];
+        // Normalize zodiac sign enum and slug
+        $rawSign = $request->zodiac_sign ?? $horoscope->zodiac_sign;
+        $signEnum = is_numeric($rawSign) ? (self::SIGN_MAP[(int)$rawSign] ?? 'Aries') : ucfirst(strtolower((string)$rawSign));
+        $signSlug = strtolower($signEnum);
 
-        $tagTypes = [
-            1 => ['en' => 'daily', 'hi' => 'दैनिक'],
-            2 => ['en' => 'weekly', 'hi' => 'साप्ताहिक'],
-            3 => ['en' => 'monthly', 'hi' => 'मासिक'],
-            4 => ['en' => 'yearly', 'hi' => 'वर्षिक'],
-        ];
+        // Normalize horoscope type enum
+        $rawType = $request->horoscope_type ?? $horoscope->horoscope_type;
+        $typeEnum = is_numeric($rawType) ? (self::TYPE_MAP[(int)$rawType] ?? 'daily') : strtolower((string)$rawType);
 
-        // Get the zodiac sign based on language
-        $language = $request->language ?? 'en'; // Default to English if language is not provided
-        $zodiacSign = $zodiacSigns[$request->zodiac_sign]['en'] ?? $horoscope->zodiac;
-        $tagTypes = $tagTypes[$request->horoscope_type]['en'] ?? $horoscope->tag;
-
-        // Merge the updated zodiac sign into the request
-        $request->merge(['zodiac' => $zodiacSign, 'tag' => $tagTypes]);
+        // Merge normalized attributes into the request
+        $request->merge([
+            'zodiac_sign' => $signEnum,
+            'horoscope_type' => $typeEnum,
+            'zodiac' => $signSlug,
+            'tag' => $typeEnum,
+        ]);
 
         // Update the horoscope record
         $horoscope->update($request->only([
@@ -193,6 +186,8 @@ class HoroscopeController extends Controller
             'end_date'
         ]));
 
+        DailyHoroscopeService::invalidateCache();
+
         return redirect()->route('horoscope.index')
             ->withSuccess(__('Horoscope updated successfully.'));
     }
@@ -205,6 +200,8 @@ class HoroscopeController extends Controller
         $horoscope = Horoscope::findOrFail($horoscope_id);
         $horoscope->update(['active' => $request->active_horoscope]);
 
+        DailyHoroscopeService::invalidateCache();
+
         return redirect()->route('horoscope.index')->withSuccess(__('Horoscope updated successfully.'));
     }
 
@@ -212,7 +209,10 @@ class HoroscopeController extends Controller
     {
         $horoscope->delete();
 
+        DailyHoroscopeService::invalidateCache();
+
         return redirect()->route('horoscope.index')
             ->withSuccess(__('Horoscope deleted successfully.'));
     }
 }
+
