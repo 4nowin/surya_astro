@@ -26,7 +26,6 @@
         "spatie/laravel-permission": "^6.25",
         "spatie/laravel-sitemap": "^8.0|^7.0",
         "staudenmeir/eloquent-json-relations": "^1.15|^1.1",
-        "tinymce/tinymce": "^7.0|^6.8",
         "tymon/jwt-auth": "^2.1|^2.0"
     },
     "require-dev": {
