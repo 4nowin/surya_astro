@@ -26,6 +26,7 @@ class CalculationJobManager
     {
         $handler = $this->registry->get($type);
         $canonicalKey = $handler->computeCanonicalKey($payload);
+        $activeKey = "{$type}:{$canonicalKey}";
 
         // 1. Fast check: is result already in durable cache?
         $cachedResult = $handler->getCachedResult($canonicalKey, $payload);
@@ -38,81 +39,35 @@ class CalculationJobManager
         }
 
         // 2. Database transaction to inspect and atomically claim/create job
-        return DB::transaction(function () use ($type, $canonicalKey, $payload, $userId, $handler) {
-            // Find existing job for this canonical calculation
-            $existingJob = AstrologyCalculationJob::where('calculation_type', $type)
-                ->where('canonical_key', $canonicalKey)
-                ->lockForUpdate()
-                ->latest('id')
-                ->first();
+        try {
+            return DB::transaction(function () use ($type, $canonicalKey, $activeKey, $payload, $userId, $handler) {
+                // Find existing job for this canonical calculation
+                $existingJob = AstrologyCalculationJob::where('calculation_type', $type)
+                    ->where('canonical_key', $canonicalKey)
+                    ->lockForUpdate()
+                    ->latest('id')
+                    ->first();
 
-            if ($existingJob) {
-                // If previously completed, re-check cache or mark completed
-                if ($existingJob->isCompleted()) {
-                    $result = $handler->getCachedResult($canonicalKey, $payload);
-                    if ($result !== null) {
-                        return [
-                            'ready' => true,
-                            'result' => $result,
-                            'job' => $existingJob,
-                            'canonical_key' => $canonicalKey,
-                        ];
-                    }
-                    // Cache expired; re-queue job
-                    $existingJob->update([
-                        'status' => AstrologyCalculationJob::STATUS_PENDING,
-                        'attempts' => 0,
-                        'started_at' => null,
-                        'completed_at' => null,
-                        'lease_expires_at' => null,
-                    ]);
-
-                    return [
-                        'ready' => false,
-                        'job' => $existingJob->fresh(),
-                        'canonical_key' => $canonicalKey,
-                        'is_new' => false,
-                    ];
-                }
-
-                // If currently processing: check for stale lease (crashed worker recovery)
-                if ($existingJob->isProcessing()) {
-                    if ($existingJob->isStale()) {
-                        // Worker died or timed out; re-queue if attempts remain
-                        if ($existingJob->canRetry()) {
-                            $existingJob->update([
-                                'status' => AstrologyCalculationJob::STATUS_PENDING,
-                                'worker_id' => null,
-                                'lease_expires_at' => null,
-                            ]);
+                if ($existingJob) {
+                    // If previously completed, re-check cache or mark completed
+                    if ($existingJob->isCompleted()) {
+                        $result = $handler->getCachedResult($canonicalKey, $payload);
+                        if ($result !== null) {
+                            return [
+                                'ready' => true,
+                                'result' => $result,
+                                'job' => $existingJob,
+                                'canonical_key' => $canonicalKey,
+                            ];
                         }
-                    }
-
-                    return [
-                        'ready' => false,
-                        'job' => $existingJob->fresh(),
-                        'canonical_key' => $canonicalKey,
-                        'is_new' => false,
-                    ];
-                }
-
-                // If pending, reuse it
-                if ($existingJob->isPending()) {
-                    return [
-                        'ready' => false,
-                        'job' => $existingJob,
-                        'canonical_key' => $canonicalKey,
-                        'is_new' => false,
-                    ];
-                }
-
-                // If failed: check if retryable
-                if ($existingJob->isFailed()) {
-                    if ($existingJob->canRetry()) {
+                        // Cache expired; re-queue job
                         $existingJob->update([
                             'status' => AstrologyCalculationJob::STATUS_PENDING,
+                            'active_key' => $activeKey,
+                            'attempts' => 0,
+                            'started_at' => null,
+                            'completed_at' => null,
                             'lease_expires_at' => null,
-                            'worker_id' => null,
                         ]);
 
                         return [
@@ -123,36 +78,105 @@ class CalculationJobManager
                         ];
                     }
 
-                    // Max retries exceeded; return failed job
-                    return [
-                        'ready' => false,
-                        'job' => $existingJob,
-                        'canonical_key' => $canonicalKey,
-                        'is_new' => false,
-                    ];
+                    // If currently processing: check for stale lease (crashed worker recovery)
+                    if ($existingJob->isProcessing()) {
+                        if ($existingJob->isStale()) {
+                            // Worker died or timed out; re-queue if attempts remain
+                            if ($existingJob->canRetry()) {
+                                $existingJob->update([
+                                    'status' => AstrologyCalculationJob::STATUS_PENDING,
+                                    'active_key' => $activeKey,
+                                    'worker_id' => null,
+                                    'lease_expires_at' => null,
+                                ]);
+                            }
+                        }
+
+                        return [
+                            'ready' => false,
+                            'job' => $existingJob->fresh(),
+                            'canonical_key' => $canonicalKey,
+                            'is_new' => false,
+                        ];
+                    }
+
+                    // If pending, reuse it
+                    if ($existingJob->isPending()) {
+                        return [
+                            'ready' => false,
+                            'job' => $existingJob,
+                            'canonical_key' => $canonicalKey,
+                            'is_new' => false,
+                        ];
+                    }
+
+                    // If failed: check if retryable
+                    if ($existingJob->isFailed()) {
+                        if ($existingJob->canRetry()) {
+                            $existingJob->update([
+                                'status' => AstrologyCalculationJob::STATUS_PENDING,
+                                'active_key' => $activeKey,
+                                'lease_expires_at' => null,
+                                'worker_id' => null,
+                            ]);
+
+                            return [
+                                'ready' => false,
+                                'job' => $existingJob->fresh(),
+                                'canonical_key' => $canonicalKey,
+                                'is_new' => false,
+                            ];
+                        }
+
+                        // Max retries exceeded; return failed job
+                        return [
+                            'ready' => false,
+                            'job' => $existingJob,
+                            'canonical_key' => $canonicalKey,
+                            'is_new' => false,
+                        ];
+                    }
                 }
+
+                // Create new job
+                $jobId = 'calc_' . bin2hex(random_bytes(16));
+                $newJob = AstrologyCalculationJob::create([
+                    'job_id' => $jobId,
+                    'calculation_type' => $type,
+                    'canonical_key' => $canonicalKey,
+                    'active_key' => $activeKey,
+                    'payload' => $payload,
+                    'status' => AstrologyCalculationJob::STATUS_PENDING,
+                    'attempts' => 0,
+                    'max_attempts' => 3,
+                    'user_id' => $userId,
+                ]);
+
+                return [
+                    'ready' => false,
+                    'job' => $newJob,
+                    'canonical_key' => $canonicalKey,
+                    'is_new' => true,
+                ];
+            });
+        } catch (\Illuminate\Database\UniqueConstraintViolationException|\Illuminate\Database\QueryException $e) {
+            // Concurrent insert race condition caught by database unique index
+            $concurrentJob = AstrologyCalculationJob::where('calculation_type', $type)
+                ->where('canonical_key', $canonicalKey)
+                ->latest('id')
+                ->first();
+
+            if ($concurrentJob) {
+                return [
+                    'ready' => false,
+                    'job' => $concurrentJob,
+                    'canonical_key' => $canonicalKey,
+                    'is_new' => false,
+                ];
             }
 
-            // Create new job
-            $jobId = 'calc_' . bin2hex(random_bytes(16));
-            $newJob = AstrologyCalculationJob::create([
-                'job_id' => $jobId,
-                'calculation_type' => $type,
-                'canonical_key' => $canonicalKey,
-                'payload' => $payload,
-                'status' => AstrologyCalculationJob::STATUS_PENDING,
-                'attempts' => 0,
-                'max_attempts' => 3,
-                'user_id' => $userId,
-            ]);
-
-            return [
-                'ready' => false,
-                'job' => $newJob,
-                'canonical_key' => $canonicalKey,
-                'is_new' => true,
-            ];
-        });
+            throw $e;
+        }
     }
 
     /**
@@ -190,6 +214,7 @@ class CalculationJobManager
     {
         $job->update([
             'status' => AstrologyCalculationJob::STATUS_COMPLETED,
+            'active_key' => null,
             'completed_at' => now(),
             'result_cache_key' => $resultCacheKey,
             'lease_expires_at' => null,
@@ -207,6 +232,7 @@ class CalculationJobManager
 
         $job->update([
             'status' => $hasRemainingAttempts ? AstrologyCalculationJob::STATUS_PENDING : AstrologyCalculationJob::STATUS_FAILED,
+            'active_key' => $hasRemainingAttempts ? "{$job->calculation_type}:{$job->canonical_key}" : null,
             'error_message' => $errorMessage,
             'error_context' => $context,
             'lease_expires_at' => null,

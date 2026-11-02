@@ -23,6 +23,7 @@ class AstrologyCalculationJob extends Model
         'job_id',
         'calculation_type',
         'canonical_key',
+        'active_key',
         'payload',
         'status',
         'attempts',

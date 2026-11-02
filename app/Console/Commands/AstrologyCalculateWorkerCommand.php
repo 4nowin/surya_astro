@@ -55,7 +55,7 @@ class AstrologyCalculateWorkerCommand extends Command
                 }
 
                 // Renew worker lease
-                $launcher->acquireWorkerLock(60);
+                $launcher->renewWorkerLock(60);
 
                 // Claim next eligible job atomically
                 $job = $jobManager->claimNextJob($workerId, 60);

@@ -270,4 +270,73 @@ class AstrologyCalculationInfrastructureTest extends TestCase
 
         $this->assertEquals(0, AstrologyCalculationJob::count());
     }
+
+    public function test_worker_lock_renewal_and_single_worker_protection(): void
+    {
+        /** @var CalculationWorkerLauncher $launcher */
+        $launcher = app(CalculationWorkerLauncher::class);
+
+        // Initially no worker is running
+        $this->assertFalse($launcher->isWorkerRunning());
+
+        // First worker acquires lock
+        $this->assertTrue($launcher->acquireWorkerLock(60));
+        $this->assertTrue($launcher->isWorkerRunning());
+
+        // Second worker attempt to acquire fails
+        $this->assertFalse($launcher->acquireWorkerLock(60));
+
+        // Worker renews lock
+        $launcher->renewWorkerLock(60);
+        $this->assertTrue($launcher->isWorkerRunning());
+
+        // Release lock
+        $launcher->releaseWorkerLock();
+        $this->assertFalse($launcher->isWorkerRunning());
+    }
+
+    public function test_database_enforces_active_job_uniqueness_and_allows_subsequent_completed_jobs(): void
+    {
+        /** @var CalculationJobManager $jobManager */
+        $jobManager = app(CalculationJobManager::class);
+
+        $payload = ['date' => '2026-11-03', 'lat' => 28.6139, 'lon' => 77.2090, 'tz' => 'Asia/Kolkata'];
+
+        // Request 1 creates active job
+        $job1 = $jobManager->findOrCreateJob('daily_panchang', $payload);
+        $this->assertFalse($job1['ready']);
+        $this->assertTrue($job1['is_new']);
+        $this->assertNotNull($job1['job']->active_key);
+
+        // Direct DB attempt to insert a duplicate active job with same active_key must fail unique constraint
+        $duplicateAttemptCaught = false;
+        try {
+            AstrologyCalculationJob::create([
+                'job_id' => 'calc_duplicate_raw',
+                'calculation_type' => 'daily_panchang',
+                'canonical_key' => $job1['canonical_key'],
+                'active_key' => $job1['job']->active_key,
+                'payload' => $payload,
+                'status' => 'pending',
+                'attempts' => 0,
+                'max_attempts' => 3,
+            ]);
+        } catch (\Illuminate\Database\UniqueConstraintViolationException|\Illuminate\Database\QueryException $e) {
+            $duplicateAttemptCaught = true;
+        }
+        $this->assertTrue($duplicateAttemptCaught, 'Database unique constraint must reject duplicate active jobs.');
+
+        // Mark first job completed
+        $jobManager->markCompleted($job1['job'], 'panchang:daily:' . $job1['canonical_key']);
+        $job1['job']->refresh();
+        $this->assertNull($job1['job']->active_key);
+
+        // Now cache expired simulation: remove cache
+        Cache::forget('panchang:daily:' . $job1['canonical_key']);
+
+        // A new or re-queued job for the same calculation can now be active without conflict
+        $job2 = $jobManager->findOrCreateJob('daily_panchang', $payload);
+        $this->assertFalse($job2['ready']);
+        $this->assertNotNull($job2['job']->active_key);
+    }
 }

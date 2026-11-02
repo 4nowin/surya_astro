@@ -102,6 +102,18 @@ class CalculationWorkerLauncher
     }
 
     /**
+     * Renew the single-worker concurrency lock lease.
+     * Overwrites/extends the active lease so long-running worker loops do not expire prematurely.
+     */
+    public function renewWorkerLock(int $seconds = self::DEFAULT_LEASE_SECONDS): void
+    {
+        Cache::put(self::WORKER_LOCK_KEY, [
+            'locked_at' => now()->toIso8601String(),
+            'expires_at' => now()->addSeconds($seconds)->toIso8601String(),
+        ], now()->addSeconds($seconds));
+    }
+
+    /**
      * Release the single-worker concurrency lock.
      */
     public function releaseWorkerLock(): void
