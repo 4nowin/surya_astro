@@ -2,13 +2,17 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Facades\Schema;
-use Illuminate\Support\Facades\App;
-use Illuminate\Support\Facades\Session;
-use Kreait\Firebase\Factory;
+use App\Services\Astrology\Calculation\CalculationHandlerRegistry;
+use App\Services\Astrology\Calculation\CalculationJobManager;
+use App\Services\Astrology\Calculation\CalculationWorkerLauncher;
+use App\Services\Astrology\Calculation\Handlers\DailyPanchangCalculationHandler;
 use App\Services\Geo\GeocodingServiceInterface;
 use App\Services\Geo\LocalGazetteerGeocodingProvider;
+use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Session;
+use Illuminate\Support\ServiceProvider;
+use Kreait\Firebase\Factory;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -27,6 +31,16 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(GeocodingServiceInterface::class, function ($app) {
             return new LocalGazetteerGeocodingProvider();
         });
+
+        // Reusable Astrology Background Calculation System
+        $this->app->singleton(CalculationHandlerRegistry::class, function ($app) {
+            $registry = new CalculationHandlerRegistry();
+            $registry->register($app->make(DailyPanchangCalculationHandler::class));
+            return $registry;
+        });
+
+        $this->app->singleton(CalculationJobManager::class);
+        $this->app->singleton(CalculationWorkerLauncher::class);
     }
 
     /**

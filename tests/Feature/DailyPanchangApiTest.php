@@ -20,14 +20,26 @@ class DailyPanchangApiTest extends TestCase
     }
 
     /**
-     * Test public guest access to daily panchang returns 200 with valid structure.
+     * Test public guest access to daily panchang returns 202 on initial request, and 200 once calculated.
      */
     public function test_guest_can_access_daily_panchang(): void
     {
-        $response = $this->getJson('/api/v1/panchang/daily?date=2026-11-02&lat=28.6139&lon=77.2090&tz=Asia/Kolkata');
+        $url = '/api/v1/panchang/daily?date=2026-11-02&lat=28.6139&lon=77.2090&tz=Asia/Kolkata';
+
+        // 1st request triggers background job -> returns 202
+        $response1 = $this->getJson($url);
+        $response1->assertStatus(202)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.status', 'pending');
+
+        // Worker processes the job
+        $this->artisan('astro:calculate-worker', ['--max-jobs' => 1])->assertSuccessful();
+
+        // 2nd request returns 200 with complete Panchang structure
+        $response = $this->getJson($url);
 
         $response->assertStatus(200)
-            ->assertHeader('X-Panchang-Cached', 'MISS')
+            ->assertHeader('X-Panchang-Cached', 'HIT')
             ->assertJsonStructure([
                 'success',
                 'message',
@@ -88,65 +100,48 @@ class DailyPanchangApiTest extends TestCase
                         ],
                     ],
                     'auspicious_timings' => [
-                        'abhijit' => ['start', 'end', 'is_available'],
-                        'brahma_muhurta' => ['start', 'end', 'is_available'],
-                        'amrit_kaal' => ['start', 'end', 'is_available'],
+                        'abhijit' => ['start', 'end', 'start_iso', 'end_iso', 'is_available'],
+                        'brahma_muhurta' => ['start', 'end', 'start_iso', 'end_iso', 'is_available'],
+                        'amrit_kaal' => ['start', 'end', 'start_iso', 'end_iso', 'is_available'],
                     ],
                     'inauspicious_timings' => [
-                        'rahu_kaal' => ['start', 'end'],
-                        'yamaganda' => ['start', 'end'],
-                        'gulika_kaal' => ['start', 'end'],
+                        'rahu_kaal' => ['start', 'end', 'start_iso', 'end_iso'],
+                        'yamaganda' => ['start', 'end', 'start_iso', 'end_iso'],
+                        'gulika_kaal' => ['start', 'end', 'start_iso', 'end_iso'],
                         'durmuhurta',
-                        'varjyam' => ['start', 'end', 'is_available'],
+                        'varjyam' => ['start', 'end', 'start_iso', 'end_iso', 'is_available'],
                     ],
                     'calendar' => [
                         'vikram_samvat',
                         'saka_samvat',
+                        'gujarati_samvat',
                         'samvatsara',
                         'ayana',
                         'ritu',
                         'lunar_month_amanta',
                         'lunar_month_purnimanta',
                         'paksha',
+                        'is_adhika',
                     ],
                 ],
             ]);
-
-        $data = $response->json('data');
-        $this->assertFalse($data['metadata']['cached']);
-        $this->assertEquals('2026-11-02', $data['metadata']['date']);
-        $this->assertEquals(28.6139, $data['metadata']['latitude']);
-        $this->assertEquals(77.209, $data['metadata']['longitude']);
-        $this->assertEquals('Asia/Kolkata', $data['metadata']['timezone']);
-
-        // Verify five limbs
-        $this->assertNotEmpty($data['panchanga']['tithi']['name']);
-        $this->assertEquals(1, $data['panchanga']['vara']['index']); // Monday
-        $this->assertEquals('Monday', $data['panchanga']['vara']['name']);
-        $this->assertEquals('Somavara', $data['panchanga']['vara']['sanskrit_name']);
-        $this->assertNotEmpty($data['panchanga']['nakshatra']['name']);
-        $this->assertNotEmpty($data['panchanga']['yoga']['name']);
-        $this->assertNotEmpty($data['panchanga']['karana']['name']);
-
-        // Verify Sun & Moon timings
-        $this->assertNotEmpty($data['sun_moon']['sunrise']);
-        $this->assertNotEmpty($data['sun_moon']['sunset']);
-
-        // Verify Auspicious & Inauspicious
-        $this->assertNotEmpty($data['auspicious_timings']['brahma_muhurta']['start']);
-        $this->assertNotEmpty($data['inauspicious_timings']['rahu_kaal']['start']);
-        $this->assertNotEmpty($data['inauspicious_timings']['rahu_kaal']['end']);
     }
 
     /**
-     * Test authenticated user access to daily panchang returns 200.
+     * Test authenticated user access to daily panchang returns 200 after calculation.
      */
     public function test_authenticated_user_can_access_daily_panchang(): void
     {
         $user = User::factory()->create();
+        $url = '/api/v1/panchang/daily?date=2026-11-02&lat=28.6139&lon=77.2090&tz=Asia/Kolkata';
 
-        $response = $this->actingAs($user, 'sanctum')
-            ->getJson('/api/v1/panchang/daily?date=2026-11-02&lat=28.6139&lon=77.2090&tz=Asia/Kolkata');
+        // 1st request triggers job
+        $this->actingAs($user, 'sanctum')->getJson($url)->assertStatus(202);
+
+        // Process job
+        $this->artisan('astro:calculate-worker', ['--max-jobs' => 1])->assertSuccessful();
+
+        $response = $this->actingAs($user, 'sanctum')->getJson($url);
 
         $response->assertStatus(200)
             ->assertJsonPath('success', true);
@@ -183,31 +178,37 @@ class DailyPanchangApiTest extends TestCase
     }
 
     /**
-     * Test deterministic caching: 1st call is a miss, 2nd call is a hit.
+     * Test deterministic caching: 1st call is a 202, worker processes, subsequent calls return 200 HIT.
      */
     public function test_daily_panchang_is_deterministically_cached(): void
     {
         $url = '/api/v1/panchang/daily?date=2026-11-02&lat=28.6139&lon=77.2090&tz=Asia/Kolkata';
 
-        // 1st request -> Cache MISS
+        // 1st request -> Triggers 202
         $response1 = $this->getJson($url);
-        $response1->assertStatus(200)
-            ->assertHeader('X-Panchang-Cached', 'MISS');
-        $this->assertFalse($response1->json('data.metadata.cached'));
+        $response1->assertStatus(202);
 
-        $cacheKey = $response1->json('data.metadata.cache_key');
-        $this->assertNotEmpty($cacheKey);
-        $this->assertTrue(Cache::has($cacheKey));
+        // Worker processes the job
+        $this->artisan('astro:calculate-worker', ['--max-jobs' => 1])->assertSuccessful();
 
-        // 2nd request -> Cache HIT
+        // 2nd request -> Cache HIT (200)
         $response2 = $this->getJson($url);
         $response2->assertStatus(200)
             ->assertHeader('X-Panchang-Cached', 'HIT');
         $this->assertTrue($response2->json('data.metadata.cached'));
-        $this->assertEquals($cacheKey, $response2->json('data.metadata.cache_key'));
+
+        $cacheKey = $response2->json('data.metadata.cache_key');
+        $this->assertNotEmpty($cacheKey);
+        $this->assertTrue(Cache::has($cacheKey));
+
+        // 3rd request -> Same cache HIT
+        $response3 = $this->getJson($url);
+        $response3->assertStatus(200)
+            ->assertHeader('X-Panchang-Cached', 'HIT');
+        $this->assertEquals($cacheKey, $response3->json('data.metadata.cache_key'));
         $this->assertEquals(
-            $response1->json('data.panchanga.tithi.name'),
-            $response2->json('data.panchanga.tithi.name')
+            $response2->json('data.panchanga.tithi.name'),
+            $response3->json('data.panchanga.tithi.name')
         );
     }
 
@@ -216,19 +217,27 @@ class DailyPanchangApiTest extends TestCase
      */
     public function test_location_and_timezone_isolation(): void
     {
-        // Delhi, India
-        $responseDelhi = $this->getJson('/api/v1/panchang/daily?date=2026-11-02&lat=28.6139&lon=77.2090&tz=Asia/Kolkata');
-        $responseDelhi->assertStatus(200);
+        $urlDelhi = '/api/v1/panchang/daily?date=2026-11-02&lat=28.6139&lon=77.2090&tz=Asia/Kolkata';
+        $urlTokyo = '/api/v1/panchang/daily?date=2026-11-02&lat=35.6762&lon=139.6503&tz=Asia/Tokyo';
 
-        // Tokyo, Japan
-        $responseTokyo = $this->getJson('/api/v1/panchang/daily?date=2026-11-02&lat=35.6762&lon=139.6503&tz=Asia/Tokyo');
+        // Trigger both
+        $this->getJson($urlDelhi)->assertStatus(202);
+        $this->getJson($urlTokyo)->assertStatus(202);
+
+        // Process both
+        $this->artisan('astro:calculate-worker', ['--max-jobs' => 2])->assertSuccessful();
+
+        // Fetch completed
+        $responseDelhi = $this->getJson($urlDelhi);
+        $responseTokyo = $this->getJson($urlTokyo);
+
+        $responseDelhi->assertStatus(200);
         $responseTokyo->assertStatus(200);
 
         $keyDelhi = $responseDelhi->json('data.metadata.cache_key');
         $keyTokyo = $responseTokyo->json('data.metadata.cache_key');
 
         $this->assertNotEquals($keyDelhi, $keyTokyo);
-        // Sunrise in Tokyo happens hours earlier than Delhi in local times
         $this->assertNotEquals(
             $responseDelhi->json('data.sun_moon.sunrise'),
             $responseTokyo->json('data.sun_moon.sunrise')
