@@ -9,9 +9,11 @@
         </p>
     </header>
 
+    @if (Route::has('verification.send'))
     <form id="send-verification" method="post" action="{{ route('verification.send') }}">
         @csrf
     </form>
+    @endif
 
     <form method="post" action="{{ route('profile.update') }}" class="mt-6 space-y-6">
         @csrf
@@ -33,9 +35,11 @@
                     <p class="text-sm mt-2 text-gray-800 dark:text-gray-200">
                         {{ __('Your email address is unverified.') }}
 
+                        @if (Route::has('verification.send'))
                         <button form="send-verification" class="underline text-sm text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-100 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 dark:focus:ring-offset-gray-800">
                             {{ __('Click here to re-send the verification email.') }}
                         </button>
+                        @endif
                     </p>
 
                     @if (session('status') === 'verification-link-sent')
