@@ -330,6 +330,36 @@
                 </div>
             </div>
         </div>
+
+        <!-- Section 6: Daily Panchanga Deterministic Cache (M3) -->
+        @if(!empty($diagnostics['panchang_cache']))
+        <div class="col-12">
+            <div class="card shadow-sm border-0">
+                <div class="card-header bg-white py-3 border-bottom">
+                    <h5 class="card-title mb-0 fw-bold">
+                        <i class="fa-solid fa-server text-primary me-2"></i>
+                        6. Daily Panchang Deterministic Caching Status (M3)
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        @foreach($diagnostics['panchang_cache'] as $key => $item)
+                        <div class="col-md-6">
+                            <div class="p-3 bg-light rounded border">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <span class="fw-bold text-dark">{{ $item['label'] }}</span>
+                                    <span class="badge bg-success">{{ $item['status'] }}</span>
+                                </div>
+                                <div class="font-monospace text-primary fw-semibold small mb-1">{{ $item['value'] }}</div>
+                                <div class="text-muted small">{{ $item['detail'] }}</div>
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
+                </div>
+            </div>
+        </div>
+        @endif
     </div>
 
     <!-- Hidden Raw JSON container for Clipboard copy -->

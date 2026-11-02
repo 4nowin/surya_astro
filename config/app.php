@@ -171,6 +171,7 @@ return [
         App\Providers\EventServiceProvider::class,
         App\Providers\RouteServiceProvider::class,
         Monarobase\CountryList\CountryListServiceProvider::class,
+        JayeshMepani\PanchangCore\PanchangServiceProvider::class,
     ])->toArray(),
 
     /*

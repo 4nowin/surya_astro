@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\FirebaseChatController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\SendNotificationController;
 use App\Http\Controllers\Api\AstrologyProfileController;
+use App\Http\Controllers\Api\DailyPanchangController;
 use App\Http\Controllers\Api\GeoController;
 use Carbon\Carbon;
 
@@ -124,6 +125,7 @@ Route::group(['middleware' => ['auth:sanctum'], 'prefix' => "/{lang?}"], functio
 */
 Route::prefix('v1')->group(function () {
     Route::get('/geo/cities', [GeoController::class, 'cities']);
+    Route::get('/panchang/daily', [DailyPanchangController::class, 'daily']);
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('/astrology/profiles', AstrologyProfileController::class);

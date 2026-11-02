@@ -19,6 +19,7 @@ class FfiDiagnosticService
         $fs = $this->checkFilesystemAndSecurity();
         $candidates = $this->evaluateAstrologyCandidates($env, $ffiCore, $nativeLib);
         $verdict = $this->generateVerdict($env, $ffiCore, $nativeLib);
+        $panchangCache = $this->getPanchangCacheDiagnostics();
 
         return [
             'timestamp' => now()->toIso8601String(),
@@ -28,6 +29,7 @@ class FfiDiagnosticService
             'native_library_test' => $nativeLib,
             'filesystem_and_security' => $fs,
             'astrology_candidates' => $candidates,
+            'panchang_cache' => $panchangCache,
             'overall_verdict' => $verdict,
         ];
     }
@@ -454,6 +456,37 @@ class FfiDiagnosticService
                     : 'Hostinger web runtime likely enforces ffi.enable=preload. You must either configure ffi.enable=true in web php.ini (if allowed) or adopt the Pure-PHP engine architecture.'
             ];
         }
+    }
+
+    /**
+     * Inspect Panchanga deterministic cache configuration and status.
+     */
+    public function getPanchangCacheDiagnostics(): array
+    {
+        $driver = config('cache.default', 'file');
+        $canonicalKeyOk = class_exists(\App\Services\Astrology\CanonicalPanchangCacheKey::class);
+        $sampleKey = '';
+        if ($canonicalKeyOk) {
+            $attrs = \App\Services\Astrology\CanonicalPanchangCacheKey::canonicalAttributes(
+                '2026-11-02', 28.6139, 77.2090, 'Asia/Kolkata'
+            );
+            $sampleKey = 'panchang:daily:' . \App\Services\Astrology\CanonicalPanchangCacheKey::generateHash($attrs);
+        }
+
+        return [
+            'cache_driver' => [
+                'label' => 'Cache Driver',
+                'value' => (string) $driver,
+                'status' => 'PASS',
+                'detail' => 'Underlying storage engine for deterministic astronomical caching.',
+            ],
+            'canonical_key_generator' => [
+                'label' => 'Canonical Panchang Cache Identity',
+                'value' => $canonicalKeyOk ? 'Active (PAN_RULES_V1)' : 'Missing',
+                'status' => $canonicalKeyOk ? 'PASS' : 'FAIL',
+                'detail' => $sampleKey ? "Deterministic key pattern: {$sampleKey}" : 'Key generator unavailable.',
+            ],
+        ];
     }
 
     /**
