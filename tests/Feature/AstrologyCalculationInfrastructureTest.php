@@ -339,4 +339,102 @@ class AstrologyCalculationInfrastructureTest extends TestCase
         $this->assertFalse($job2['ready']);
         $this->assertNotNull($job2['job']->active_key);
     }
+
+    public function test_web_lifecycle_never_initializes_native_ffi_engine_across_all_scenarios(): void
+    {
+        // Assert that native JmeEphFFI and PanchangService are NEVER resolved in web context
+        $ffiInstantiated = false;
+        $this->app->resolving(\JmeEph\FFI\JmeEphFFI::class, function () use (&$ffiInstantiated) {
+            $ffiInstantiated = true;
+            throw new \RuntimeException('Native FFI engine was resolved during web request!');
+        });
+
+        $panchangServiceInstantiated = false;
+        $this->app->resolving(\JayeshMepani\PanchangCore\Panchanga\PanchangService::class, function () use (&$panchangServiceInstantiated) {
+            $panchangServiceInstantiated = true;
+            throw new \RuntimeException('PanchangService was resolved during web request!');
+        });
+
+        $workerLaunchCount = 0;
+        CalculationWorkerLauncher::setLaunchHook(function () use (&$workerLaunchCount) {
+            $workerLaunchCount++;
+            return true;
+        });
+
+        $url = '/api/v1/panchang/daily?date=2026-11-04&lat=19.0760&lon=72.8777&tz=Asia/Kolkata';
+
+        // 1. Scenario: Cache miss
+        $missRes = $this->getJson($url);
+        $missRes->assertStatus(202)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.status', 'pending');
+        $this->assertEquals(1, $workerLaunchCount);
+        $jobId = $missRes->json('data.job_id');
+
+        // 2. Scenario: Duplicate request reuses the active job
+        $dupRes = $this->getJson($url);
+        $dupRes->assertStatus(202);
+        $this->assertEquals($jobId, $dupRes->json('data.job_id'));
+
+        // 3. Scenario: Job status transitions
+        // 3a. Pending status
+        $statusPending = $this->getJson("/api/v1/calculations/{$jobId}");
+        $statusPending->assertStatus(200)
+            ->assertJsonPath('data.status', 'pending')
+            ->assertJsonPath('data.ready', false);
+
+        // 3b. Processing transition
+        $job = AstrologyCalculationJob::where('job_id', $jobId)->firstOrFail();
+        $job->update([
+            'status' => AstrologyCalculationJob::STATUS_PROCESSING,
+            'worker_id' => 'worker_cli_test',
+            'started_at' => now(),
+            'lease_expires_at' => now()->addSeconds(60),
+        ]);
+        $statusProcessing = $this->getJson("/api/v1/calculations/{$jobId}");
+        $statusProcessing->assertStatus(200)
+            ->assertJsonPath('data.status', 'processing')
+            ->assertJsonPath('data.ready', false);
+
+        // 3c. Completed transition with cached result
+        $dummyResult = [
+            'metadata' => [
+                'date' => '2026-11-04',
+                'latitude' => 19.0760,
+                'longitude' => 72.8777,
+                'timezone' => 'Asia/Kolkata',
+                'cached' => true,
+            ],
+            'panchanga' => [
+                'vara' => ['name' => 'Wednesday'],
+                'tithi' => ['name' => 'Ekadashi'],
+            ],
+        ];
+        $cacheKey = "panchang:daily:{$job->canonical_key}";
+        Cache::put($cacheKey, $dummyResult, now()->addDays(30));
+
+        /** @var CalculationJobManager $jobManager */
+        $jobManager = app(CalculationJobManager::class);
+        $jobManager->markCompleted($job, $cacheKey);
+
+        $statusCompleted = $this->getJson("/api/v1/calculations/{$jobId}");
+        $statusCompleted->assertStatus(200)
+            ->assertJsonPath('data.status', 'completed')
+            ->assertJsonPath('data.ready', true)
+            ->assertJsonPath('data.result.panchanga.vara.name', 'Wednesday');
+
+        // 4. Scenario: Completed result returned by original Panchang endpoint
+        $hitRes = $this->getJson($url);
+        $hitRes->assertStatus(200)
+            ->assertHeader('X-Panchang-Cached', 'HIT')
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.panchanga.vara.name', 'Wednesday');
+
+        // Confirm worker was not launched again on cache hit
+        $this->assertEquals(1, $workerLaunchCount);
+
+        // Final assertion: Native FFI and PanchangService were NEVER touched
+        $this->assertFalse($ffiInstantiated, 'JmeEphFFI must never be instantiated in web requests');
+        $this->assertFalse($panchangServiceInstantiated, 'PanchangService must never be instantiated in web requests');
+    }
 }

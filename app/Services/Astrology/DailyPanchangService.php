@@ -29,9 +29,18 @@ class DailyPanchangService
         6 => 'Shanivara',
     ];
 
+    protected ?PanchangService $panchangService = null;
+
     public function __construct(
-        protected PanchangService $panchangService
-    ) {}
+        ?PanchangService $panchangService = null
+    ) {
+        $this->panchangService = $panchangService;
+    }
+
+    protected function getPanchangService(): PanchangService
+    {
+        return $this->panchangService ??= app(PanchangService::class);
+    }
 
     /**
      * Compute or retrieve cached daily Panchang for a specific date and location.
@@ -86,7 +95,7 @@ class DailyPanchangService
             'Varjyam',
         ];
 
-        $raw = $this->panchangService->getSelectedDetails(
+        $raw = $this->getPanchangService()->getSelectedDetails(
             $dateImmutable,
             $latitude,
             $longitude,

@@ -33,6 +33,11 @@ class AppServiceProvider extends ServiceProvider
         });
 
         // Reusable Astrology Background Calculation System
+        // Explicitly instantiate without resolving DailyPanchangService to keep web SAPI free from native FFI initialization
+        $this->app->singleton(DailyPanchangCalculationHandler::class, function () {
+            return new DailyPanchangCalculationHandler();
+        });
+
         $this->app->singleton(CalculationHandlerRegistry::class, function ($app) {
             $registry = new CalculationHandlerRegistry();
             $registry->register($app->make(DailyPanchangCalculationHandler::class));

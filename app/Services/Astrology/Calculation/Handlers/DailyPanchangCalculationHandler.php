@@ -14,9 +14,16 @@ class DailyPanchangCalculationHandler implements CalculationHandlerInterface
     public const TYPE = 'daily_panchang';
     private const CACHE_TTL_DAYS = 30;
 
-    public function __construct(
-        protected DailyPanchangService $panchangService
-    ) {}
+    /**
+     * Optional lazy-loaded Panchang computation service.
+     * MUST NOT be instantiated in web SAPI processes where native FFI is restricted.
+     */
+    protected ?DailyPanchangService $panchangService = null;
+
+    public function __construct(?DailyPanchangService $panchangService = null)
+    {
+        $this->panchangService = $panchangService;
+    }
 
     public function getCalculationType(): string
     {
@@ -36,9 +43,18 @@ class DailyPanchangCalculationHandler implements CalculationHandlerInterface
         return CanonicalPanchangCacheKey::generateHash($attributes);
     }
 
+    /**
+     * Resolve the Panchang calculation service lazily on demand.
+     * This is ONLY called within the background CLI worker (where FFI is supported).
+     */
+    protected function getService(): DailyPanchangService
+    {
+        return $this->panchangService ??= app(DailyPanchangService::class);
+    }
+
     public function calculate(array $payload): array
     {
-        return $this->panchangService->getDailyPanchang(
+        return $this->getService()->getDailyPanchang(
             date: (string) $payload['date'],
             latitude: (float) $payload['lat'],
             longitude: (float) $payload['lon'],
