@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('job_id', 64)->unique();
             $table->string('calculation_type', 64)->index();
             $table->string('canonical_key', 64)->index();
+            $table->string('active_key', 128)->nullable()->unique();
             $table->json('payload');
             $table->string('status', 20)->default('pending')->index();
             $table->unsignedTinyInteger('attempts')->default(0);

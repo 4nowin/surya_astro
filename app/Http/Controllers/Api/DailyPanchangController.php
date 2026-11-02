@@ -76,6 +76,11 @@ class DailyPanchangController extends Controller
 
             // Case B & C: Job is pending or processing. Trigger background worker launch if not already running.
             $launchResult = $this->workerLauncher->launchWorkerIfNeeded();
+            if (!empty($launchResult['error'])) {
+                Log::warning("Background calculation worker launch notice for job [{$job->job_id}]: {$launchResult['error']}", [
+                    'reason' => $launchResult['reason'],
+                ]);
+            }
 
             $statusUrl = url("/api/v1/calculations/{$job->job_id}");
 

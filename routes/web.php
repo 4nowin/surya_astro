@@ -151,12 +151,6 @@ Route::group([
 Route::get('/admin/diagnostics/ffi-compatibility', [App\Http\Controllers\Admin\AstrologyDiagnosticController::class, 'ffiCompatibilityTest'])
     ->name('admin.diagnostics.ffi_compatibility');
 
-// Temporary Protected Hostinger LiteSpeed CLI Execution Compatibility Test (Admin Session OR Secure Key)
-Route::get('/admin/diagnostics/cli-execution-compatibility', [App\Http\Controllers\Admin\AstrologyDiagnosticController::class, 'cliExecutionCompatibility'])
-    ->name('admin.diagnostics.cli_execution_compatibility');
-Route::get('/admin/diagnostics/cli-execution-compatibility/result/{test_id}', [App\Http\Controllers\Admin\AstrologyDiagnosticController::class, 'cliExecutionCompatibilityResult'])
-    ->name('admin.diagnostics.cli_execution_compatibility_result');
-
 Route::get('/clear-cache', function () {
     Artisan::call('config:clear');
     Artisan::call('cache:clear');
