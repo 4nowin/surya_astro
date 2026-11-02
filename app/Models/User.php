@@ -97,6 +97,16 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(ChatPayment::class);
     }
 
+    public function astrologyProfiles()
+    {
+        return $this->hasMany(\App\Models\UserAstrologyProfile::class);
+    }
+
+    public function primaryAstrologyProfile()
+    {
+        return $this->hasOne(\App\Models\UserAstrologyProfile::class)->where('is_default', true);
+    }
+
     public static function generateReferralCode(): string
     {
         do {

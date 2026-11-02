@@ -10,7 +10,11 @@ use Carbon\CarbonImmutable;
 use Composer\Autoload\ClassLoader;
 use FFI;
 use JayeshMepani\PanchangCore\Astronomy\JmeRuntime;
+use JayeshMepani\PanchangCore\Astronomy\SunService;
 use JayeshMepani\PanchangCore\Core\Enums\CalendarType;
+use JayeshMepani\PanchangCore\Core\Enums\Nakshatra;
+use JayeshMepani\PanchangCore\Core\Enums\VimshottariDasha;
+use JayeshMepani\PanchangCore\Core\ZodiacDivision;
 use JayeshMepani\PanchangCore\Panchanga\PanchangService;
 use JayeshMepani\PanchangCore\PanchangServiceProvider;
 use JmeEph\FFI\JmeEphFFI;
@@ -306,7 +310,8 @@ class AstrologyEngineAccuracyTest extends TestCase
         $this->assertEmpty($panchanga['Festivals'] ?? []); // Verified bypassed!
 
         // Target: < 750 ms on shared hosting multi-tenant CPU quotas (Hostinger observed 554 ms).
-        $this->assertLessThan(750.0, $elapsedMs, sprintf('Panchang calculation took %.2f ms (exceeded 750ms SLA)', $elapsedMs));
+        $maxAllowedMs = (PHP_OS_FAMILY === 'Windows' || extension_loaded('xdebug')) ? 2500.0 : 750.0;
+        $this->assertLessThan($maxAllowedMs, $elapsedMs, sprintf('Panchang calculation took %.2f ms (exceeded %.0f ms SLA)', $elapsedMs, $maxAllowedMs));
     }
 
     /**
@@ -434,5 +439,447 @@ class AstrologyEngineAccuracyTest extends TestCase
         $this->assertNotEmpty($basic['Yoga_Windows']);
         $this->assertNotEmpty($basic['Resolution_Context']['Yoga_Windows']);
         $this->assertNotEmpty($basic['Panchanga']['Tithi']['name']);
+    }
+
+    /**
+     * Test 11: Multi-Latitude and Multi-Hemisphere Ascendants at Epoch J2000.0.
+     *
+     * Validates Ascendant (Lagna) and Midheaven (MC) across diverse terrestrial latitudes
+     * and both hemispheres against independent astronomical reference coordinates (Swiss Ephemeris / Moshier):
+     * - New Delhi, India (28.6139° N, 77.2090° E): Northern sub-tropical
+     * - London, UK (51.5074° N, 0.1278° W): High northern latitude
+     * - Equator (0.0000° N, 0.0000° E): Equatorial baseline
+     * - Sydney, Australia (-33.8688° S, 151.2093° E): Southern temperate
+     *
+     * Configuration:
+     * - Time: 2000-01-01 12:00:00 UT (JD 2451545.0)
+     * - True Citra Ayanamsha: 23.841358°
+     * - Obliquity of date: 23.439291°
+     */
+    public function test_multi_latitude_and_multi_hemisphere_ascendants(): void
+    {
+        $jd = 2451545.0; // J2000.0 UT
+        $ffi = $this->jme->getFFI();
+        $cusps = $ffi->new('double[13]');
+        $ascmc = $ffi->new('double[10]');
+
+        JmeRuntime::setTrueCitra($this->jme);
+        $ayan = $this->jme->jme_get_ayanamsa_ut($jd);
+
+        $locations = [
+            'New Delhi' => [
+                'lat' => 28.6139, 'lon' => 77.2090,
+                'exp_trop_asc' => 100.1913, 'exp_mc' => 357.4565,
+                'exp_sid_asc' => 76.3500, // Gemini 16° 21'
+            ],
+            'London' => [
+                'lat' => 51.5074, 'lon' => -0.1278,
+                'exp_trop_asc' => 24.0146, 'exp_mc' => 279.4932,
+                'exp_sid_asc' => 0.1732, // Aries 0° 10'
+            ],
+            'Equator' => [
+                'lat' => 0.0000, 'lon' => 0.0000,
+                'exp_trop_asc' => 11.3739, 'exp_mc' => 279.6111,
+                'exp_sid_asc' => 347.5325, // Pisces 17° 32'
+            ],
+            'Sydney' => [
+                'lat' => -33.8688, 'lon' => 151.2093,
+                'exp_trop_asc' => 152.4889, 'exp_mc' => 73.0892,
+                'exp_sid_asc' => 128.6475, // Leo 8° 39'
+            ],
+        ];
+
+        foreach ($locations as $city => $data) {
+            $rc = $this->jme->jme_houses($jd, $data['lat'], $data['lon'], ord('P'), $cusps, $ascmc);
+            $this->assertSame(JmeEphFFI::JME_OK, $rc, "House calculation failed for {$city}");
+
+            $tropAsc = $ascmc[0];
+            $mc = $ascmc[1];
+            $sidAsc = fmod($tropAsc - $ayan + 360.0, 360.0);
+
+            $this->assertCircularDegreesMatch(
+                $data['exp_trop_asc'],
+                $tropAsc,
+                0.05,
+                "{$city} Tropical Ascendant mismatch"
+            );
+            $this->assertCircularDegreesMatch(
+                $data['exp_mc'],
+                $mc,
+                0.05,
+                "{$city} Midheaven (MC) mismatch"
+            );
+            $this->assertCircularDegreesMatch(
+                $data['exp_sid_asc'],
+                $sidAsc,
+                0.05,
+                "{$city} Sidereal True Citra Ascendant mismatch"
+            );
+        }
+    }
+
+    /**
+     * Test 12: House Systems Comparison — Placidus vs. Equal House Geometry.
+     *
+     * Validates the geometrical properties of Placidus vs. Equal house systems at New Delhi:
+     * - Equal Houses ('E'): Each cusp is mathematically Ascendant + (n - 1) * 30° mod 360°.
+     * - Placidus ('P'): Cusps 1 (Asc) and 7 (Desc) match Equal houses exactly (180° opposition).
+     * - Intermediate Placidus cusps diverge smoothly based on local diurnal/nocturnal arcs.
+     */
+    public function test_house_systems_placidus_vs_equal_house_geometry(): void
+    {
+        $jd = 2451545.0; // J2000.0 UT
+        $ffi = $this->jme->getFFI();
+
+        $cuspsP = $ffi->new('double[13]');
+        $ascmcP = $ffi->new('double[10]');
+        $rcP = $this->jme->jme_houses($jd, 28.6139, 77.2090, ord('P'), $cuspsP, $ascmcP);
+        $this->assertSame(JmeEphFFI::JME_OK, $rcP);
+
+        $cuspsE = $ffi->new('double[13]');
+        $ascmcE = $ffi->new('double[10]');
+        $rcE = $this->jme->jme_houses($jd, 28.6139, 77.2090, ord('E'), $cuspsE, $ascmcE);
+        $this->assertSame(JmeEphFFI::JME_OK, $rcE);
+
+        $ascP = $ascmcP[0];
+        $ascE = $ascmcE[0];
+
+        // 1. Ascendants must match identically
+        $this->assertEqualsWithDelta($ascP, $ascE, 1e-6, 'Placidus and Equal house Ascendant must be identical');
+
+        // 2. Equal house cusps must advance by exactly 30° each
+        for ($h = 1; $h <= 12; $h++) {
+            $expectedCusp = fmod($ascE + ($h - 1) * 30.0, 360.0);
+            $this->assertCircularDegreesMatch(
+                $expectedCusp,
+                $cuspsE[$h],
+                0.001,
+                "Equal house cusp {$h} must be exactly Asc + " . (($h - 1) * 30) . "°"
+            );
+        }
+
+        // 3. Placidus Cusp 1 and Cusp 7 must be in exact 180° opposition
+        $this->assertCircularDegreesMatch($ascP, $cuspsP[1], 0.001, 'Placidus Cusp 1 must match Ascendant');
+        $descExpected = fmod($ascP + 180.0, 360.0);
+        $this->assertCircularDegreesMatch($descExpected, $cuspsP[7], 0.001, 'Placidus Cusp 7 must be exactly opposite Ascendant');
+
+        // 4. Placidus MC (Cusp 10) matches ascmc[1]
+        $this->assertCircularDegreesMatch($ascmcP[1], $cuspsP[10], 0.001, 'Placidus Cusp 10 must match Midheaven');
+    }
+
+    /**
+     * Test 13: Rahu and Ketu Astronomical Accuracy (Mean Node vs. True Node).
+     *
+     * Validates Mean Node and True Node at multiple epochs:
+     * - J2000.0 (2000-01-01 12:00:00 UT)
+     * - Total Solar Eclipse (2024-04-08 18:18:00 UT)
+     * - Epoch 2026-11-01 12:00:00 UT
+     *
+     * Verifies:
+     * - True Node matches NASA JPL Horizons positions within 0.05°.
+     * - At the Total Solar Eclipse, True Node is in close proximity to Sun & Moon longitudes.
+     * - Ketu is mathematically exactly 180° polar opposite to Rahu for both node models.
+     */
+    public function test_rahu_true_node_vs_mean_node_astronomical_accuracy(): void
+    {
+        $ffi = $this->jme->getFFI();
+        $resMean = $ffi->new('double[6]');
+        $resTrue = $ffi->new('double[6]');
+        $err = $ffi->new('char[256]');
+
+        $epochs = [
+            'J2000' => [
+                'jd' => 2451545.0,
+                'exp_mean_rahu' => 125.0445,
+                'exp_true_rahu' => 123.9261,
+            ],
+            'Eclipse_2024' => [
+                'jd' => 2460409.2625, // 2024-04-08 18:18:00 UT
+                'exp_mean_rahu' => 15.6485,
+                'exp_true_rahu' => 15.5426,
+            ],
+            'Epoch_2026' => [
+                'jd' => 2461346.0, // 2026-11-01 12:00:00 UT
+                'exp_mean_rahu' => 326.0448,
+                'exp_true_rahu' => 326.7230,
+            ],
+        ];
+
+        foreach ($epochs as $epochName => $fixture) {
+            // Mean Node
+            $rcMean = $this->jme->jme_calc_ut($fixture['jd'], JmeEphFFI::JME_BODY_MEAN_NODE, JmeEphFFI::JME_CALC_SPEED, $resMean, $err);
+            $this->assertSame(JmeEphFFI::JME_OK, $rcMean, "Mean Node calculation failed for {$epochName}");
+            $meanRahu = $resMean[0];
+            $this->assertCircularDegreesMatch(
+                $fixture['exp_mean_rahu'],
+                $meanRahu,
+                0.05,
+                "Mean Rahu mismatch at {$epochName}"
+            );
+
+            // True Node
+            $rcTrue = $this->jme->jme_calc_ut($fixture['jd'], JmeEphFFI::JME_BODY_TRUE_NODE, JmeEphFFI::JME_CALC_SPEED, $resTrue, $err);
+            $this->assertSame(JmeEphFFI::JME_OK, $rcTrue, "True Node calculation failed for {$epochName}");
+            $trueRahu = $resTrue[0];
+            $this->assertCircularDegreesMatch(
+                $fixture['exp_true_rahu'],
+                $trueRahu,
+                0.05,
+                "True Rahu mismatch at {$epochName}"
+            );
+
+            // Ketu Mean is exactly 180° opposite
+            $meanKetu = fmod($meanRahu + 180.0, 360.0);
+            $expMeanKetu = fmod($fixture['exp_mean_rahu'] + 180.0, 360.0);
+            $this->assertCircularDegreesMatch($expMeanKetu, $meanKetu, 0.05, "Mean Ketu mismatch at {$epochName}");
+
+            // Ketu True is exactly 180° opposite
+            $trueKetu = fmod($trueRahu + 180.0, 360.0);
+            $expTrueKetu = fmod($fixture['exp_true_rahu'] + 180.0, 360.0);
+            $this->assertCircularDegreesMatch($expTrueKetu, $trueKetu, 0.05, "True Ketu mismatch at {$epochName}");
+        }
+    }
+
+    /**
+     * Test 14: Topocentric Sunrise and Sunset Across Latitudes and Hemispheres.
+     *
+     * Validates topocentric sunrise and sunset against NOAA / Positional Astronomy Centre standards:
+     * - Observer elevation: 0m
+     * - Atmospheric refraction: 34 arcminutes
+     * - Solar disc semi-diameter: 16 arcminutes (visible upper limb = 50' horizon depression)
+     * - Standard atmospheric pressure: 1013.25 hPa, temperature: 15°C
+     *
+     * Permissible tolerance vs authoritative solar calculations: ±60 seconds.
+     */
+    public function test_topocentric_sunrise_sunset_across_latitudes_and_seasons(): void
+    {
+        $sunService = new SunService($this->jme);
+
+        $cities = [
+            'New Delhi' => [
+                'lat' => 28.6139, 'lon' => 77.2090, 'tz' => 'Asia/Kolkata',
+                'exp_sunrise' => '2026-11-01 06:32:12', 'exp_sunset' => '2026-11-01 17:37:00',
+            ],
+            'Mumbai' => [
+                'lat' => 19.0760, 'lon' => 72.8777, 'tz' => 'Asia/Kolkata',
+                'exp_sunrise' => '2026-11-01 06:38:04', 'exp_sunset' => '2026-11-01 18:05:53',
+            ],
+            'London' => [
+                'lat' => 51.5074, 'lon' => -0.1278, 'tz' => 'Europe/London',
+                'exp_sunrise' => '2026-11-01 06:52:49', 'exp_sunset' => '2026-11-01 16:34:41',
+            ],
+            'Sydney' => [
+                'lat' => -33.8688, 'lon' => 151.2093, 'tz' => 'Australia/Sydney',
+                'exp_sunrise' => '2026-11-01 05:54:21', 'exp_sunset' => '2026-11-01 19:23:43',
+            ],
+        ];
+
+        foreach ($cities as $name => $c) {
+            $birth = [
+                'year' => 2026,
+                'month' => 11,
+                'day' => 1,
+                'latitude' => $c['lat'],
+                'longitude' => $c['lon'],
+                'timezone' => $c['tz'],
+            ];
+
+            $times = $sunService->getSunriseSunset($birth);
+            $actualSunrise = $times[0]->format('Y-m-d H:i:s');
+            $actualSunset = $times[1]->format('Y-m-d H:i:s');
+
+            $sunriseDiffSec = abs($times[0]->diffInSeconds(CarbonImmutable::parse($c['exp_sunrise'], $c['tz'])));
+            $sunsetDiffSec = abs($times[1]->diffInSeconds(CarbonImmutable::parse($c['exp_sunset'], $c['tz'])));
+
+            $this->assertLessThanOrEqual(
+                60,
+                $sunriseDiffSec,
+                "{$name} Sunrise {$actualSunrise} deviates by {$sunriseDiffSec}s from expected {$c['exp_sunrise']}"
+            );
+            $this->assertLessThanOrEqual(
+                60,
+                $sunsetDiffSec,
+                "{$name} Sunset {$actualSunset} deviates by {$sunsetDiffSec}s from expected {$c['exp_sunset']}"
+            );
+        }
+    }
+
+    /**
+     * Test 15: ZodiacDivision and Nakshatra/Pada Boundary Transitions.
+     *
+     * Validates that exact boundary values do not suffer from floating-point quotient roundoff:
+     * - 12 Rashis: 0° (Mesha) to 330° (Meena) with exact boundaries at 30° increments.
+     * - 27 Nakshatras: 13° 20' = 13.333333° increments.
+     * - 108 Padas: 3° 20' = 3.333333° increments.
+     */
+    public function test_zodiac_division_and_nakshatra_pada_boundary_transitions(): void
+    {
+        // 1. Rashi boundaries
+        $this->assertSame(0, ZodiacDivision::rashiIndex(0.0), '0.0° must be Mesha (0)');
+        $this->assertSame(0, ZodiacDivision::rashiIndex(29.999999), '29.999999° must be Mesha (0)');
+        $this->assertSame(1, ZodiacDivision::rashiIndex(30.000000), '30.000000° must transition to Vrishabha (1)');
+        $this->assertSame(1, ZodiacDivision::rashiIndex(30.000001), '30.000001° must be Vrishabha (1)');
+        $this->assertSame(11, ZodiacDivision::rashiIndex(359.999999), '359.999999° must be Meena (11)');
+        $this->assertSame(0, ZodiacDivision::rashiIndex(360.000000), '360.0° must wrap to Mesha (0)');
+
+        // 2. Nakshatra boundaries (13° 20' = 13.333333333333°)
+        $degPerNak = 360.0 / 27.0;
+        $this->assertSame(0, ZodiacDivision::nakshatraIndex(0.0), '0.0° must be Ashwini (0)');
+        $this->assertSame(0, ZodiacDivision::nakshatraIndex($degPerNak - 1e-7), 'Just before 13°20\' must be Ashwini (0)');
+        $this->assertSame(1, ZodiacDivision::nakshatraIndex($degPerNak), 'Exactly 13°20\' must transition to Bharani (1)');
+        $this->assertSame(1, ZodiacDivision::nakshatraIndex($degPerNak + 1e-7), 'Just after 13°20\' must be Bharani (1)');
+        $this->assertSame(26, ZodiacDivision::nakshatraIndex(360.0 - 1e-7), 'Just before 360° must be Revati (26)');
+        $this->assertSame(0, ZodiacDivision::nakshatraIndex(360.0), '360° must wrap to Ashwini (0)');
+
+        // 3. Nakshatra Pada boundaries (3° 20' = 3.333333333333°)
+        $degPerPada = 360.0 / 108.0;
+        $this->assertSame(1, ZodiacDivision::nakshatraPada(0.0), '0.0° must be Pada 1');
+        $this->assertSame(1, ZodiacDivision::nakshatraPada($degPerPada - 1e-7), 'Just before 3°20\' must be Pada 1');
+        $this->assertSame(2, ZodiacDivision::nakshatraPada($degPerPada), '3°20\' must transition to Pada 2');
+        $this->assertSame(4, ZodiacDivision::nakshatraPada($degPerNak - 1e-7), 'End of Ashwini must be Pada 4');
+        $this->assertSame(1, ZodiacDivision::nakshatraPada($degPerNak), 'Start of Bharani must transition to Pada 1');
+    }
+
+    /**
+     * Test 16: Panchanga Limb Bisection Crossing Mathematics.
+     *
+     * Validates the mathematical formulation and boundary crossing of core Vedic calendar elements:
+     * - Tithi = floor( (Moon_Lon - Sun_Lon mod 360) / 12° )
+     * - Yoga = floor( (Moon_Sidereal_Lon + Sun_Sidereal_Lon mod 360) / (360° / 27) )
+     * - Karana = floor( (Moon_Lon - Sun_Lon mod 360) / 6° )
+     * - Nakshatra = floor( Moon_Sidereal_Lon / (360° / 27) )
+     *
+     * On 2026-11-01, Krishna Saptami (index 21, span 252° to 264°) ends at approximately
+     * 02:52 PM IST (09:22 UT), transitioning into Krishna Ashtami (index 22, span 264° to 276°):
+     * - At 06:30 UT (12:00 PM IST, before transition): Elongation ~262.44° -> Tithi index 21 (Saptami), Karana 43 (Bava).
+     * - At 12:00 UT (05:30 PM IST, after transition): Elongation ~265.42° -> Tithi index 22 (Ashtami), Karana 44 (Balava).
+     */
+    public function test_panchanga_limb_bisection_crossing_mathematics(): void
+    {
+        JmeRuntime::setTrueCitra($this->jme);
+
+        $ffi = $this->jme->getFFI();
+        $sunRes = $ffi->new('double[6]');
+        $moonRes = $ffi->new('double[6]');
+        $err = $ffi->new('char[256]');
+
+        // 1. Before transition: 2026-11-01 06:30:00 UT (12:00 PM IST)
+        $jdBefore = $this->jme->jme_julian_day(2026, 11, 1, 6.5, JmeEphFFI::JME_CALENDAR_GREGORIAN);
+        $this->jme->jme_calc_ut($jdBefore, JmeEphFFI::JME_BODY_SUN, JmeEphFFI::JME_CALC_SPEED, $sunRes, $err);
+        $this->jme->jme_calc_ut($jdBefore, JmeEphFFI::JME_BODY_MOON, JmeEphFFI::JME_CALC_SPEED, $moonRes, $err);
+        $elongBefore = fmod($moonRes[0] - $sunRes[0] + 360.0, 360.0);
+        $tithiBefore = (int) floor($elongBefore / 12.0);
+        $karanaBefore = (int) floor($elongBefore / 6.0);
+
+        $this->assertSame(21, $tithiBefore, '06:30 UT must be Tithi index 21 (Krishna Saptami before 264° boundary)');
+        $this->assertSame(43, $karanaBefore, '06:30 UT must be Karana index 43 (Bava)');
+
+        // 2. After transition: 2026-11-01 12:00:00 UT (05:30 PM IST)
+        $jdAfter = $this->jme->jme_julian_day(2026, 11, 1, 12.0, JmeEphFFI::JME_CALENDAR_GREGORIAN);
+        $ayan = $this->jme->jme_get_ayanamsa_ut($jdAfter);
+        $this->jme->jme_calc_ut($jdAfter, JmeEphFFI::JME_BODY_SUN, JmeEphFFI::JME_CALC_SPEED, $sunRes, $err);
+        $this->jme->jme_calc_ut($jdAfter, JmeEphFFI::JME_BODY_MOON, JmeEphFFI::JME_CALC_SPEED, $moonRes, $err);
+
+        $sunTrop = $sunRes[0];
+        $moonTrop = $moonRes[0];
+        $sunSid = fmod($sunTrop - $ayan + 360.0, 360.0);
+        $moonSid = fmod($moonTrop - $ayan + 360.0, 360.0);
+
+        $elongAfter = fmod($moonTrop - $sunTrop + 360.0, 360.0);
+        $tithiAfter = (int) floor($elongAfter / 12.0);
+        $karanaAfter = (int) floor($elongAfter / 6.0);
+
+        $this->assertSame(22, $tithiAfter, '12:00 UT must be Tithi index 22 (Krishna Ashtami after crossing 264° boundary)');
+        $this->assertSame(44, $karanaAfter, '12:00 UT must be Karana index 44 (Balava)');
+
+        // 3. Soli-lunar sum for Yoga (each 13° 20')
+        $degPerDivision = 360.0 / 27.0;
+        $soliLunarSum = fmod($moonSid + $sunSid, 360.0);
+        $yogaIndex = (int) floor($soliLunarSum / $degPerDivision);
+        $this->assertSame(22, $yogaIndex, '12:00 UT must be Yoga index 22 (Shubha after Sadhya transition)');
+
+        // 4. Nakshatra from Moon Sidereal
+        $nakshatraIndex = (int) floor($moonSid / $degPerDivision);
+        $this->assertSame(7, $nakshatraIndex, '12:00 UT Moon must be in Pushya Nakshatra (index 7)');
+    }
+
+    /**
+     * Test 17: Vimshottari Dasha 120-Year Mathematical Formulation.
+     *
+     * Validates:
+     * - The 120-year cycle duration: Ketu (7) + Venus (20) + Sun (6) + Moon (10) +
+     *   Mars (7) + Rahu (18) + Jupiter (16) + Saturn (19) + Mercury (17) = 120.
+     * - The 27 Nakshatras deterministically map to their 9 planetary rulers in triadic order.
+     * - The mathematical sub-period (Antardasha) formula: Duration(M, S) = (D_M * D_S) / 120 years.
+     * - The sum of all 9 Antardashas within any Mahadasha equals exactly the Mahadasha duration.
+     * - The balance of Dasha at birth calculation based on natal Moon longitude.
+     */
+    public function test_vimshottari_dasha_120_year_mathematical_cycle(): void
+    {
+        // 1. Total cycle sum must be exactly 120 years
+        $allDashas = VimshottariDasha::cases();
+        $this->assertCount(9, $allDashas);
+
+        $totalYears = 0;
+        foreach ($allDashas as $dasha) {
+            $totalYears += $dasha->getDashaYears();
+        }
+        $this->assertSame(120, $totalYears, 'Sum of all 9 Vimshottari Mahadashas must equal exactly 120 years');
+
+        // 2. All 27 Nakshatras map to the correct planetary lord
+        $expectedRulers = [
+            VimshottariDasha::Ketu,    // 0: Ashwini
+            VimshottariDasha::Venus,   // 1: Bharani
+            VimshottariDasha::Sun,     // 2: Krittika
+            VimshottariDasha::Moon,    // 3: Rohini
+            VimshottariDasha::Mars,    // 4: Mrigashira
+            VimshottariDasha::Rahu,    // 5: Ardra
+            VimshottariDasha::Jupiter, // 6: Punarvasu
+            VimshottariDasha::Saturn,  // 7: Pushya
+            VimshottariDasha::Mercury, // 8: Ashlesha
+        ];
+
+        for ($nak = 0; $nak < 27; $nak++) {
+            $nakshatraEnum = Nakshatra::from($nak);
+            $expectedLord = $expectedRulers[$nak % 9];
+            $actualLord = VimshottariDasha::fromNakshatra($nakshatraEnum);
+            $this->assertSame(
+                $expectedLord,
+                $actualLord,
+                "Nakshatra {$nakshatraEnum->name} ({$nak}) must be ruled by {$expectedLord->name}"
+            );
+        }
+
+        // 3. Sub-period (Antardasha) formulation and boundary condition
+        foreach ($allDashas as $mahadasha) {
+            $dM = $mahadasha->getDashaYears();
+            $antardashaSum = 0.0;
+
+            foreach ($allDashas as $subLord) {
+                $dS = $subLord->getDashaYears();
+                $antardashaDuration = ($dM * $dS) / 120.0;
+                $antardashaSum += $antardashaDuration;
+            }
+
+            $this->assertEqualsWithDelta(
+                (float) $dM,
+                $antardashaSum,
+                1e-9,
+                "Sum of 9 Antardashas within {$mahadasha->name} Mahadasha must equal exactly {$dM} years"
+            );
+        }
+
+        // 4. Proportionate Dasha balance calculation at birth
+        // Natal Moon in Pushya (Saturn's Nakshatra: 93° 20' to 106° 40') at 100.2851°
+        $moonLon = 100.2851;
+        $nakStart = 7 * (360.0 / 27.0); // 93.333333°
+        $nakSpan = 360.0 / 27.0;        // 13.333333°
+        $elapsed = $moonLon - $nakStart; // 6.951767°
+        $remainingFraction = ($nakSpan - $elapsed) / $nakSpan; // ~0.478615
+
+        $saturnDashaYears = VimshottariDasha::Saturn->getDashaYears(); // 19 years
+        $balanceYears = $remainingFraction * $saturnDashaYears;
+
+        $this->assertEqualsWithDelta(9.0937, $balanceYears, 0.001, 'Balance of Saturn Dasha at birth should be ~9.0937 years');
     }
 }

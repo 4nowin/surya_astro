@@ -7,6 +7,8 @@ use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Session;
 use Kreait\Firebase\Factory;
+use App\Services\Geo\GeocodingServiceInterface;
+use App\Services\Geo\LocalGazetteerGeocodingProvider;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -20,6 +22,10 @@ class AppServiceProvider extends ServiceProvider
             return (new Factory)
                 ->withServiceAccount($credentialsPath)
                 ->createAuth();
+        });
+
+        $this->app->singleton(GeocodingServiceInterface::class, function ($app) {
+            return new LocalGazetteerGeocodingProvider();
         });
     }
 

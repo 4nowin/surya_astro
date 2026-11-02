@@ -16,6 +16,8 @@ use App\Http\Controllers\Api\AstrologerChatController;
 use App\Http\Controllers\Api\FirebaseChatController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\SendNotificationController;
+use App\Http\Controllers\Api\AstrologyProfileController;
+use App\Http\Controllers\Api\GeoController;
 use Carbon\Carbon;
 
 /*
@@ -112,5 +114,18 @@ Route::group(['middleware' => ['auth:sanctum'], 'prefix' => "/{lang?}"], functio
             $user->save();
         }
         return response()->json(['success' => true, 'user' => $user]);
+    });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Mini-Phase 2: Astrology Profile & Geocoding API Routes (v1)
+|--------------------------------------------------------------------------
+*/
+Route::prefix('v1')->group(function () {
+    Route::get('/geo/cities', [GeoController::class, 'cities']);
+
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::apiResource('/astrology/profiles', AstrologyProfileController::class);
     });
 });
