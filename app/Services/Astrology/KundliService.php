@@ -86,13 +86,13 @@ class KundliService implements KundliCalculatorInterface
         'ketu'    => ['exalted' => 8,  'debilitated' => 2,  'own' => [8]],
     ];
 
-    protected JmeEphFFI $jme;
-    protected AstronomyService $astronomy;
+    protected ?JmeEphFFI $jme = null;
+    protected ?AstronomyService $astronomy = null;
     protected DashaService $dashaService;
     protected KundliInterpretationService $interpretationService;
 
-    protected CData $resultsBuffer;
-    protected CData $errorBuffer;
+    protected ?CData $resultsBuffer = null;
+    protected ?CData $errorBuffer = null;
 
     public function __construct(
         ?JmeEphFFI $jme = null,
@@ -100,10 +100,24 @@ class KundliService implements KundliCalculatorInterface
         ?DashaService $dashaService = null,
         ?KundliInterpretationService $interpretationService = null
     ) {
-        $this->jme = $jme ?? app(JmeEphFFI::class);
-        $this->astronomy = $astronomy ?? app(AstronomyService::class);
+        $this->jme = $jme;
+        $this->astronomy = $astronomy;
         $this->dashaService = $dashaService ?? app(DashaService::class);
         $this->interpretationService = $interpretationService ?? app(KundliInterpretationService::class);
+    }
+
+    /**
+     * Lazily initialize native FFI ephemeris engine only when calculations execute.
+     * Prevents invoking FFI during service construction or in web SAPI processes.
+     */
+    protected function ensureNativeEphemerisInitialized(): void
+    {
+        if ($this->resultsBuffer !== null && $this->errorBuffer !== null) {
+            return;
+        }
+
+        $this->jme ??= app(JmeEphFFI::class);
+        $this->astronomy ??= app(AstronomyService::class);
 
         // Enforce True Chitra Lahiri
         JmeRuntime::setTrueCitra($this->jme);
@@ -199,8 +213,8 @@ class KundliService implements KundliCalculatorInterface
         string $timezone,
         array $profileMetadata = []
     ): array {
-        // Enforce True Citra Lahiri
-        JmeRuntime::setTrueCitra($this->jme);
+        // Enforce True Citra Lahiri and initialize buffers lazily
+        $this->ensureNativeEphemerisInitialized();
 
         // 1. Resolve birth interval and midpoint
         $interval = $this->resolveBirthInterval($birthDate, $birthTime, $precision, $approximateWindow, $timezone);

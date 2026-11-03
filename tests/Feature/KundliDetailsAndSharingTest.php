@@ -7,11 +7,13 @@ namespace Tests\Feature;
 use App\Models\SavedKundli;
 use App\Models\User;
 use App\Models\UserAstrologyProfile;
+use App\Services\Astrology\Calculation\CalculationWorkerLauncher;
 use App\Services\Astrology\DashaService;
 use App\Services\Astrology\KundliService;
 use App\Services\Astrology\Pdf\KundliPdfService;
 use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Laravel\Sanctum\Sanctum;
 use Tests\TestCase;
 
@@ -25,6 +27,10 @@ class KundliDetailsAndSharingTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        Cache::flush();
+        CalculationWorkerLauncher::setLaunchHook(function () {
+            return true;
+        });
 
         $this->user = User::factory()->create([
             'email' => 'm6user@example.com',
@@ -45,6 +51,19 @@ class KundliDetailsAndSharingTest extends TestCase
             'longitude' => 77.2090,
             'timezone' => 'Asia/Kolkata',
         ]);
+    }
+
+    protected function tearDown(): void
+    {
+        CalculationWorkerLauncher::setLaunchHook(null);
+        parent::tearDown();
+    }
+
+    protected function primeCalculation(): void
+    {
+        Sanctum::actingAs($this->user);
+        $this->getJson("/api/v1/astrology/kundli?profile_id={$this->profile->id}");
+        $this->artisan('astro:calculate-worker', ['--max-jobs' => 1]);
     }
 
     public function test_vimshottari_dasha_calculation_covers_120_years(): void
@@ -75,6 +94,7 @@ class KundliDetailsAndSharingTest extends TestCase
 
     public function test_dasha_api_endpoint_returns_success_for_authenticated_user(): void
     {
+        $this->primeCalculation();
         Sanctum::actingAs($this->user);
 
         $res = $this->getJson("/api/v1/kundli/{$this->profile->id}/dashas");
@@ -95,6 +115,7 @@ class KundliDetailsAndSharingTest extends TestCase
 
     public function test_saving_and_retrieving_kundli_snapshot(): void
     {
+        $this->primeCalculation();
         Sanctum::actingAs($this->user);
 
         // 1. Save snapshot
@@ -169,6 +190,7 @@ class KundliDetailsAndSharingTest extends TestCase
 
     public function test_pdf_report_generates_valid_pdf_content_for_english_and_hindi(): void
     {
+        $this->primeCalculation();
         Sanctum::actingAs($this->user);
 
         // 1. English PDF
@@ -188,5 +210,31 @@ class KundliDetailsAndSharingTest extends TestCase
         $contentHi = $resHi->getContent();
         $this->assertStringStartsWith('%PDF-', $contentHi);
         $this->assertGreaterThan(5000, strlen($contentHi));
+    }
+
+    public function test_uncomputed_profile_returns_pending_status_without_triggering_native_ephemeris(): void
+    {
+        Sanctum::actingAs($this->user);
+
+        // Dashas endpoint without prior calculation
+        $dashaRes = $this->getJson("/api/v1/kundli/{$this->profile->id}/dashas");
+        $dashaRes->assertStatus(202)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.status', 'pending');
+
+        // Save endpoint without prior calculation
+        $saveRes = $this->postJson('/api/v1/kundli/save', [
+            'profile_id' => $this->profile->id,
+            'title' => 'Pending Chart',
+        ]);
+        $saveRes->assertStatus(202)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.status', 'pending');
+
+        // PDF endpoint without prior calculation
+        $pdfRes = $this->get("/api/v1/kundli/pdf?profile_id={$this->profile->id}&locale=en");
+        $pdfRes->assertStatus(202)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.status', 'pending');
     }
 }

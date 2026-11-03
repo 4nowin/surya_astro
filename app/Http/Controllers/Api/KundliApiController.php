@@ -12,7 +12,7 @@ use App\Models\UserAstrologyProfile;
 use App\Services\Astrology\Calculation\CalculationJobManager;
 use App\Services\Astrology\Calculation\CalculationWorkerLauncher;
 use App\Services\Astrology\Calculation\Handlers\KundliCalculationHandler;
-use App\Services\Astrology\KundliService;
+use App\Services\Astrology\DashaService;
 use App\Services\Astrology\Pdf\KundliPdfService;
 use DateTimeInterface;
 use Illuminate\Http\JsonResponse;
@@ -24,7 +24,7 @@ class KundliApiController extends Controller
     public function __construct(
         protected CalculationJobManager $jobManager,
         protected CalculationWorkerLauncher $workerLauncher,
-        protected KundliService $kundliService,
+        protected DashaService $dashaService,
         protected KundliPdfService $pdfService
     ) {}
 
@@ -197,6 +197,40 @@ class KundliApiController extends Controller
     }
 
     /**
+     * Resolve calculated Kundli result from cache or calculation job infrastructure.
+     *
+     * @return array{ready: bool, result: ?array<string, mixed>, job: ?AstrologyCalculationJob, canonical_key: string}
+     */
+    protected function resolveKundliData(UserAstrologyProfile $profile, int $userId): array
+    {
+        $timezone = $profile->timezone ?: 'UTC';
+        $dob = $profile->date_of_birth instanceof DateTimeInterface
+            ? $profile->date_of_birth->format('Y-m-d')
+            : (string) $profile->date_of_birth;
+
+        $payload = [
+            'profile_id' => $profile->id,
+            'user_id' => $userId,
+            'date_of_birth' => $dob,
+            'birth_time_precision' => (string) $profile->birth_time_precision,
+            'birth_time' => $profile->birth_time,
+            'approximate_time_window' => $profile->approximate_time_window,
+            'latitude' => (float) $profile->latitude,
+            'longitude' => (float) $profile->longitude,
+            'timezone' => $timezone,
+            'name' => $profile->name,
+            'relationship' => $profile->relationship,
+            'birth_city' => $profile->birth_city,
+        ];
+
+        return $this->jobManager->findOrCreateJob(
+            type: KundliCalculationHandler::TYPE,
+            payload: $payload,
+            userId: $userId
+        );
+    }
+
+    /**
      * Retrieve Vimshottari Dasha timeline for a profile.
      *
      * GET /api/v1/kundli/{profileId}/dashas
@@ -216,13 +250,53 @@ class KundliApiController extends Controller
             return response()->json(['success' => false, 'message' => 'Profile not found.'], 404);
         }
 
-        $kundli = $this->kundliService->calculateForProfile($profile);
+        $lookup = $this->resolveKundliData($profile, $user->id);
+
+        if ($lookup['ready'] && !empty($lookup['result'])) {
+            $result = $lookup['result'];
+            if (!empty($result['dasha'])) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Vimshottari Dasha timeline retrieved successfully.',
+                    'data' => $result['dasha'],
+                ]);
+            }
+
+            // Fallback: Compute dasha from cached natal moon longitude using pure PHP DashaService
+            $moonLon = $result['planets']['moon']['longitude'] ?? null;
+            $dob = $profile->date_of_birth instanceof DateTimeInterface
+                ? $profile->date_of_birth->format('Y-m-d')
+                : (string) $profile->date_of_birth;
+            $birthDateTimeString = ($profile->birth_time && $profile->birth_time_precision === UserAstrologyProfile::PRECISION_VERIFIED)
+                ? "{$dob} {$profile->birth_time}"
+                : "{$dob} 12:00:00";
+            $dashaData = $this->dashaService->calculateVimshottariTimeline(
+                moonLongitude: $moonLon,
+                birthDate: $birthDateTimeString,
+                precision: (string) $profile->birth_time_precision,
+                locale: $request->query('locale', 'en')
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Vimshottari Dasha timeline calculated successfully.',
+                'data' => $dashaData,
+            ]);
+        }
+
+        // Job is pending or queued: launch worker if needed and return 202
+        $this->workerLauncher->launchWorkerIfNeeded();
 
         return response()->json([
             'success' => true,
-            'message' => 'Vimshottari Dasha timeline calculated successfully.',
-            'data' => $kundli['dasha'] ?? null,
-        ]);
+            'status' => 'pending',
+            'message' => 'Kundli calculation in progress. Please poll calculation status.',
+            'data' => [
+                'status' => 'pending',
+                'job_id' => $lookup['job']?->job_id,
+                'status_url' => url("/api/v1/calculations/{$lookup['job']?->job_id}"),
+            ],
+        ], 202);
     }
 
     /**
@@ -329,10 +403,26 @@ class KundliApiController extends Controller
             return response()->json(['success' => false, 'message' => 'Astrology profile not found.'], 404);
         }
 
-        // Fresh calculation or provided chart data
+        // 1. Consume provided chart_data from client if passed
         $chartData = $request->input('chart_data');
+
+        // 2. Otherwise retrieve from cached calculation result
         if (empty($chartData)) {
-            $chartData = $this->kundliService->calculateForProfile($profile);
+            $lookup = $this->resolveKundliData($profile, $user->id);
+            if ($lookup['ready'] && !empty($lookup['result'])) {
+                $chartData = $lookup['result'];
+            } else {
+                $this->workerLauncher->launchWorkerIfNeeded();
+                return response()->json([
+                    'success' => true,
+                    'status' => 'pending',
+                    'message' => 'Kundli calculation is still in progress. Please wait for completion before saving snapshot.',
+                    'data' => [
+                        'status' => 'pending',
+                        'job_id' => $lookup['job']?->job_id,
+                    ],
+                ], 202);
+            }
         }
 
         $title = $request->input('title') ?: "{$profile->name}'s Kundli";
@@ -430,7 +520,21 @@ class KundliApiController extends Controller
                 return response()->json(['success' => false, 'message' => 'Astrology profile not found.'], 404);
             }
 
-            $chartData = $this->kundliService->calculateForProfile($profile);
+            $lookup = $this->resolveKundliData($profile, $user->id);
+            if ($lookup['ready'] && !empty($lookup['result'])) {
+                $chartData = $lookup['result'];
+            } else {
+                $this->workerLauncher->launchWorkerIfNeeded();
+                return response()->json([
+                    'success' => true,
+                    'status' => 'pending',
+                    'message' => 'Kundli calculation in progress. Please retry PDF export once calculation completes.',
+                    'data' => [
+                        'status' => 'pending',
+                        'job_id' => $lookup['job']?->job_id,
+                    ],
+                ], 202);
+            }
         }
 
         $pdfBinary = $this->pdfService->generatePdf($chartData, $locale);
