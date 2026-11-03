@@ -21,17 +21,26 @@
 <form method="GET" action="{{ route('horoscope.index') }}" class="mb-3 row g-2">
     <div class="col-auto">
         <label for="date" class="form-label">{{ __('horoscope.date') }}</label>
-        <input type="date" name="date" id="date" value="{{ request('date') }}" class="form-control form-control-sm">
+        <input type="date" name="date" id="date" value="{{ $selectedDate ?? request('date') }}" class="form-control form-control-sm">
     </div>
 
     <div class="col-auto">
         <label for="horoscope_type" class="form-label">{{ __('horoscope.type') }}</label>
         <select name="horoscope_type" id="horoscope_type" class="form-select form-select-sm">
             <option value="">{{ __('horoscope.all') }}</option>
-            <option value="daily" {{ request('horoscope_type') == 'daily' ? 'selected' : '' }}>{{ __('horoscope.daily') }}</option>
+            <option value="daily" {{ (request('horoscope_type') == 'daily' || !request()->has('horoscope_type')) ? 'selected' : '' }}>{{ __('horoscope.daily') }}</option>
             <option value="weekly" {{ request('horoscope_type') == 'weekly' ? 'selected' : '' }}>{{ __('horoscope.weekly') }}</option>
             <option value="monthly" {{ request('horoscope_type') == 'monthly' ? 'selected' : '' }}>{{ __('horoscope.monthly') }}</option>
             <option value="yearly" {{ request('horoscope_type') == 'yearly' ? 'selected' : '' }}>{{ __('horoscope.yearly') }}</option>
+        </select>
+    </div>
+
+    <div class="col-auto">
+        <label for="language" class="form-label">{{ __('Language') }}</label>
+        <select name="language" id="language" class="form-select form-select-sm">
+            <option value="">{{ __('All Languages') }}</option>
+            <option value="en" {{ request('language') == 'en' ? 'selected' : '' }}>English</option>
+            <option value="hi" {{ request('language') == 'hi' ? 'selected' : '' }}>Hindi (हिंदी)</option>
         </select>
     </div>
 
@@ -41,6 +50,42 @@
     </div>
 </form>
 </div>
+
+{{-- 12-Zodiac Daily Publication Status Matrix --}}
+@if (isset($signsMatrix) && count($signsMatrix) > 0)
+<div class="card mb-4 border-primary">
+    <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
+        <strong>Daily Horoscope Coverage for {{ \Carbon\Carbon::parse($selectedDate)->format('d M Y') }}</strong>
+        <span class="badge {{ $publishedCount === 12 ? 'bg-success' : 'bg-warning text-dark' }}">
+            {{ $publishedCount }}/12 Fully Published (EN & HI)
+        </span>
+    </div>
+    <div class="card-body p-2">
+        <div class="row g-2">
+            @foreach ($signsMatrix as $s)
+            <div class="col-md-3 col-sm-4 col-6">
+                <div class="border rounded p-2 text-center {{ $s['is_complete'] ? 'bg-light' : 'border-warning' }}">
+                    <div class="fw-bold small">{{ $s['name_en'] }} / {{ $s['name_hi'] }}</div>
+                    <div class="mt-1 d-flex justify-content-center gap-1">
+                        @if ($s['has_en'])
+                            <a href="{{ route('horoscope.edit', $s['en_id']) }}" class="badge bg-success text-decoration-none" title="Edit English Horoscope">EN ✓</a>
+                        @else
+                            <a href="{{ route('horoscope.create', ['zodiac_sign' => $s['enum'], 'language' => 'en', 'start_date' => $selectedDate]) }}" class="badge bg-warning text-dark text-decoration-none" title="Add English Horoscope">+ EN</a>
+                        @endif
+
+                        @if ($s['has_hi'])
+                            <a href="{{ route('horoscope.edit', $s['hi_id']) }}" class="badge bg-success text-decoration-none" title="Edit Hindi Horoscope">HI ✓</a>
+                        @else
+                            <a href="{{ route('horoscope.create', ['zodiac_sign' => $s['enum'], 'language' => 'hi', 'start_date' => $selectedDate]) }}" class="badge bg-warning text-dark text-decoration-none" title="Add Hindi Horoscope">+ HI</a>
+                        @endif
+                    </div>
+                </div>
+            </div>
+            @endforeach
+        </div>
+    </div>
+</div>
+@endif
 
 <table class="table">
     <thead>

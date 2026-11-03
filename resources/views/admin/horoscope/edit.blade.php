@@ -16,7 +16,20 @@
         @csrf
         @method('patch')
 
-        <input type="text" class="form-control" name="language" value="{{ Config::get('app.locale') }}" hidden>
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <div class="row">
+                    <label for="language" class="col-md-2 col-form-label text-md-end">{{ __('Language') }}</label>
+                    <div class="col-md-10">
+                        <select id="language" class="form-select" name="language" required>
+                            <option value="en" {{ old('language', $horoscope->language) == 'en' ? 'selected' : '' }}>English</option>
+                            <option value="hi" {{ old('language', $horoscope->language) == 'hi' ? 'selected' : '' }}>Hindi (हिंदी)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <x-image-chooser class="border border-grey p-4 mb-3 hidden-content" height="250px" width="100%" :value="$horoscope->image" name="image">
         </x-image-chooser>
 

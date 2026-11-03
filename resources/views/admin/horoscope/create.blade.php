@@ -14,9 +14,21 @@
     <form method="POST" action="{{ route('horoscope.store') }}" enctype="multipart/form-data">
         @csrf
 
-        <input type="text" class="form-control" name="language" value="{{ Config::get('app.locale') }}" hidden>
-        <x-image-chooser class="border border-grey p-4 mb-3 hidden-content" height="200px" width="100%" :value="null" name="image" id="horoscope-image"></x-image-chooser>
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <div class="row">
+                    <label for="language" class="col-md-2 col-form-label text-md-end">{{ __('Language') }}</label>
+                    <div class="col-md-10">
+                        <select id="language" class="form-select" name="language" required>
+                            <option value="en" {{ old('language', $prefill['language'] ?? 'en') == 'en' ? 'selected' : '' }}>English</option>
+                            <option value="hi" {{ old('language', $prefill['language'] ?? 'en') == 'hi' ? 'selected' : '' }}>Hindi (हिंदी)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
 
+        <x-image-chooser class="border border-grey p-4 mb-3 hidden-content" height="200px" width="100%" :value="null" name="image" id="horoscope-image"></x-image-chooser>
 
         <div class="row">
             <div class="col-md-6">
@@ -25,19 +37,22 @@
                     <label for="zodiac" class="col-md-1 col-form-label text-md-end">{{ __('horoscope.zodiac') }}</label>
 
                     <div class="col-md-11">
+                        @php
+                            $selectedSign = old('zodiac_sign', $prefill['zodiac_sign'] ?? '');
+                        @endphp
                         <select id="zodiac" type="text" class="form-select" name="zodiac_sign" required>
-                            <option value="1">{{ __('horoscope.aries') }}</option>
-                            <option value="2">{{ __('horoscope.taurus') }}</option>
-                            <option value="3">{{ __('horoscope.gemini') }}</option>
-                            <option value="4">{{ __('horoscope.cancer') }}</option>
-                            <option value="5">{{ __('horoscope.leo') }}</option>
-                            <option value="6">{{ __('horoscope.virgo') }}</option>
-                            <option value="7">{{ __('horoscope.libra') }}</option>
-                            <option value="8">{{ __('horoscope.scorpio') }}</option>
-                            <option value="9">{{ __('horoscope.sagittarius') }}</option>
-                            <option value="10">{{ __('horoscope.capricorn') }}</option>
-                            <option value="11">{{ __('horoscope.aquarius') }}</option>
-                            <option value="12">{{ __('horoscope.pisces') }}</option>
+                            <option value="1" {{ $selectedSign == '1' || strcasecmp($selectedSign, 'Aries') === 0 ? 'selected' : '' }}>{{ __('horoscope.aries') }}</option>
+                            <option value="2" {{ $selectedSign == '2' || strcasecmp($selectedSign, 'Taurus') === 0 ? 'selected' : '' }}>{{ __('horoscope.taurus') }}</option>
+                            <option value="3" {{ $selectedSign == '3' || strcasecmp($selectedSign, 'Gemini') === 0 ? 'selected' : '' }}>{{ __('horoscope.gemini') }}</option>
+                            <option value="4" {{ $selectedSign == '4' || strcasecmp($selectedSign, 'Cancer') === 0 ? 'selected' : '' }}>{{ __('horoscope.cancer') }}</option>
+                            <option value="5" {{ $selectedSign == '5' || strcasecmp($selectedSign, 'Leo') === 0 ? 'selected' : '' }}>{{ __('horoscope.leo') }}</option>
+                            <option value="6" {{ $selectedSign == '6' || strcasecmp($selectedSign, 'Virgo') === 0 ? 'selected' : '' }}>{{ __('horoscope.virgo') }}</option>
+                            <option value="7" {{ $selectedSign == '7' || strcasecmp($selectedSign, 'Libra') === 0 ? 'selected' : '' }}>{{ __('horoscope.libra') }}</option>
+                            <option value="8" {{ $selectedSign == '8' || strcasecmp($selectedSign, 'Scorpio') === 0 ? 'selected' : '' }}>{{ __('horoscope.scorpio') }}</option>
+                            <option value="9" {{ $selectedSign == '9' || strcasecmp($selectedSign, 'Sagittarius') === 0 ? 'selected' : '' }}>{{ __('horoscope.sagittarius') }}</option>
+                            <option value="10" {{ $selectedSign == '10' || strcasecmp($selectedSign, 'Capricorn') === 0 ? 'selected' : '' }}>{{ __('horoscope.capricorn') }}</option>
+                            <option value="11" {{ $selectedSign == '11' || strcasecmp($selectedSign, 'Aquarius') === 0 ? 'selected' : '' }}>{{ __('horoscope.aquarius') }}</option>
+                            <option value="12" {{ $selectedSign == '12' || strcasecmp($selectedSign, 'Pisces') === 0 ? 'selected' : '' }}>{{ __('horoscope.pisces') }}</option>
                         </select>
                     </div>
                 </div>
@@ -89,7 +104,7 @@
                 <div class="row mb-3">
                     <label for="start_date" class="col-md-4 col-form-label text-md-end">{{ __('horoscope.start_date') }}</label>
                     <div class="col-md-6">
-                        <input id="start_date" type="date" class="form-control" name="start_date" value="{{ old('start_date') }}" required>
+                        <input id="start_date" type="date" class="form-control" name="start_date" value="{{ old('start_date', $prefill['start_date'] ?? date('Y-m-d')) }}" required>
                     </div>
                 </div>
             </div>

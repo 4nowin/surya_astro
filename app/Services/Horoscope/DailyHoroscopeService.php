@@ -139,6 +139,12 @@ class DailyHoroscopeService
         ],
     ];
 
+    public const SIGN_NUMERIC_MAP = [
+        1 => 'aries', 2 => 'taurus', 3 => 'gemini', 4 => 'cancer',
+        5 => 'leo', 6 => 'virgo', 7 => 'libra', 8 => 'scorpio',
+        9 => 'sagittarius', 10 => 'capricorn', 11 => 'aquarius', 12 => 'pisces',
+    ];
+
     /**
      * Invalidate all horoscope caches upon CMS create/update/delete.
      */
@@ -191,7 +197,11 @@ class DailyHoroscopeService
         // Index records by sign enum (lowercase) and language
         $indexed = [];
         foreach ($records as $record) {
-            $sign = strtolower((string) $record->zodiac_sign);
+            $raw = (string) ($record->zodiac ?: $record->zodiac_sign);
+            $sign = strtolower(trim($raw));
+            if (is_numeric($sign) && isset(self::SIGN_NUMERIC_MAP[(int) $sign])) {
+                $sign = self::SIGN_NUMERIC_MAP[(int) $sign];
+            }
             $recordLang = strtolower((string) $record->language);
             $indexed[$sign][$recordLang] = $record;
         }

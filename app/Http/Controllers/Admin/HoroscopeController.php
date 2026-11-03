@@ -27,7 +27,8 @@ class HoroscopeController extends Controller
      */
     public function index(Request $request)
     {
-        $query = Horoscope::where('language', app()->getLocale());
+        $selectedDate = $request->filled('date') ? $request->date : now()->toDateString();
+        $query = Horoscope::query();
 
         // Optional date filter
         if ($request->filled('date')) {
@@ -39,17 +40,64 @@ class HoroscopeController extends Controller
             $query->where('horoscope_type', $request->horoscope_type);
         }
 
+        // Optional language filter
+        if ($request->filled('language')) {
+            $query->where('language', $request->language);
+        }
+
         $horoscopes = $query->latest()->paginate(12);
 
-        return view('admin.horoscope.index', compact('horoscopes'));
+        // Daily publication status matrix for the selected date
+        $dailyRecords = Horoscope::where('horoscope_type', 'daily')
+            ->whereDate('start_date', $selectedDate)
+            ->get();
+
+        $signsMatrix = [];
+        $publishedCount = 0;
+        foreach (DailyHoroscopeService::SIGNS as $key => $meta) {
+            $enRecord = $dailyRecords->first(function ($r) use ($key) {
+                return strtolower((string) ($r->zodiac ?: $r->zodiac_sign)) === $key && strtolower((string) $r->language) === 'en';
+            });
+            $hiRecord = $dailyRecords->first(function ($r) use ($key) {
+                return strtolower((string) ($r->zodiac ?: $r->zodiac_sign)) === $key && strtolower((string) $r->language) === 'hi';
+            });
+
+            $hasEn = ($enRecord !== null);
+            $hasHi = ($hiRecord !== null);
+            if ($hasEn && $hasHi) {
+                $publishedCount++;
+            }
+
+            $signsMatrix[$key] = [
+                'id' => $meta['id'],
+                'sign' => $meta['sign'],
+                'enum' => $meta['enum'],
+                'name_en' => $meta['name_en'],
+                'name_hi' => $meta['name_hi'],
+                'vedic_name' => $meta['vedic_name'],
+                'has_en' => $hasEn,
+                'has_hi' => $hasHi,
+                'en_id' => $enRecord?->id,
+                'hi_id' => $hiRecord?->id,
+                'is_complete' => ($hasEn && $hasHi),
+            ];
+        }
+
+        return view('admin.horoscope.index', compact('horoscopes', 'signsMatrix', 'selectedDate', 'publishedCount'));
     }
+
     /**
      * Show the form for creating a new resource.
      */
-    public function create()
+    public function create(Request $request)
     {
-        $horoscopes = Horoscope::get();
-        return view('admin.horoscope.create', compact('horoscopes'));
+        $prefill = [
+            'zodiac_sign' => $request->query('zodiac_sign'),
+            'language' => $request->query('language', config('app.locale', 'en')),
+            'start_date' => $request->query('start_date', now()->toDateString()),
+            'horoscope_type' => $request->query('horoscope_type', 'daily'),
+        ];
+        return view('admin.horoscope.create', compact('prefill'));
     }
 
     /**
