@@ -4,12 +4,26 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <title>{{ $locale === 'hi' ? 'वैदिक जन्म पत्रिका - एस्ट्रो सेतु' : 'Vedic Janam Kundli - Astro Setu' }}</title>
     <style>
+@if($locale === 'hi')
+        @font-face {
+            font-family: 'Noto Sans Devanagari';
+            font-style: normal;
+            font-weight: 400;
+            src: url('{{ $fontRegular }}') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Sans Devanagari';
+            font-style: normal;
+            font-weight: 700;
+            src: url('{{ $fontBold }}') format('truetype');
+        }
+@endif
         @page {
             margin: 28px 32px 32px 32px;
             size: A4 portrait;
         }
         body {
-            font-family: 'DejaVu Sans', sans-serif;
+            font-family: {{ $locale === 'hi' ? "'Noto Sans Devanagari', 'DejaVu Sans', sans-serif" : "'DejaVu Sans', sans-serif" }};
             font-size: 10px;
             color: #2D3748;
             line-height: 1.45;

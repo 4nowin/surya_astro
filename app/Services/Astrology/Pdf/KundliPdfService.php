@@ -53,10 +53,18 @@ class KundliPdfService
             ? $this->renderNorthIndianChartSvg($chandraHouses, $locale, 'Chandra Kundli (Moon Chart)')
             : null;
 
+        $fontDir = storage_path('fonts');
+        if (!is_dir($fontDir)) {
+            @mkdir($fontDir, 0755, true);
+        }
+
         $options = new Options();
         $options->set('isHtml5ParserEnabled', true);
         $options->set('isRemoteEnabled', true);
-        $options->set('defaultFont', 'DejaVu Sans');
+        $options->set('fontDir', $fontDir);
+        $options->set('fontCache', $fontDir);
+        $options->set('chroot', [base_path()]);
+        $options->set('defaultFont', $locale === 'hi' ? 'Noto Sans Devanagari' : 'DejaVu Sans');
 
         $dompdf = new Dompdf($options);
 
@@ -65,6 +73,8 @@ class KundliPdfService
             'locale' => $locale,
             'lagnaSvg' => $lagnaSvg,
             'chandraSvg' => $chandraSvg,
+            'fontRegular' => resource_path('fonts/NotoSansDevanagari-Regular.ttf'),
+            'fontBold' => resource_path('fonts/NotoSansDevanagari-Bold.ttf'),
         ])->render();
 
         $dompdf->loadHtml($html, 'UTF-8');
@@ -100,6 +110,8 @@ class KundliPdfService
         $svg .= '<line x1="0" y1="400" x2="400" y2="0" stroke="#C59B27" stroke-width="1.8"/>';
         $svg .= '<polygon points="200,0 400,200 200,400 0,200" fill="none" stroke="#C59B27" stroke-width="1.8"/>';
 
+        $fontFamily = $locale === 'hi' ? "'Noto Sans Devanagari', 'DejaVu Sans', sans-serif" : "DejaVu Sans, Arial, sans-serif";
+
         // House labels and planet placements
         for ($hNum = 1; $hNum <= 12; $hNum++) {
             $coords = self::HOUSE_COORDINATES[$hNum];
@@ -109,9 +121,10 @@ class KundliPdfService
                 // Rashi number in Roman/Devanagari digit
                 $rashiId = (int) ($hData['sign_id'] ?? ($hData['rashi']['id'] ?? 1));
                 $svg .= sprintf(
-                    '<text x="%d" y="%d" font-family="DejaVu Sans, Arial, sans-serif" font-size="12" font-weight="bold" fill="#8C1D40" text-anchor="middle">%d</text>',
+                    '<text x="%d" y="%d" font-family="%s" font-size="12" font-weight="bold" fill="#8C1D40" text-anchor="middle">%d</text>',
                     $coords['rashi_x'],
                     $coords['rashi_y'],
+                    $fontFamily,
                     $rashiId
                 );
 
@@ -132,9 +145,10 @@ class KundliPdfService
 
                     $planetText = implode(' ', $abbrs);
                     $svg .= sprintf(
-                        '<text x="%d" y="%d" font-family="DejaVu Sans, Arial, sans-serif" font-size="11" font-weight="600" fill="#1A365D" text-anchor="middle">%s</text>',
+                        '<text x="%d" y="%d" font-family="%s" font-size="11" font-weight="600" fill="#1A365D" text-anchor="middle">%s</text>',
                         $coords['planets_x'],
                         $coords['planets_y'],
+                        $fontFamily,
                         htmlspecialchars($planetText, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
                     );
                 }
