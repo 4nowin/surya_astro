@@ -112,7 +112,6 @@ class FirebaseNotificationService
                     'title' => $title,
                     'body' => $body,
                 ],
-                'data' => $stringData,
                 'android' => [
                     'priority' => 'high',
                     'notification' => [
@@ -132,6 +131,10 @@ class FirebaseNotificationService
                 ],
             ],
         ];
+
+        if (!empty($stringData)) {
+            $message['message']['data'] = $stringData;
+        }
 
         $url = "https://fcm.googleapis.com/v1/projects/{$this->projectId}/messages:send";
 
@@ -157,7 +160,7 @@ class FirebaseNotificationService
 
             // Check if token is invalid or uninstalled
             $isUnregistered = in_array($status, [404, 410], true)
-                || in_array($errorCode, ['UNREGISTERED', 'NOT_FOUND', 'INVALID_ARGUMENT'], true)
+                || in_array($errorCode, ['UNREGISTERED', 'NOT_FOUND'], true)
                 || str_contains(strtolower($errorMessage), 'not registered');
 
             Log::warning("FCM send failed [{$status}] {$errorCode}: {$errorMessage}");
@@ -213,9 +216,12 @@ class FirebaseNotificationService
                     'title' => $title,
                     'body' => $body,
                 ],
-                'data' => $stringData,
             ],
         ];
+
+        if (!empty($stringData)) {
+            $message['message']['data'] = $stringData;
+        }
 
         $url = "https://fcm.googleapis.com/v1/projects/{$this->projectId}/messages:send";
 
