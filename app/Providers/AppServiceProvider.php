@@ -6,6 +6,7 @@ use App\Services\Astrology\Calculation\CalculationHandlerRegistry;
 use App\Services\Astrology\Calculation\CalculationJobManager;
 use App\Services\Astrology\Calculation\CalculationWorkerLauncher;
 use App\Services\Astrology\Calculation\Handlers\DailyPanchangCalculationHandler;
+use App\Services\Astrology\Calculation\Handlers\KundliCalculationHandler;
 use App\Services\Astrology\Calculation\Handlers\PersonalizedInsightsCalculationHandler;
 use App\Services\Geo\GeocodingServiceInterface;
 use App\Services\Geo\LocalGazetteerGeocodingProvider;
@@ -43,10 +44,15 @@ class AppServiceProvider extends ServiceProvider
             return new PersonalizedInsightsCalculationHandler();
         });
 
+        $this->app->singleton(KundliCalculationHandler::class, function () {
+            return new KundliCalculationHandler();
+        });
+
         $this->app->singleton(CalculationHandlerRegistry::class, function ($app) {
             $registry = new CalculationHandlerRegistry();
             $registry->register($app->make(DailyPanchangCalculationHandler::class));
             $registry->register($app->make(PersonalizedInsightsCalculationHandler::class));
+            $registry->register($app->make(KundliCalculationHandler::class));
             return $registry;
         });
 
