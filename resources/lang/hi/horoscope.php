@@ -83,4 +83,6 @@ return [
     'gray' => 'स्लेटी',
     'brown' => 'भूरा',
     'select_color' => 'रंग का चयन करें',
+    'language' => 'भाषा',
+    'all_languages' => 'सभी भाषाएं',
 ];

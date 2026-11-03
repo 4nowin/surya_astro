@@ -22,6 +22,48 @@ class HoroscopeController extends Controller
         1 => 'daily', 2 => 'weekly', 3 => 'monthly', 4 => 'yearly',
     ];
 
+    public const REQUIRED_DAILY_FIELDS = [
+        'context',
+        'career',
+        'love',
+        'money',
+        'health',
+        'travel',
+    ];
+
+    /**
+     * Evaluate a horoscope record's completeness status.
+     *
+     * @param Horoscope|null $record
+     * @return array{status: 'complete'|'incomplete'|'missing', missing_fields: string[], id: int|null}
+     */
+    public function evaluateRecordStatus(?Horoscope $record): array
+    {
+        if ($record === null) {
+            return [
+                'status' => 'missing',
+                'missing_fields' => self::REQUIRED_DAILY_FIELDS,
+                'id' => null,
+            ];
+        }
+
+        $missing = [];
+        foreach (self::REQUIRED_DAILY_FIELDS as $field) {
+            $raw = (string) $record->{$field};
+            // Strip HTML tags and decode entities in case rich text editor submitted empty markup e.g. <p><br></p> or &nbsp;
+            $clean = trim(html_entity_decode(strip_tags($raw), ENT_QUOTES | ENT_HTML5, 'UTF-8'));
+            if ($clean === '') {
+                $missing[] = $field;
+            }
+        }
+
+        return [
+            'status' => empty($missing) ? 'complete' : 'incomplete',
+            'missing_fields' => $missing,
+            'id' => $record->id,
+        ];
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -62,9 +104,11 @@ class HoroscopeController extends Controller
                 return strtolower((string) ($r->zodiac ?: $r->zodiac_sign)) === $key && strtolower((string) $r->language) === 'hi';
             });
 
-            $hasEn = ($enRecord !== null);
-            $hasHi = ($hiRecord !== null);
-            if ($hasEn && $hasHi) {
+            $enEval = $this->evaluateRecordStatus($enRecord);
+            $hiEval = $this->evaluateRecordStatus($hiRecord);
+
+            $isComplete = ($enEval['status'] === 'complete' && $hiEval['status'] === 'complete');
+            if ($isComplete) {
                 $publishedCount++;
             }
 
@@ -75,11 +119,13 @@ class HoroscopeController extends Controller
                 'name_en' => $meta['name_en'],
                 'name_hi' => $meta['name_hi'],
                 'vedic_name' => $meta['vedic_name'],
-                'has_en' => $hasEn,
-                'has_hi' => $hasHi,
-                'en_id' => $enRecord?->id,
-                'hi_id' => $hiRecord?->id,
-                'is_complete' => ($hasEn && $hasHi),
+                'en_status' => $enEval['status'],
+                'en_missing' => $enEval['missing_fields'],
+                'en_id' => $enEval['id'],
+                'hi_status' => $hiEval['status'],
+                'hi_missing' => $hiEval['missing_fields'],
+                'hi_id' => $hiEval['id'],
+                'is_complete' => $isComplete,
             ];
         }
 

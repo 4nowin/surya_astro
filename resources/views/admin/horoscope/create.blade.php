@@ -17,7 +17,7 @@
         <div class="row mb-3">
             <div class="col-md-6">
                 <div class="row">
-                    <label for="language" class="col-md-2 col-form-label text-md-end">{{ __('Language') }}</label>
+                    <label for="language" class="col-md-2 col-form-label text-md-end">{{ __('horoscope.language') }}</label>
                     <div class="col-md-10">
                         <select id="language" class="form-select" name="language" required>
                             <option value="en" {{ old('language', $prefill['language'] ?? 'en') == 'en' ? 'selected' : '' }}>English</option>

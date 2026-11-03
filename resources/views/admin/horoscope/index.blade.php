@@ -36,9 +36,9 @@
     </div>
 
     <div class="col-auto">
-        <label for="language" class="form-label">{{ __('Language') }}</label>
+        <label for="language" class="form-label">{{ __('horoscope.language') }}</label>
         <select name="language" id="language" class="form-select form-select-sm">
-            <option value="">{{ __('All Languages') }}</option>
+            <option value="">{{ __('horoscope.all_languages') }}</option>
             <option value="en" {{ request('language') == 'en' ? 'selected' : '' }}>English</option>
             <option value="hi" {{ request('language') == 'hi' ? 'selected' : '' }}>Hindi (हिंदी)</option>
         </select>
@@ -54,29 +54,45 @@
 {{-- 12-Zodiac Daily Publication Status Matrix --}}
 @if (isset($signsMatrix) && count($signsMatrix) > 0)
 <div class="card mb-4 border-primary">
-    <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
+    <div class="card-header bg-light d-flex justify-content-between align-items-center py-2 flex-wrap gap-2">
         <strong>Daily Horoscope Coverage for {{ \Carbon\Carbon::parse($selectedDate)->format('d M Y') }}</strong>
-        <span class="badge {{ $publishedCount === 12 ? 'bg-success' : 'bg-warning text-dark' }}">
-            {{ $publishedCount }}/12 Fully Published (EN & HI)
-        </span>
+        <div class="d-flex align-items-center gap-2">
+            <span class="small text-muted d-none d-md-inline">
+                Legend: <span class="badge bg-success">✓ Complete</span> <span class="badge bg-warning text-dark">⚠ Incomplete</span> <span class="badge bg-secondary">+ Missing</span>
+            </span>
+            <span class="badge {{ $publishedCount === 12 ? 'bg-success' : 'bg-warning text-dark' }}">
+                {{ $publishedCount }}/12 Complete (EN & HI)
+            </span>
+        </div>
     </div>
     <div class="card-body p-2">
         <div class="row g-2">
             @foreach ($signsMatrix as $s)
+            @php
+                $cardBorderClass = $s['is_complete'] 
+                    ? 'border-success bg-light' 
+                    : (($s['en_status'] === 'incomplete' || $s['hi_status'] === 'incomplete') ? 'border-warning bg-white' : 'border-secondary bg-white');
+            @endphp
             <div class="col-md-3 col-sm-4 col-6">
-                <div class="border rounded p-2 text-center {{ $s['is_complete'] ? 'bg-light' : 'border-warning' }}">
+                <div class="border rounded p-2 text-center {{ $cardBorderClass }}">
                     <div class="fw-bold small">{{ $s['name_en'] }} / {{ $s['name_hi'] }}</div>
-                    <div class="mt-1 d-flex justify-content-center gap-1">
-                        @if ($s['has_en'])
-                            <a href="{{ route('horoscope.edit', $s['en_id']) }}" class="badge bg-success text-decoration-none" title="Edit English Horoscope">EN ✓</a>
+                    <div class="mt-1 d-flex justify-content-center gap-1 flex-wrap">
+                        {{-- English status badge --}}
+                        @if ($s['en_status'] === 'complete')
+                            <a href="{{ route('horoscope.edit', $s['en_id']) }}" class="badge bg-success text-decoration-none" title="English: Complete (All 6 sections populated)">EN ✓</a>
+                        @elseif ($s['en_status'] === 'incomplete')
+                            <a href="{{ route('horoscope.edit', $s['en_id']) }}" class="badge bg-warning text-dark text-decoration-none" data-bs-toggle="tooltip" title="English: Incomplete (Missing: {{ implode(', ', $s['en_missing']) }})">EN ⚠ ({{ count($s['en_missing']) }} missing)</a>
                         @else
-                            <a href="{{ route('horoscope.create', ['zodiac_sign' => $s['enum'], 'language' => 'en', 'start_date' => $selectedDate]) }}" class="badge bg-warning text-dark text-decoration-none" title="Add English Horoscope">+ EN</a>
+                            <a href="{{ route('horoscope.create', ['zodiac_sign' => $s['enum'], 'language' => 'en', 'start_date' => $selectedDate]) }}" class="badge bg-secondary text-decoration-none" title="English: Missing (Click to create)">+ EN</a>
                         @endif
 
-                        @if ($s['has_hi'])
-                            <a href="{{ route('horoscope.edit', $s['hi_id']) }}" class="badge bg-success text-decoration-none" title="Edit Hindi Horoscope">HI ✓</a>
+                        {{-- Hindi status badge --}}
+                        @if ($s['hi_status'] === 'complete')
+                            <a href="{{ route('horoscope.edit', $s['hi_id']) }}" class="badge bg-success text-decoration-none" title="Hindi: Complete (All 6 sections populated)">HI ✓</a>
+                        @elseif ($s['hi_status'] === 'incomplete')
+                            <a href="{{ route('horoscope.edit', $s['hi_id']) }}" class="badge bg-warning text-dark text-decoration-none" data-bs-toggle="tooltip" title="Hindi: Incomplete (Missing: {{ implode(', ', $s['hi_missing']) }})">HI ⚠ ({{ count($s['hi_missing']) }} missing)</a>
                         @else
-                            <a href="{{ route('horoscope.create', ['zodiac_sign' => $s['enum'], 'language' => 'hi', 'start_date' => $selectedDate]) }}" class="badge bg-warning text-dark text-decoration-none" title="Add Hindi Horoscope">+ HI</a>
+                            <a href="{{ route('horoscope.create', ['zodiac_sign' => $s['enum'], 'language' => 'hi', 'start_date' => $selectedDate]) }}" class="badge bg-secondary text-decoration-none" title="Hindi: Missing (Click to create)">+ HI</a>
                         @endif
                     </div>
                 </div>
@@ -112,10 +128,11 @@
                 <a class="btn btn-primary btn-sm" href="{{ route('horoscope.edit', $horoscope->id) }}">{{ __('horoscope.edit') }}</a>
             </td>
             <td>
-                {!! Form::open(['method' => 'DELETE','route' => ['horoscope.destroy', $horoscope->id],'style'=>'display:inline']) !!}
-                @csrf
-                {!! Form::submit(__('horoscope.delete'), ['class' => 'btn btn-danger btn-sm']) !!}
-                {!! Form::close() !!}
+                <form method="POST" action="{{ route('horoscope.destroy', $horoscope->id) }}" style="display:inline">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="btn btn-danger btn-sm">{{ __('horoscope.delete') }}</button>
+                </form>
             </td>
         </tr>
         @endforeach

@@ -82,5 +82,7 @@ return [
     'white' => 'White',
     'gray' => 'Gray',
     'brown' => 'Brown',
-    'select_color' => 'Select Color'
+    'select_color' => 'Select Color',
+    'language' => 'Language',
+    'all_languages' => 'All Languages'
 ];

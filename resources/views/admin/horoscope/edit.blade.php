@@ -19,7 +19,7 @@
         <div class="row mb-3">
             <div class="col-md-6">
                 <div class="row">
-                    <label for="language" class="col-md-2 col-form-label text-md-end">{{ __('Language') }}</label>
+                    <label for="language" class="col-md-2 col-form-label text-md-end">{{ __('horoscope.language') }}</label>
                     <div class="col-md-10">
                         <select id="language" class="form-select" name="language" required>
                             <option value="en" {{ old('language', $horoscope->language) == 'en' ? 'selected' : '' }}>English</option>
@@ -40,19 +40,22 @@
                     <label for="zodiac" class="col-md-1 col-form-label text-md-end">{{ __('horoscope.zodiac') }}</label>
 
                     <div class="col-md-11">
-                        <select id="zodiac" type="text" class="form-select" name="zodiac_sign" value="{{ $horoscope->zodiac_sign }}" required>
-                            <option value="1">{{ __('horoscope.aries') }}</option>
-                            <option value="2">{{ __('horoscope.taurus') }}</option>
-                            <option value="3">{{ __('horoscope.gemini') }}</option>
-                            <option value="4">{{ __('horoscope.cancer') }}</option>
-                            <option value="5">{{ __('horoscope.leo') }}</option>
-                            <option value="6">{{ __('horoscope.virgo') }}</option>
-                            <option value="7">{{ __('horoscope.libra') }}</option>
-                            <option value="8">{{ __('horoscope.scorpio') }}</option>
-                            <option value="9">{{ __('horoscope.sagittarius') }}</option>
-                            <option value="10">{{ __('horoscope.capricorn') }}</option>
-                            <option value="11">{{ __('horoscope.aquarius') }}</option>
-                            <option value="12">{{ __('horoscope.pisces') }}</option>
+                        @php
+                            $selectedSign = old('zodiac_sign', $horoscope->zodiac_sign ?? $horoscope->zodiac);
+                        @endphp
+                        <select id="zodiac" type="text" class="form-select" name="zodiac_sign" required>
+                            <option value="1" {{ $selectedSign == '1' || strcasecmp((string)$selectedSign, 'Aries') === 0 ? 'selected' : '' }}>{{ __('horoscope.aries') }}</option>
+                            <option value="2" {{ $selectedSign == '2' || strcasecmp((string)$selectedSign, 'Taurus') === 0 ? 'selected' : '' }}>{{ __('horoscope.taurus') }}</option>
+                            <option value="3" {{ $selectedSign == '3' || strcasecmp((string)$selectedSign, 'Gemini') === 0 ? 'selected' : '' }}>{{ __('horoscope.gemini') }}</option>
+                            <option value="4" {{ $selectedSign == '4' || strcasecmp((string)$selectedSign, 'Cancer') === 0 ? 'selected' : '' }}>{{ __('horoscope.cancer') }}</option>
+                            <option value="5" {{ $selectedSign == '5' || strcasecmp((string)$selectedSign, 'Leo') === 0 ? 'selected' : '' }}>{{ __('horoscope.leo') }}</option>
+                            <option value="6" {{ $selectedSign == '6' || strcasecmp((string)$selectedSign, 'Virgo') === 0 ? 'selected' : '' }}>{{ __('horoscope.virgo') }}</option>
+                            <option value="7" {{ $selectedSign == '7' || strcasecmp((string)$selectedSign, 'Libra') === 0 ? 'selected' : '' }}>{{ __('horoscope.libra') }}</option>
+                            <option value="8" {{ $selectedSign == '8' || strcasecmp((string)$selectedSign, 'Scorpio') === 0 ? 'selected' : '' }}>{{ __('horoscope.scorpio') }}</option>
+                            <option value="9" {{ $selectedSign == '9' || strcasecmp((string)$selectedSign, 'Sagittarius') === 0 ? 'selected' : '' }}>{{ __('horoscope.sagittarius') }}</option>
+                            <option value="10" {{ $selectedSign == '10' || strcasecmp((string)$selectedSign, 'Capricorn') === 0 ? 'selected' : '' }}>{{ __('horoscope.capricorn') }}</option>
+                            <option value="11" {{ $selectedSign == '11' || strcasecmp((string)$selectedSign, 'Aquarius') === 0 ? 'selected' : '' }}>{{ __('horoscope.aquarius') }}</option>
+                            <option value="12" {{ $selectedSign == '12' || strcasecmp((string)$selectedSign, 'Pisces') === 0 ? 'selected' : '' }}>{{ __('horoscope.pisces') }}</option>
                         </select>
                     </div>
                 </div>
@@ -64,19 +67,22 @@
                     <label for="zodiac" class="col-md-1 col-form-label text-md-end">{{ __('horoscope.mood') }}</label>
 
                     <div class="col-md-11">
-                        <select id="mood" type="text" class="form-select" name="mood" value="{{ $horoscope->mood }}" required>
-                            <option value="happy">{{ __('horoscope.happy') }}</option>
-                            <option value="excited">{{ __('horoscope.excited') }}</option>
-                            <option value="calm">{{ __('horoscope.calm') }}</option>
-                            <option value="sad">{{ __('horoscope.sad') }}</option>
-                            <option value="angry">{{ __('horoscope.angry') }}</option>
-                            <option value="anxious">{{ __('horoscope.anxious') }}</option>
-                            <option value="confused">{{ __('horoscope.confused') }}</option>
-                            <option value="loving">{{ __('horoscope.loving') }}</option>
-                            <option value="friendly">{{ __('horoscope.friendly') }}</option>
-                            <option value="energetic">{{ __('horoscope.energetic') }}</option>
-                            <option value="relaxed">{{ __('horoscope.relaxed') }}</option>
-                            <option value="peaceful">{{ __('horoscope.peaceful') }}</option>
+                        @php
+                            $selectedMood = old('mood', strtolower((string)$horoscope->mood));
+                        @endphp
+                        <select id="mood" type="text" class="form-select" name="mood" required>
+                            <option value="happy" {{ $selectedMood === 'happy' ? 'selected' : '' }}>{{ __('horoscope.happy') }}</option>
+                            <option value="excited" {{ $selectedMood === 'excited' ? 'selected' : '' }}>{{ __('horoscope.excited') }}</option>
+                            <option value="calm" {{ $selectedMood === 'calm' ? 'selected' : '' }}>{{ __('horoscope.calm') }}</option>
+                            <option value="sad" {{ $selectedMood === 'sad' ? 'selected' : '' }}>{{ __('horoscope.sad') }}</option>
+                            <option value="angry" {{ $selectedMood === 'angry' ? 'selected' : '' }}>{{ __('horoscope.angry') }}</option>
+                            <option value="anxious" {{ $selectedMood === 'anxious' ? 'selected' : '' }}>{{ __('horoscope.anxious') }}</option>
+                            <option value="confused" {{ $selectedMood === 'confused' ? 'selected' : '' }}>{{ __('horoscope.confused') }}</option>
+                            <option value="loving" {{ $selectedMood === 'loving' ? 'selected' : '' }}>{{ __('horoscope.loving') }}</option>
+                            <option value="friendly" {{ $selectedMood === 'friendly' ? 'selected' : '' }}>{{ __('horoscope.friendly') }}</option>
+                            <option value="energetic" {{ $selectedMood === 'energetic' ? 'selected' : '' }}>{{ __('horoscope.energetic') }}</option>
+                            <option value="relaxed" {{ $selectedMood === 'relaxed' ? 'selected' : '' }}>{{ __('horoscope.relaxed') }}</option>
+                            <option value="peaceful" {{ $selectedMood === 'peaceful' ? 'selected' : '' }}>{{ __('horoscope.peaceful') }}</option>
                         </select>
                     </div>
                 </div>
@@ -90,11 +96,14 @@
                     <label for="type" class="col-md-4 col-form-label text-md-end">{{ __('horoscope.type') }}</label>
 
                     <div class="col-md-6">
-                        <select id="type" type="text" class="form-select horoscope-type" name="horoscope_type" value="{{ $horoscope->horoscope_type }}" required>
-                            <option value="1">{{ __('horoscope.daily') }}</option>
-                            <option value="2">{{ __('horoscope.weekly') }}</option>
-                            <option value="3">{{ __('horoscope.monthly') }}</option>
-                            <option value="4">{{ __('horoscope.yearly') }}</option>
+                        @php
+                            $selectedType = old('horoscope_type', $horoscope->horoscope_type);
+                        @endphp
+                        <select id="type" type="text" class="form-select horoscope-type" name="horoscope_type" required>
+                            <option value="1" {{ $selectedType == '1' || strcasecmp((string)$selectedType, 'daily') === 0 ? 'selected' : '' }}>{{ __('horoscope.daily') }}</option>
+                            <option value="2" {{ $selectedType == '2' || strcasecmp((string)$selectedType, 'weekly') === 0 ? 'selected' : '' }}>{{ __('horoscope.weekly') }}</option>
+                            <option value="3" {{ $selectedType == '3' || strcasecmp((string)$selectedType, 'monthly') === 0 ? 'selected' : '' }}>{{ __('horoscope.monthly') }}</option>
+                            <option value="4" {{ $selectedType == '4' || strcasecmp((string)$selectedType, 'yearly') === 0 ? 'selected' : '' }}>{{ __('horoscope.yearly') }}</option>
                         </select>
                     </div>
                 </div>
@@ -103,14 +112,14 @@
             <div class="col-md-4">
                 <div class="mb-3">
                     <label for="start_date" class="form-label">{{ __('horoscope.start_date') }}</label>
-                    <input type="date" class="form-control" name="start_date" value="{{$horoscope->start_date}}" required>
+                    <input id="start_date" type="date" class="form-control" name="start_date" value="{{ old('start_date', $horoscope->start_date ? \Illuminate\Support\Carbon::parse($horoscope->start_date)->format('Y-m-d') : '') }}" required>
                 </div>
             </div>
 
             <div class="col-md-4 hidden-content">
                 <div class="mb-3">
                     <label for="end_date" class="form-label">{{ __('horoscope.end_date') }}</label>
-                    <input type="date" class="form-control" name="end_date" value="{{$horoscope->end_date}}">
+                    <input id="end_date" type="date" class="form-control" name="end_date" value="{{ old('end_date', $horoscope->end_date ? \Illuminate\Support\Carbon::parse($horoscope->end_date)->format('Y-m-d') : '') }}">
                 </div>
             </div>
         </div>

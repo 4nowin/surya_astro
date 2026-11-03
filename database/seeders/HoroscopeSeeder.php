@@ -404,23 +404,59 @@ class HoroscopeSeeder extends Seeder
         $startDay = Carbon::today()->subDays(3);
         $endDay = Carbon::today()->addDays(7);
 
-        // Delete existing daily records in this date window to ensure clean, idempotent re-seeding
-        DB::table('horoscopes')
+        // Fetch existing daily records in this date window to NEVER overwrite administrator content
+        $existingDaily = DB::table('horoscopes')
             ->where('horoscope_type', 'daily')
             ->whereBetween('start_date', [$startDay->toDateString() . ' 00:00:00', $endDay->toDateString() . ' 23:59:59'])
-            ->delete();
+            ->get(['zodiac_sign', 'zodiac', 'language', 'start_date'])
+            ->map(function ($row) {
+                $rawSign = (string) ($row->zodiac ?: $row->zodiac_sign);
+                $signKey = strtolower(trim($rawSign));
+                if (is_numeric($signKey) && isset(DailyHoroscopeService::SIGN_NUMERIC_MAP[(int) $signKey])) {
+                    $signKey = DailyHoroscopeService::SIGN_NUMERIC_MAP[(int) $signKey];
+                }
+                $dateKey = Carbon::parse($row->start_date)->toDateString();
+                $langKey = strtolower(trim((string) $row->language));
+                return "{$signKey}_{$dateKey}_{$langKey}";
+            })
+            ->flip()
+            ->all();
 
         for ($day = $startDay->copy(); $day->lte($endDay); $day->addDay()) {
+            $dateStr = $day->toDateString();
             foreach (self::SIGN_PROFILES as $sign => $profile) {
+                $signSlug = strtolower($sign);
                 foreach ($languages as $lang) {
-                    $records[] = $this->buildDailyHoroscope($sign, $profile, $lang, $day);
+                    $key = "{$signSlug}_{$dateStr}_{$lang}";
+                    if (!isset($existingDaily[$key])) {
+                        $records[] = $this->buildDailyHoroscope($sign, $profile, $lang, $day);
+                        $existingDaily[$key] = true;
+                    }
                 }
             }
         }
 
-        // 2. Seed Weekly, Monthly, Yearly horoscopes
+        // 2. Seed Weekly, Monthly, Yearly horoscopes (scoped strictly to [type, canonical_sign, start_date, language])
         $otherTypes = ['weekly', 'monthly', 'yearly'];
         $now = Carbon::now();
+
+        // Pre-fetch existing periodic records to ensure exact 4-tuple identity matching and eliminate redundant DB queries
+        $existingPeriodic = DB::table('horoscopes')
+            ->whereIn('horoscope_type', $otherTypes)
+            ->get(['horoscope_type', 'zodiac_sign', 'zodiac', 'language', 'start_date'])
+            ->map(function ($row) {
+                $typeKey = strtolower(trim((string) $row->horoscope_type));
+                $rawSign = (string) ($row->zodiac ?: $row->zodiac_sign);
+                $signKey = strtolower(trim($rawSign));
+                if (is_numeric($signKey) && isset(DailyHoroscopeService::SIGN_NUMERIC_MAP[(int) $signKey])) {
+                    $signKey = DailyHoroscopeService::SIGN_NUMERIC_MAP[(int) $signKey];
+                }
+                $dateKey = Carbon::parse($row->start_date)->toDateString();
+                $langKey = strtolower(trim((string) $row->language));
+                return "{$typeKey}_{$signKey}_{$dateKey}_{$langKey}";
+            })
+            ->flip()
+            ->all();
 
         foreach ($otherTypes as $type) {
             switch ($type) {
@@ -438,29 +474,29 @@ class HoroscopeSeeder extends Seeder
                     break;
             }
 
-            foreach (self::SIGN_PROFILES as $sign => $profile) {
-                foreach ($languages as $lang) {
-                    $exists = DB::table('horoscopes')
-                        ->where('horoscope_type', $type)
-                        ->where('zodiac_sign', $sign)
-                        ->where('language', $lang)
-                        ->whereDate('start_date', $periodStart->toDateString())
-                        ->exists();
+            $periodStartDate = $periodStart->toDateString();
 
-                    if (!$exists) {
+            foreach (self::SIGN_PROFILES as $sign => $profile) {
+                $signSlug = strtolower($sign);
+                foreach ($languages as $lang) {
+                    $key = "{$type}_{$signSlug}_{$periodStartDate}_{$lang}";
+                    if (!isset($existingPeriodic[$key])) {
                         $records[] = $this->buildPeriodicHoroscope($sign, $profile, $type, $lang, $periodStart, $periodEnd);
+                        $existingPeriodic[$key] = true;
                     }
                 }
             }
         }
 
-        // Insert in chunks of 50 for optimal performance
-        foreach (array_chunk($records, 50) as $chunk) {
-            DB::table('horoscopes')->insert($chunk);
-        }
+        if (!empty($records)) {
+            // Insert in chunks of 50 for optimal performance
+            foreach (array_chunk($records, 50) as $chunk) {
+                DB::table('horoscopes')->insert($chunk);
+            }
 
-        // Invalidate cached horoscope responses
-        DailyHoroscopeService::invalidateCache();
+            // Invalidate cached horoscope responses
+            DailyHoroscopeService::invalidateCache();
+        }
     }
 
     /**
