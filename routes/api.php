@@ -40,10 +40,13 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
     return $request->user();
 });
 
-Route::post('{lang?}/horoscope-notification', [SendNotificationController::class, "sendHoroscopeNotification"]);
-Route::post('{lang?}/pooja-notification', [SendNotificationController::class, "sendPoojaNotification"]);
-Route::post('{lang?}/astrologer-notification', [SendNotificationController::class, "sendAstrologerNotification"]);
-Route::post('{lang?}/donation-notification', [SendNotificationController::class, "sendDonationNotification"]);
+// Legacy broadcast routes secured behind authentication
+Route::middleware(['auth:sanctum'])->group(function () {
+    Route::post('{lang?}/horoscope-notification', [SendNotificationController::class, "sendHoroscopeNotification"]);
+    Route::post('{lang?}/pooja-notification', [SendNotificationController::class, "sendPoojaNotification"]);
+    Route::post('{lang?}/astrologer-notification', [SendNotificationController::class, "sendAstrologerNotification"]);
+    Route::post('{lang?}/donation-notification', [SendNotificationController::class, "sendDonationNotification"]);
+});
 
 
 Route::get('/enquiry', [ApiController::class, "inquiry"]);
@@ -151,5 +154,11 @@ Route::prefix('v1')->group(function () {
         Route::delete('/kundli/saved/{id}', [KundliApiController::class, 'deleteSaved']);
         Route::get('/kundli/pdf', [KundliApiController::class, 'downloadPdf']);
         Route::get('/astrology/kundli/pdf', [KundliApiController::class, 'downloadPdf']);
+
+        // M8: Daily Notifications & Device Token Management
+        Route::post('/notifications/devices/register', [\App\Http\Controllers\Api\NotificationSettingsApiController::class, 'registerDevice']);
+        Route::post('/notifications/devices/remove', [\App\Http\Controllers\Api\NotificationSettingsApiController::class, 'removeDevice']);
+        Route::get('/notifications/preferences', [\App\Http\Controllers\Api\NotificationSettingsApiController::class, 'getPreferences']);
+        Route::put('/notifications/preferences', [\App\Http\Controllers\Api\NotificationSettingsApiController::class, 'updatePreferences']);
     });
 });

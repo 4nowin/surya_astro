@@ -107,6 +107,21 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasOne(\App\Models\UserAstrologyProfile::class)->where('is_default', true);
     }
 
+    public function devices(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\UserDevice::class);
+    }
+
+    public function notificationPreference(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(\App\Models\UserNotificationPreference::class);
+    }
+
+    public function notificationDeliveries(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\NotificationDelivery::class);
+    }
+
     public static function generateReferralCode(): string
     {
         do {
