@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\AstrologyProfileController;
 use App\Http\Controllers\Api\CalculationStatusController;
 use App\Http\Controllers\Api\DailyPanchangController;
 use App\Http\Controllers\Api\DailyHoroscopeApiController;
+use App\Http\Controllers\Api\PersonalizedInsightsApiController;
 use App\Http\Controllers\Api\GeoController;
 use Carbon\Carbon;
 
@@ -134,5 +135,7 @@ Route::prefix('v1')->group(function () {
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('/astrology/profiles', AstrologyProfileController::class);
+        Route::get('/astrology/personalized-insights/today', [PersonalizedInsightsApiController::class, 'today']);
+        Route::post('/astrology/personalized-insights/calculate', [PersonalizedInsightsApiController::class, 'calculate']);
     });
 });

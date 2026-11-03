@@ -198,6 +198,12 @@
                                             <span class="menu-title">{{ trans('navbar.horoscope')}}</span>
                                         </a>
                                     </li>
+
+                                    <li class="menu-item">
+                                        <a href="{{ route('daily-insight-rules.index') }}">
+                                            <span class="menu-title">Daily Insight Rules</span>
+                                        </a>
+                                    </li>
                                     
                                     <li class="menu-item">
                                         <a href="{{ route('product.index') }}">

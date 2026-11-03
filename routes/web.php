@@ -10,6 +10,7 @@ use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\BannerController;
 use App\Http\Controllers\Admin\PoojaController;
 use App\Http\Controllers\Admin\HoroscopeController;
+use App\Http\Controllers\Admin\DailyInsightRuleController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\AstrologerController;
 use App\Http\Controllers\Admin\CancellationPolicyController;
@@ -118,6 +119,8 @@ Route::group([
     Route::post('pooja_active/{pooja}', [PoojaController::class, 'active'])->name("pooja.active");
     Route::resource('horoscope', HoroscopeController::class);
     Route::post('horoscope_active/{horoscope}', [HoroscopeController::class, 'active'])->name("horoscope.active");
+    Route::resource('daily-insight-rules', DailyInsightRuleController::class);
+    Route::post('daily-insight-rules/{rule}/toggle-active', [DailyInsightRuleController::class, 'toggleActive'])->name("daily-insight-rules.toggle-active");
     Route::resource('product', ProductController::class);
     Route::resource('astrologer', AstrologerController::class);
     Route::post('product_active/{product}', [ProductController::class, 'active'])->name("product.active");

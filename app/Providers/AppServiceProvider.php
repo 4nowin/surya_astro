@@ -6,6 +6,7 @@ use App\Services\Astrology\Calculation\CalculationHandlerRegistry;
 use App\Services\Astrology\Calculation\CalculationJobManager;
 use App\Services\Astrology\Calculation\CalculationWorkerLauncher;
 use App\Services\Astrology\Calculation\Handlers\DailyPanchangCalculationHandler;
+use App\Services\Astrology\Calculation\Handlers\PersonalizedInsightsCalculationHandler;
 use App\Services\Geo\GeocodingServiceInterface;
 use App\Services\Geo\LocalGazetteerGeocodingProvider;
 use Illuminate\Support\Facades\App;
@@ -33,14 +34,19 @@ class AppServiceProvider extends ServiceProvider
         });
 
         // Reusable Astrology Background Calculation System
-        // Explicitly instantiate without resolving DailyPanchangService to keep web SAPI free from native FFI initialization
+        // Explicitly instantiate without resolving native calculation services to keep web SAPI free from native FFI initialization
         $this->app->singleton(DailyPanchangCalculationHandler::class, function () {
             return new DailyPanchangCalculationHandler();
+        });
+
+        $this->app->singleton(PersonalizedInsightsCalculationHandler::class, function () {
+            return new PersonalizedInsightsCalculationHandler();
         });
 
         $this->app->singleton(CalculationHandlerRegistry::class, function ($app) {
             $registry = new CalculationHandlerRegistry();
             $registry->register($app->make(DailyPanchangCalculationHandler::class));
+            $registry->register($app->make(PersonalizedInsightsCalculationHandler::class));
             return $registry;
         });
 
