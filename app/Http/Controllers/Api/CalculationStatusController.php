@@ -32,7 +32,8 @@ class CalculationStatusController extends Controller
             ], 400);
         }
 
-        $userId = $request->user()?->id;
+        $user = $request->user('sanctum') ?? $request->user();
+        $userId = $user?->id;
         $job = $this->jobManager->getJobById($jobId, $userId);
 
         if (!$job) {

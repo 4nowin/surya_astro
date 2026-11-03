@@ -107,6 +107,14 @@ class PersonalizedAstrologyCalculationTest extends TestCase
         $response->assertStatus(404)
             ->assertJsonPath('success', false)
             ->assertJsonFragment(['message' => 'Calculation job not found or access denied.']);
+
+        // Owning user can access their calculation job via Sanctum
+        Sanctum::actingAs($userA);
+        $ownerResponse = $this->getJson("/api/v1/calculations/{$job->job_id}");
+        $ownerResponse->assertStatus(200)
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.job_id', $job->job_id)
+            ->assertJsonPath('data.status', 'pending');
     }
 
     public function test_verified_birth_time_calculation_produces_confirmed_ascendant_and_all_navagraha_positions(): void
@@ -366,8 +374,16 @@ class PersonalizedAstrologyCalculationTest extends TestCase
         $cachedResponse->assertStatus(200)
             ->assertHeader('X-Astrology-Cached', 'HIT')
             ->assertJsonPath('success', true)
+            ->assertJsonPath('data.target_date', '2026-11-03')
             ->assertJsonPath('data.metadata.ruleset_version', PersonalizedInsightsCalculationHandler::TYPE === 'personalized_insights' ? 'M4B_V1' : '')
             ->assertJsonPath('data.birth_chart_reference.ascendant.status', 'confirmed');
+
+        // 6. Request for different date (2026-11-04) requires new calculation and does not return 2026-11-03 data
+        $nextDayResponse = $this->getJson('/api/v1/astrology/personalized-insights/today?date=2026-11-04');
+        $nextDayResponse->assertStatus(202)
+            ->assertJsonPath('data.status', 'pending');
+        $nextJobId = $nextDayResponse->json('data.job_id');
+        $this->assertNotEquals($jobId, $nextJobId);
     }
 
     public function test_cache_namespace_isolation_from_panchang_cache(): void
