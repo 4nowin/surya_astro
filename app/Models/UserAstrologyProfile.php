@@ -120,4 +120,21 @@ class UserAstrologyProfile extends Model
             default                     => 'Unspecified',
         };
     }
+
+    /**
+     * Compute a canonical deterministic hash of the astronomical birth parameters.
+     */
+    public function computeCanonicalKey(): string
+    {
+        $dob = $this->date_of_birth ? (is_string($this->date_of_birth) ? $this->date_of_birth : $this->date_of_birth->format('Y-m-d')) : '';
+        return hash('sha256', implode('|', [
+            $dob,
+            (string) $this->birth_time,
+            (string) $this->birth_time_precision,
+            (string) $this->approximate_time_window,
+            round((float) $this->latitude, 4),
+            round((float) $this->longitude, 4),
+            (string) $this->timezone,
+        ]));
+    }
 }

@@ -7,19 +7,25 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\KundliRequest;
 use App\Models\AstrologyCalculationJob;
+use App\Models\SavedKundli;
 use App\Models\UserAstrologyProfile;
 use App\Services\Astrology\Calculation\CalculationJobManager;
 use App\Services\Astrology\Calculation\CalculationWorkerLauncher;
 use App\Services\Astrology\Calculation\Handlers\KundliCalculationHandler;
+use App\Services\Astrology\KundliService;
+use App\Services\Astrology\Pdf\KundliPdfService;
 use DateTimeInterface;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
 class KundliApiController extends Controller
 {
     public function __construct(
         protected CalculationJobManager $jobManager,
-        protected CalculationWorkerLauncher $workerLauncher
+        protected CalculationWorkerLauncher $workerLauncher,
+        protected KundliService $kundliService,
+        protected KundliPdfService $pdfService
     ) {}
 
     /**
@@ -57,7 +63,7 @@ class KundliApiController extends Controller
      */
     protected function handleKundliRequest(KundliRequest $request): JsonResponse
     {
-        $user = $request->user();
+        $user = $request->user('sanctum') ?? $request->user();
         if (!$user) {
             return response()->json([
                 'success' => false,
@@ -188,5 +194,252 @@ class KundliApiController extends Controller
                 'error' => $e->getMessage(),
             ], 500);
         }
+    }
+
+    /**
+     * Retrieve Vimshottari Dasha timeline for a profile.
+     *
+     * GET /api/v1/kundli/{profileId}/dashas
+     */
+    public function dashas(Request $request, string $profileId): JsonResponse
+    {
+        $user = $request->user('sanctum') ?? $request->user();
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'Unauthenticated.'], 401);
+        }
+
+        $profile = ($profileId === 'default')
+            ? ($user->astrologyProfiles()->where('is_default', true)->first() ?? $user->astrologyProfiles()->first())
+            : $user->astrologyProfiles()->find($profileId);
+
+        if (!$profile) {
+            return response()->json(['success' => false, 'message' => 'Profile not found.'], 404);
+        }
+
+        $kundli = $this->kundliService->calculateForProfile($profile);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Vimshottari Dasha timeline calculated successfully.',
+            'data' => $kundli['dasha'] ?? null,
+        ]);
+    }
+
+    /**
+     * List all saved Kundli snapshots for the authenticated user.
+     *
+     * GET /api/v1/kundli/saved
+     */
+    public function listSaved(Request $request): JsonResponse
+    {
+        $user = $request->user('sanctum') ?? $request->user();
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'Unauthenticated.'], 401);
+        }
+
+        $savedList = SavedKundli::with('profile')
+            ->where('user_id', $user->id)
+            ->orderBy('created_at', 'desc')
+            ->get()
+            ->map(function (SavedKundli $saved) {
+                return [
+                    'id' => $saved->id,
+                    'profile_id' => $saved->profile_id,
+                    'title' => $saved->title,
+                    'person_name' => $saved->person_name,
+                    'relationship' => $saved->relationship,
+                    'date_of_birth' => $saved->date_of_birth ? $saved->date_of_birth->format('Y-m-d') : null,
+                    'birth_time' => $saved->birth_time,
+                    'birth_city' => $saved->birth_city,
+                    'is_outdated' => $saved->isOutdated(),
+                    'created_at' => $saved->created_at?->toIso8601String(),
+                ];
+            });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Saved Kundlis retrieved successfully.',
+            'data' => $savedList,
+        ]);
+    }
+
+    /**
+     * Retrieve a single saved Kundli snapshot.
+     *
+     * GET /api/v1/kundli/saved/{id}
+     */
+    public function showSaved(Request $request, int|string $id): JsonResponse
+    {
+        $user = $request->user('sanctum') ?? $request->user();
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'Unauthenticated.'], 401);
+        }
+
+        $saved = SavedKundli::where('user_id', $user->id)->find($id);
+        if (!$saved) {
+            return response()->json(['success' => false, 'message' => 'Saved Kundli not found.'], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Saved Kundli retrieved successfully.',
+            'data' => [
+                'id' => $saved->id,
+                'profile_id' => $saved->profile_id,
+                'title' => $saved->title,
+                'person_name' => $saved->person_name,
+                'relationship' => $saved->relationship,
+                'date_of_birth' => $saved->date_of_birth ? $saved->date_of_birth->format('Y-m-d') : null,
+                'birth_time' => $saved->birth_time,
+                'birth_city' => $saved->birth_city,
+                'is_outdated' => $saved->isOutdated(),
+                'chart_data' => $saved->chart_data,
+                'notes' => $saved->notes,
+                'created_at' => $saved->created_at?->toIso8601String(),
+            ],
+        ]);
+    }
+
+    /**
+     * Save a Kundli snapshot.
+     *
+     * POST /api/v1/kundli/save
+     */
+    public function saveSnapshot(Request $request): JsonResponse
+    {
+        $user = $request->user('sanctum') ?? $request->user();
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'Unauthenticated.'], 401);
+        }
+
+        $request->validate([
+            'profile_id' => 'nullable|integer',
+            'title' => 'nullable|string|max:255',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+
+        if ($request->filled('profile_id')) {
+            $profile = $user->astrologyProfiles()->find($request->input('profile_id'));
+        } else {
+            $profile = $user->astrologyProfiles()->where('is_default', true)->first()
+                ?? $user->astrologyProfiles()->first();
+        }
+
+        if (!$profile) {
+            return response()->json(['success' => false, 'message' => 'Astrology profile not found.'], 404);
+        }
+
+        // Fresh calculation or provided chart data
+        $chartData = $request->input('chart_data');
+        if (empty($chartData)) {
+            $chartData = $this->kundliService->calculateForProfile($profile);
+        }
+
+        $title = $request->input('title') ?: "{$profile->name}'s Kundli";
+
+        $saved = SavedKundli::create([
+            'user_id' => $user->id,
+            'profile_id' => $profile->id,
+            'title' => $title,
+            'person_name' => $profile->name,
+            'relationship' => $profile->relationship,
+            'canonical_key' => $profile->computeCanonicalKey(),
+            'date_of_birth' => $profile->date_of_birth,
+            'birth_time' => $profile->birth_time,
+            'birth_time_precision' => (string) $profile->birth_time_precision,
+            'approximate_time_window' => $profile->approximate_time_window,
+            'birth_city' => $profile->birth_city,
+            'latitude' => (float) $profile->latitude,
+            'longitude' => (float) $profile->longitude,
+            'timezone' => $profile->timezone ?: 'UTC',
+            'chart_data' => $chartData,
+            'notes' => $request->input('notes'),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Kundli report saved successfully.',
+            'data' => [
+                'id' => $saved->id,
+                'title' => $saved->title,
+                'person_name' => $saved->person_name,
+                'created_at' => $saved->created_at?->toIso8601String(),
+            ],
+        ], 201);
+    }
+
+    /**
+     * Delete a saved Kundli.
+     *
+     * DELETE /api/v1/kundli/saved/{id}
+     */
+    public function deleteSaved(Request $request, int|string $id): JsonResponse
+    {
+        $user = $request->user('sanctum') ?? $request->user();
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'Unauthenticated.'], 401);
+        }
+
+        $saved = SavedKundli::where('user_id', $user->id)->find($id);
+        if (!$saved) {
+            return response()->json(['success' => false, 'message' => 'Saved Kundli not found.'], 404);
+        }
+
+        $saved->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Saved Kundli deleted successfully.',
+        ]);
+    }
+
+    /**
+     * Download or stream the Kundli PDF report.
+     *
+     * GET /api/v1/kundli/pdf
+     */
+    public function downloadPdf(Request $request)
+    {
+        $user = $request->user('sanctum') ?? $request->user();
+        if (!$user) {
+            return response()->json(['success' => false, 'message' => 'Unauthenticated.'], 401);
+        }
+
+        $locale = $request->query('locale', 'en');
+        if (!in_array($locale, ['en', 'hi'], true)) {
+            $locale = 'en';
+        }
+
+        $chartData = null;
+        if ($request->filled('saved_id')) {
+            $saved = SavedKundli::where('user_id', $user->id)->find($request->input('saved_id'));
+            if ($saved) {
+                $chartData = $saved->chart_data;
+            }
+        }
+
+        if (!$chartData) {
+            if ($request->filled('profile_id')) {
+                $profile = $user->astrologyProfiles()->find($request->input('profile_id'));
+            } else {
+                $profile = $user->astrologyProfiles()->where('is_default', true)->first()
+                    ?? $user->astrologyProfiles()->first();
+            }
+
+            if (!$profile) {
+                return response()->json(['success' => false, 'message' => 'Astrology profile not found.'], 404);
+            }
+
+            $chartData = $this->kundliService->calculateForProfile($profile);
+        }
+
+        $pdfBinary = $this->pdfService->generatePdf($chartData, $locale);
+        $fileName = 'kundli_' . preg_replace('/[^a-z0-9_-]/i', '_', $chartData['profile']['name'] ?? 'report') . '.pdf';
+
+        return response($pdfBinary, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => "attachment; filename=\"{$fileName}\"",
+            'Content-Length' => strlen($pdfBinary),
+        ]);
     }
 }

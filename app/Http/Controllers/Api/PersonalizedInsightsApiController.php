@@ -50,7 +50,7 @@ class PersonalizedInsightsApiController extends Controller
      */
     protected function handlePersonalizedInsights(PersonalizedInsightsRequest $request): JsonResponse
     {
-        $user = $request->user();
+        $user = $request->user('sanctum') ?? $request->user();
         if (!$user) {
             return response()->json([
                 'success' => false,

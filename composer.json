@@ -6,6 +6,7 @@
     "license": "MIT",
     "require": {
         "php": "^8.3",
+        "dompdf/dompdf": "*",
         "google/apiclient": "^2.18",
         "google/auth": "^1.47",
         "google/cloud-firestore": "^1.50|^2.0",
@@ -71,7 +72,7 @@
         }
     },
     "config": {
-        "optimize-autoloader": true,
+        "optimize-autoloader": false,
         "preferred-install": "dist",
         "sort-packages": true,
         "platform": {

@@ -11,7 +11,7 @@ class PersonalizedInsightsRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user() !== null;
+        return ($this->user('sanctum') ?? $this->user()) !== null;
     }
 
     public function rules(): array

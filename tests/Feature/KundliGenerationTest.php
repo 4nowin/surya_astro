@@ -379,4 +379,50 @@ class KundliGenerationTest extends TestCase
             ->assertHeader('X-Astrology-Cached', 'HIT')
             ->assertJsonPath('success', true);
     }
+
+    public function test_sanctum_bearer_token_authorization_header_authenticates_user(): void
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('test-device')->plainTextToken;
+
+        UserAstrologyProfile::create([
+            'user_id' => $user->id,
+            'name' => 'Sanctum User',
+            'relationship' => 'self',
+            'birth_time_precision' => 'verified',
+            'date_of_birth' => '1995-08-10',
+            'birth_time' => '11:15:00',
+            'birth_city' => 'Mumbai',
+            'birth_country' => 'India',
+            'latitude' => 19.0760,
+            'longitude' => 72.8777,
+            'timezone' => 'Asia/Kolkata',
+            'is_default' => true,
+        ]);
+
+        CalculationWorkerLauncher::setLaunchHook(function () {
+            return true;
+        });
+
+        // 1. Without Authorization header -> 401 Unauthenticated
+        $unauthRes = $this->postJson('/api/v1/kundli/generate', []);
+        $unauthRes->assertStatus(401)
+            ->assertJsonPath('message', 'Unauthenticated.');
+
+        // 2. With Sanctum Bearer token -> 202 Accepted
+        $authRes = $this->withHeaders([
+            'Authorization' => "Bearer {$token}",
+        ])->postJson('/api/v1/kundli/generate', []);
+
+        $authRes->assertStatus(202)
+            ->assertJsonPath('success', true);
+
+        // 3. GET endpoint with Bearer token
+        $getAuthRes = $this->withHeaders([
+            'Authorization' => "Bearer {$token}",
+        ])->getJson('/api/v1/astrology/kundli');
+
+        $getAuthRes->assertStatus(202)
+            ->assertJsonPath('success', true);
+    }
 }

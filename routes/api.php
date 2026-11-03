@@ -141,5 +141,15 @@ Route::prefix('v1')->group(function () {
         Route::post('/kundli/generate', [KundliApiController::class, 'generate']);
         Route::get('/astrology/kundli', [KundliApiController::class, 'show']);
         Route::post('/astrology/kundli/calculate', [KundliApiController::class, 'calculate']);
+
+        // M6: Kundli Details, Dashas, Saved Reports, and PDF Export
+        Route::get('/kundli/{profileId}/dashas', [KundliApiController::class, 'dashas']);
+        Route::get('/astrology/kundli/{profileId}/dashas', [KundliApiController::class, 'dashas']);
+        Route::get('/kundli/saved', [KundliApiController::class, 'listSaved']);
+        Route::get('/kundli/saved/{id}', [KundliApiController::class, 'showSaved']);
+        Route::post('/kundli/save', [KundliApiController::class, 'saveSnapshot']);
+        Route::delete('/kundli/saved/{id}', [KundliApiController::class, 'deleteSaved']);
+        Route::get('/kundli/pdf', [KundliApiController::class, 'downloadPdf']);
+        Route::get('/astrology/kundli/pdf', [KundliApiController::class, 'downloadPdf']);
     });
 });

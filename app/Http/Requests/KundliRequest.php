@@ -11,7 +11,7 @@ class KundliRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user() !== null;
+        return ($this->user('sanctum') ?? $this->user()) !== null;
     }
 
     public function rules(): array
@@ -19,6 +19,7 @@ class KundliRequest extends FormRequest
         return [
             'profile_id' => ['nullable', 'integer'],
             'lang' => ['nullable', 'string', Rule::in(['en', 'hi'])],
+            'language' => ['nullable', 'string', Rule::in(['en', 'hi'])],
         ];
     }
 

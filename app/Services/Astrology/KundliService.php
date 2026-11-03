@@ -6,6 +6,8 @@ namespace App\Services\Astrology;
 
 use App\Contracts\Astrology\KundliCalculatorInterface;
 use App\Models\UserAstrologyProfile;
+use App\Services\Astrology\DashaService;
+use App\Services\Astrology\Interpretation\KundliInterpretationService;
 use Carbon\CarbonImmutable;
 use FFI;
 use FFI\CData;
@@ -86,16 +88,22 @@ class KundliService implements KundliCalculatorInterface
 
     protected JmeEphFFI $jme;
     protected AstronomyService $astronomy;
+    protected DashaService $dashaService;
+    protected KundliInterpretationService $interpretationService;
 
     protected CData $resultsBuffer;
     protected CData $errorBuffer;
 
     public function __construct(
         ?JmeEphFFI $jme = null,
-        ?AstronomyService $astronomy = null
+        ?AstronomyService $astronomy = null,
+        ?DashaService $dashaService = null,
+        ?KundliInterpretationService $interpretationService = null
     ) {
         $this->jme = $jme ?? app(JmeEphFFI::class);
         $this->astronomy = $astronomy ?? app(AstronomyService::class);
+        $this->dashaService = $dashaService ?? app(DashaService::class);
+        $this->interpretationService = $interpretationService ?? app(KundliInterpretationService::class);
 
         // Enforce True Chitra Lahiri
         JmeRuntime::setTrueCitra($this->jme);
@@ -234,7 +242,30 @@ class KundliService implements KundliCalculatorInterface
             chartType: 'chandra'
         );
 
-        // 7. Assemble Complete M5 Kundli Structure
+        // 7. Calculate Vimshottari Dasha
+        $moonLon = $natalPlanets['moon']['longitude'] ?? null;
+        $birthDateTimeString = ($birthTime && $precision === UserAstrologyProfile::PRECISION_VERIFIED)
+            ? "{$birthDate} {$birthTime}"
+            : "{$birthDate} 12:00:00";
+        $dashaData = $this->dashaService->calculateVimshottariTimeline(
+            moonLongitude: $moonLon,
+            birthDate: $birthDateTimeString,
+            precision: $precision
+        );
+
+        // 8. Generate rule-based classical interpretations
+        $rawChartData = [
+            'planets' => $natalPlanets,
+            'houses' => $lagnaHouses,
+            'ascendant' => $ascendantData,
+            'chandra_kundli' => [
+                'houses' => $chandraHouses,
+            ],
+        ];
+        $interpretationsEn = $this->interpretationService->interpretChart($rawChartData, 'en');
+        $interpretationsHi = $this->interpretationService->interpretChart($rawChartData, 'hi');
+
+        // 9. Assemble Complete Kundli Structure (M5 & M6)
         return [
             'metadata' => [
                 'engine' => 'Standalone Moshier FFI (glibc 2.28)',
@@ -272,6 +303,11 @@ class KundliService implements KundliCalculatorInterface
                 'lagna_chart_available' => ($ascendantData['status'] === 'confirmed'),
                 'chandra_chart_available' => true,
                 'advisory' => $ascendantData['reason'],
+            ],
+            'dasha' => $dashaData,
+            'interpretations' => [
+                'en' => $interpretationsEn,
+                'hi' => $interpretationsHi,
             ],
         ];
     }
