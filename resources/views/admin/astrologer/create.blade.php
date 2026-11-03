@@ -1,6 +1,3 @@
-blade
-Copy
-Edit
 @extends('admin.layouts.admin')
 
 @section('content')
@@ -60,16 +57,11 @@ Edit
             <div class="col-md-4 mb-3">
                 <label for="expertise">{{ __('astrologer.expertise') }}</label>
                 <select class="form-control" name="expertise[]" multiple required>
-                    <option value="{{ __('astrologer.vedic_astrology') }}" {{ in_array(__('astrologer.vedic_astrology'), old('expertise', [])) ? 'selected' : '' }}>{{ __('astrologer.vedic_astrology') }}</option>
-                    <option value="{{ __('astrologer.numerology') }}" {{ in_array(__('astrologer.numerology'), old('expertise', [])) ? 'selected' : '' }}>{{ __('astrologer.numerology') }}</option>
-                    <option value="{{ __('astrologer.vastu') }}" {{ in_array(__('astrologer.vastu'), old('expertise', [])) ? 'selected' : '' }}>{{ __('astrologer.vastu') }}</option>
-                    <option value="{{ __('astrologer.face_reading') }}" {{ in_array(__('astrologer.face_reading'), old('expertise', [])) ? 'selected' : '' }}>{{ __('astrologer.face_reading') }}</option>
-                    <option value="{{ __('astrologer.astrology') }}" {{ in_array(__('astrologer.astrology'), old('expertise', [])) ? 'selected' : '' }}>{{ __('astrologer.astrology') }}</option>
-                    <option value="{{ __('astrologer.kundli') }}" {{ in_array(__('astrologer.horoscope'), old('expertise', [])) ? 'selected' : '' }}>{{ __('astrologer.horoscope') }}</option>
-                    <option value="{{ __('astrologer.palmistry') }}" {{ in_array(__('astrologer.palmistry'), old('expertise', [])) ? 'selected' : '' }}>{{ __('astrologer.palmistry') }}Palmistry</option>
-                    <option value="{{ __('astrologer.tarot_reading') }}" {{ in_array(__('astrologer.tarot_reading'), old('expertise', [])) ? 'selected' : '' }}>{{ __('astrologer.tarot_reading') }}</option>
-                    <option value="{{ __('astrologer.western_astrology') }}" {{ in_array(__('astrologer.western_astrology'), old('expertise', [])) ? 'selected' : '' }}>{{ __('astrologer.western_astrology') }}</option>
-                    <!-- Add more options as needed -->
+                    @foreach(__('astrologer.expertise_options') as $expertiseOption)
+                    <option value="{{ $expertiseOption }}" {{ in_array($expertiseOption, old('expertise', [])) ? 'selected' : '' }}>
+                        {{ $expertiseOption }}
+                    </option>
+                    @endforeach
                 </select>
                 @error('expertise') <span class="text-danger">{{ $message }}</span> @enderror
             </div>

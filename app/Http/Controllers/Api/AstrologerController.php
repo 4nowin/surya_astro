@@ -14,18 +14,75 @@ use App\Models\ChatSession;
 
 class AstrologerController extends Controller
 {
-
-  public function index($lang = 'en')
+  public function index(Request $request, $lang = 'en')
   {
+    if ($request->route('lang')) {
+      $lang = $request->route('lang');
+    }
+
     $validLanguages = ['en', 'hi']; // Add supported languages here
     if (!in_array($lang, $validLanguages)) {
       return response()->json(['error' => 'Invalid language selected'], 400);
     }
 
-    $astrologers  = Astrologer::where([
+    $query = Astrologer::where([
       ['active', 1],
       ['language', $lang]
-    ])->get();
+    ]);
+
+    // Optional specialisation / expertise filter
+    $expertise = $request->query('expertise') ?? $request->query('specialisation');
+    if (!empty($expertise)) {
+      $expertiseStr = trim($expertise);
+
+      // Supported taxonomy mapping (canonical => aliases)
+      $supportedTaxonomy = [
+        'kundli' => ['kundli', 'कुंडली', 'horoscope'],
+        'muhurat' => ['muhurat', 'मुहूर्त', 'panchang', 'पंचांग'],
+        'vastu' => ['vastu', 'vastu shastra', 'वास्तु', 'वास्तु शास्त्र'],
+        'vedic astrology' => ['vedic astrology', 'वैदिक ज्योतिष'],
+        'numerology' => ['numerology', 'अंक ज्योतिष'],
+        'tarot reading' => ['tarot reading', 'टैरो रीडिंग'],
+        'palmistry' => ['palmistry', 'हस्तरेखा शास्त्र'],
+        'face reading' => ['face reading', 'फेस रीडिंग'],
+        'astrology' => ['astrology', 'ज्योतिष'],
+        'western astrology' => ['western astrology', 'पश्चिमी ज्योतिष'],
+        'kp astrology' => ['kp astrology', 'के.पी. ज्योतिष'],
+        'lal kitab' => ['lal kitab', 'लाल किताब'],
+        'nadi astrology' => ['nadi astrology', 'नाड़ी ज्योतिष'],
+      ];
+
+      $lowerInput = mb_strtolower($expertiseStr, 'UTF-8');
+
+      // Find matching group
+      $searchKeywords = [];
+      foreach ($supportedTaxonomy as $canonical => $aliases) {
+        foreach ($aliases as $alias) {
+          if (mb_stripos($alias, $lowerInput) !== false || mb_stripos($lowerInput, $alias) !== false) {
+            $searchKeywords = array_merge($searchKeywords, $aliases);
+            break;
+          }
+        }
+      }
+
+      if (empty($searchKeywords)) {
+        return response()->json(['error' => 'Invalid specialisation filter'], 422);
+      }
+
+      $searchKeywords = array_unique($searchKeywords);
+
+      $query->where(function ($q) use ($searchKeywords) {
+        foreach ($searchKeywords as $keyword) {
+          $q->orWhere('expertise', 'LIKE', '%' . $keyword . '%');
+        }
+      });
+    }
+
+    // Show online astrologers first, then order by price ascending
+    $astrologers = $query
+      ->orderByRaw("CASE WHEN status = 'online' THEN 1 ELSE 2 END")
+      ->orderBy('price', 'asc')
+      ->get();
 
     if ($astrologers->isEmpty()) {
       return response()->json(['message' => 'No Astrologer found'], 404);
@@ -77,5 +134,4 @@ class AstrologerController extends Controller
 
     return response()->json(['data' => $donations]);
   }
-
 }
