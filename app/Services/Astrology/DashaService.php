@@ -162,7 +162,7 @@ class DashaService
                             'lord_hi' => $ad['name_hi'],
                             'start_date' => $ad['start_date'],
                             'end_date' => $ad['end_date'],
-                            'remaining_days' => $remainingDays,
+                            'remaining_days' => (int) round($remainingDays),
                             'remaining_formatted' => $remFormatted,
                         ];
                         break;
