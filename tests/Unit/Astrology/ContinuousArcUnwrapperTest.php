@@ -150,4 +150,44 @@ class ContinuousArcUnwrapperTest extends TestCase
         $this->assertEquals(1, $boundaries['min_index']);
         $this->assertEquals(1, $boundaries['max_index']);
     }
+
+    /**
+     * Test bisectRoot with a valid bracket.
+     */
+    public function test_bisect_root_with_valid_bracket(): void
+    {
+        // f(x) = x^2 - 4 on [1, 3], root at x = 2.0
+        $fn = fn(float $x): float => ($x * $x) - 4.0;
+        $root = ContinuousArcUnwrapper::bisectRoot($fn, 1.0, 3.0);
+
+        $this->assertEqualsWithDelta(2.0, $root, 1e-5);
+        $this->assertEqualsWithDelta(0.0, $fn($root), 1e-4);
+    }
+
+    /**
+     * Test bisectRoot when left endpoint is exact root.
+     */
+    public function test_bisect_root_at_exact_endpoint(): void
+    {
+        $fn = fn(float $x): float => $x - 5.0;
+        $rootLeft = ContinuousArcUnwrapper::bisectRoot($fn, 5.0, 10.0);
+        $this->assertEqualsWithDelta(5.0, $rootLeft, 1e-6);
+
+        $rootRight = ContinuousArcUnwrapper::bisectRoot($fn, 0.0, 5.0);
+        $this->assertEqualsWithDelta(5.0, $rootRight, 1e-6);
+    }
+
+    /**
+     * Test bisectRoot throws InvalidArgumentException on invalid (unbracketed) interval.
+     */
+    public function test_bisect_root_throws_on_invalid_bracket(): void
+    {
+        // f(x) = x^2 + 1 on [1, 3], both endpoints positive (f(1)=2, f(3)=10)
+        $fn = fn(float $x): float => ($x * $x) + 1.0;
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('does not bracket a root');
+
+        ContinuousArcUnwrapper::bisectRoot($fn, 1.0, 3.0);
+    }
 }

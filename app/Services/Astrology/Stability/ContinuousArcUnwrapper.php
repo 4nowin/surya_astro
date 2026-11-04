@@ -314,6 +314,7 @@ class ContinuousArcUnwrapper
                             $tStart,
                             $tEnd,
                             $aStart,
+                            $aEnd,
                             $targetUnwrapped
                         );
 
@@ -334,6 +335,7 @@ class ContinuousArcUnwrapper
                             $tStart,
                             $tEnd,
                             $aStart,
+                            $aEnd,
                             $targetUnwrapped
                         );
 
@@ -361,9 +363,23 @@ class ContinuousArcUnwrapper
 
     /**
      * Bisection root finding to solve f(t) = 0 in [tA, tB] where f(tA) * f(tB) <= 0.
+     *
+     * @param Closure(float): float $fn Continuous scalar function
+     * @param float $tA Left endpoint
+     * @param float $tB Right endpoint
+     * @param float $tolerance Numerical tolerance
+     * @param float|null $residualTolerance Optional maximum residual tolerance for root verification
+     * @return float
+     * @throws InvalidArgumentException If [tA, tB] does not bracket a root (f(tA) * f(tB) > 0)
+     * @throws RuntimeException If bisection fails to converge to an actual root within tolerance
      */
-    public static function bisectRoot(Closure $fn, float $tA, float $tB, float $tolerance = self::DEFAULT_NUMERICAL_TOLERANCE): float
-    {
+    public static function bisectRoot(
+        Closure $fn,
+        float $tA,
+        float $tB,
+        float $tolerance = self::DEFAULT_NUMERICAL_TOLERANCE,
+        ?float $residualTolerance = null
+    ): float {
         $fA = $fn($tA);
         $fB = $fn($tB);
 
@@ -372,6 +388,13 @@ class ContinuousArcUnwrapper
         }
         if (abs($fB) <= $tolerance) {
             return $tB;
+        }
+
+        // Validate bracket: f(tA) and f(tB) must have opposite signs
+        if (($fA > 0.0 && $fB > 0.0) || ($fA < 0.0 && $fB < 0.0)) {
+            throw new InvalidArgumentException(
+                sprintf("Interval [%.6f, %.6f] does not bracket a root (f(tA) = %.6f, f(tB) = %.6f).", $tA, $tB, $fA, $fB)
+            );
         }
 
         $low = $tA;
@@ -385,7 +408,7 @@ class ContinuousArcUnwrapper
                 return $mid;
             }
 
-            if (($fA > 0 && $fMid > 0) || ($fA < 0 && $fMid < 0)) {
+            if (($fA > 0.0 && $fMid > 0.0) || ($fA < 0.0 && $fMid < 0.0)) {
                 $low = $mid;
                 $fA = $fMid;
             } else {
@@ -393,7 +416,17 @@ class ContinuousArcUnwrapper
             }
         }
 
-        return ($low + $high) / 2.0;
+        $finalMid = ($low + $high) / 2.0;
+        $finalResidual = abs($fn($finalMid));
+        $maxAllowedResidual = $residualTolerance ?? max(1e-3, $tolerance * 100.0);
+
+        if ($finalResidual > $maxAllowedResidual && abs($fA) > $maxAllowedResidual && abs($fB) > $maxAllowedResidual) {
+            throw new RuntimeException(
+                sprintf("Bisection root finding failed to converge to a root within tolerance in [%.6f, %.6f] (residual = %.6f).", $tA, $tB, $finalResidual)
+            );
+        }
+
+        return $finalMid;
     }
 
     /**
@@ -404,11 +437,53 @@ class ContinuousArcUnwrapper
         float $tStart,
         float $tEnd,
         float $aStartUnwrapped,
+        float $aEndUnwrapped,
         float $targetUnwrapped
     ): float {
-        $rawStart = self::normalize($angleEvaluator($tStart));
+        // If the monotonic interval spans a large range (e.g. 24h civil day unknown time spanning 360°),
+        // we first narrow down to a sub-bracket [subA, subB] where angle change is strictly <= 15°
+        $subA = $tStart;
+        $subB = $tEnd;
+        $subAUnwrapped = $aStartUnwrapped;
 
-        $fn = function (float $t) use ($angleEvaluator, $tStart, $rawStart, $aStartUnwrapped, $targetUnwrapped): float {
+        $totalArc = max(1.0, abs($aEndUnwrapped - $aStartUnwrapped));
+        $steps = max(1, (int) ceil($totalArc / 15.0));
+
+        if ($steps > 1) {
+            $dt = ($tEnd - $tStart) / $steps;
+            $prevT = $tStart;
+            $prevUnwrapped = $aStartUnwrapped;
+            $prevRaw = self::normalize($angleEvaluator($tStart));
+
+            for ($s = 1; $s <= $steps; $s++) {
+                $currT = ($s === $steps) ? $tEnd : ($tStart + $s * $dt);
+                $currRaw = self::normalize($angleEvaluator($currT));
+                $d = $currRaw - $prevRaw;
+                if ($d > 180.0) {
+                    $d -= 360.0;
+                } elseif ($d < -180.0) {
+                    $d += 360.0;
+                }
+                $currUnwrapped = $prevUnwrapped + $d;
+
+                // Check if target is bracketed in [prevUnwrapped, currUnwrapped]
+                if (($prevUnwrapped <= $targetUnwrapped && $targetUnwrapped <= $currUnwrapped) ||
+                    ($currUnwrapped <= $targetUnwrapped && $targetUnwrapped <= $prevUnwrapped)) {
+                    $subA = $prevT;
+                    $subB = $currT;
+                    $subAUnwrapped = $prevUnwrapped;
+                    break;
+                }
+
+                $prevT = $currT;
+                $prevUnwrapped = $currUnwrapped;
+                $prevRaw = $currRaw;
+            }
+        }
+
+        $rawStart = self::normalize($angleEvaluator($subA));
+
+        $fn = function (float $t) use ($angleEvaluator, $subA, $rawStart, $subAUnwrapped, $targetUnwrapped): float {
             $raw = self::normalize($angleEvaluator($t));
             $diff = $raw - $rawStart;
             if ($diff > 180.0) {
@@ -416,10 +491,10 @@ class ContinuousArcUnwrapper
             } elseif ($diff < -180.0) {
                 $diff += 360.0;
             }
-            $currentUnwrapped = $aStartUnwrapped + $diff;
+            $currentUnwrapped = $subAUnwrapped + $diff;
             return $currentUnwrapped - $targetUnwrapped;
         };
 
-        return self::bisectRoot($fn, $tStart, $tEnd);
+        return self::bisectRoot($fn, $subA, $subB);
     }
 }
