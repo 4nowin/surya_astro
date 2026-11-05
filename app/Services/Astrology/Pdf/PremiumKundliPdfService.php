@@ -46,11 +46,6 @@ class PremiumKundliPdfService
      */
     protected function tryRenderChromium(array $reportData, string $locale): ?string
     {
-        $chromeBinary = $this->resolveChromiumBinary();
-        if ($chromeBinary === null) {
-            return null;
-        }
-
         $fontRegular = 'file:///' . str_replace('\\', '/', resource_path('fonts/NotoSansDevanagari-Regular.ttf'));
         $fontBold = 'file:///' . str_replace('\\', '/', resource_path('fonts/NotoSansDevanagari-Bold.ttf'));
 
@@ -71,12 +66,25 @@ class PremiumKundliPdfService
             'logoBase64' => $logoBase64,
         ])->render();
 
+        return $this->renderHtmlViaChromium($html, 'detailed_report_');
+    }
+
+    /**
+     * Render an arbitrary HTML string into a PDF binary using headless Chromium.
+     */
+    public function renderHtmlViaChromium(string $html, string $tempPrefix = 'report_'): ?string
+    {
+        $chromeBinary = $this->resolveChromiumBinary();
+        if ($chromeBinary === null) {
+            return null;
+        }
+
         $tempDir = storage_path('app/temp_pdf');
         if (!is_dir($tempDir)) {
             @mkdir($tempDir, 0755, true);
         }
 
-        $id = uniqid('report_', true);
+        $id = uniqid($tempPrefix, true);
         $tempHtml = $tempDir . '/' . $id . '.html';
         $tempPdf = $tempDir . '/' . $id . '.pdf';
 
@@ -118,7 +126,7 @@ class PremiumKundliPdfService
     /**
      * Resolve Chromium binary path across common environments.
      */
-    protected function resolveChromiumBinary(): ?string
+    public function resolveChromiumBinary(): ?string
     {
         $custom = env('CHROME_PATH') ?? env('PUPPETEER_EXECUTABLE_PATH');
         if ($custom && file_exists((string) $custom)) {
@@ -214,7 +222,7 @@ class PremiumKundliPdfService
     /**
      * Ensure Dompdf named font metrics and TTF files are in place for SVG font resolution.
      */
-    protected function ensureSvgFontAssets(string $fontDir): void
+    public function ensureSvgFontAssets(string $fontDir): void
     {
         $regTtf = resource_path('fonts/NotoSansDevanagari-Regular.ttf');
         $boldTtf = resource_path('fonts/NotoSansDevanagari-Bold.ttf');

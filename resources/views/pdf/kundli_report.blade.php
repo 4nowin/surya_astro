@@ -4,7 +4,30 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <title>{{ $locale === 'hi' ? 'वैदिक जन्म पत्रिका - एस्ट्रो सेतु' : 'Vedic Janam Kundli - Astro Setu' }}</title>
     <style>
-@if($locale === 'hi')
+        @font-face {
+            font-family: 'NotoDevanagari';
+            font-style: normal;
+            font-weight: 400;
+            src: url('{{ $fontRegular }}') format('truetype');
+        }
+        @font-face {
+            font-family: 'NotoDevanagari';
+            font-style: normal;
+            font-weight: 700;
+            src: url('{{ $fontBold }}') format('truetype');
+        }
+        @font-face {
+            font-family: 'NotoDevanagari';
+            font-style: italic;
+            font-weight: 400;
+            src: url('{{ $fontRegular }}') format('truetype');
+        }
+        @font-face {
+            font-family: 'NotoDevanagari';
+            font-style: italic;
+            font-weight: 700;
+            src: url('{{ $fontBold }}') format('truetype');
+        }
         @font-face {
             font-family: 'Noto Sans Devanagari';
             font-style: normal;
@@ -17,40 +40,56 @@
             font-weight: 700;
             src: url('{{ $fontBold }}') format('truetype');
         }
-@endif
+        @font-face {
+            font-family: 'Noto Sans Devanagari';
+            font-style: italic;
+            font-weight: 400;
+            src: url('{{ $fontRegular }}') format('truetype');
+        }
+        @font-face {
+            font-family: 'Noto Sans Devanagari';
+            font-style: italic;
+            font-weight: 700;
+            src: url('{{ $fontBold }}') format('truetype');
+        }
         @page {
-            margin: 28px 32px 32px 32px;
+            margin: 20px 28px 24px 28px;
             size: A4 portrait;
         }
+        body, table, td, th, div, span, p, em, strong, b, i {
+            font-family: {!! $locale === 'hi' ? 'NotoDevanagari, "Noto Sans Devanagari", sans-serif' : "'DejaVu Sans', sans-serif" !!};
+        }
         body {
-            font-family: {{ $locale === 'hi' ? "'Noto Sans Devanagari', 'DejaVu Sans', sans-serif" : "'DejaVu Sans', sans-serif" }};
-            font-size: 10px;
+            font-size: 9.5px;
             color: #2D3748;
-            line-height: 1.45;
+            line-height: 1.4;
             background-color: #FFFFFF;
+        }
+        .devanagari {
+            font-family: NotoDevanagari, "Noto Sans Devanagari", sans-serif !important;
         }
         .header {
             border-bottom: 2px solid #D4AF37;
-            padding-bottom: 8px;
-            margin-bottom: 14px;
+            padding-bottom: 6px;
+            margin-bottom: 10px;
         }
         .header table {
             width: 100%;
         }
         .brand-title {
-            font-size: 20px;
+            font-size: 18px;
             font-weight: bold;
             color: #8C1D40;
             letter-spacing: 0.5px;
         }
         .brand-sub {
-            font-size: 9px;
+            font-size: 8.5px;
             color: #718096;
             margin-top: 2px;
         }
         .report-title {
             text-align: right;
-            font-size: 14px;
+            font-size: 13px;
             font-weight: bold;
             color: #2B6CB0;
         }
@@ -63,24 +102,24 @@
             background-color: #F7FAFC;
             border: 1px solid #E2E8F0;
             border-radius: 4px;
-            padding: 8px 10px;
-            margin-bottom: 12px;
+            padding: 6px 8px;
+            margin-bottom: 8px;
         }
         .section-title {
-            font-size: 12px;
+            font-size: 11px;
             font-weight: bold;
             color: #8C1D40;
             border-bottom: 1px solid #E2E8F0;
-            padding-bottom: 4px;
-            margin-bottom: 6px;
+            padding-bottom: 3px;
+            margin-bottom: 5px;
         }
         .meta-grid {
             width: 100%;
             border-collapse: collapse;
         }
         .meta-grid td {
-            padding: 3px 4px;
-            font-size: 9px;
+            padding: 2.5px 4px;
+            font-size: 8.5px;
             vertical-align: top;
         }
         .meta-label {
@@ -94,7 +133,7 @@
         }
         .chart-container {
             width: 100%;
-            margin-bottom: 14px;
+            margin-bottom: 10px;
         }
         .chart-col {
             width: 48%;
@@ -103,29 +142,29 @@
             text-align: center;
         }
         .chart-heading {
-            font-size: 11px;
+            font-size: 10.5px;
             font-weight: bold;
             color: #2C5282;
-            margin-bottom: 6px;
+            margin-bottom: 4px;
         }
         .data-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 6px;
-            margin-bottom: 12px;
+            margin-top: 4px;
+            margin-bottom: 8px;
         }
         .data-table th {
             background-color: #EDF2F7;
             color: #2D3748;
             font-weight: bold;
-            font-size: 8.5px;
-            padding: 5px 4px;
+            font-size: 8px;
+            padding: 4px 4px;
             border: 1px solid #CBD5E0;
             text-align: left;
         }
         .data-table td {
-            font-size: 8px;
-            padding: 4px 4px;
+            font-size: 7.5px;
+            padding: 3px 4px;
             border: 1px solid #E2E8F0;
             vertical-align: middle;
         }

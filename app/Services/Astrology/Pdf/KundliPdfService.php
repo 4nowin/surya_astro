@@ -34,6 +34,12 @@ class KundliPdfService
         12 => ['rashi_x' => 300, 'rashi_y' => 35,  'planets_x' => 310, 'planets_y' => 65],
     ];
 
+    public function __construct(
+        protected ?PremiumKundliPdfService $premiumPdfService = null
+    ) {
+        $this->premiumPdfService ??= app(PremiumKundliPdfService::class);
+    }
+
     /**
      * Generate PDF binary content for a Janam Kundli.
      *
@@ -53,10 +59,50 @@ class KundliPdfService
             ? $this->renderNorthIndianChartSvg($chandraHouses, $locale, 'Chandra Kundli (Moon Chart)')
             : null;
 
+        // 1. Try Chromium renderer for native HarfBuzz complex-script shaping
+        $chromiumPdf = $this->tryRenderChromium($kundliData, $locale, $lagnaSvg, $chandraSvg);
+        if ($chromiumPdf !== null && $chromiumPdf !== '') {
+            return $chromiumPdf;
+        }
+
+        // 2. Deterministic zero-dependency fallback: Dompdf with embedded Noto fonts
+        return $this->renderDompdf($kundliData, $locale, $lagnaSvg, $chandraSvg);
+    }
+
+    /**
+     * Render PDF using headless Chromium with native HarfBuzz complex-script shaping.
+     */
+    protected function tryRenderChromium(array $kundliData, string $locale, ?string $lagnaSvg, ?string $chandraSvg): ?string
+    {
+        $fontRegular = 'file:///' . str_replace('\\', '/', resource_path('fonts/NotoSansDevanagari-Regular.ttf'));
+        $fontBold = 'file:///' . str_replace('\\', '/', resource_path('fonts/NotoSansDevanagari-Bold.ttf'));
+
+        $html = View::make('pdf.kundli_report', [
+            'kundli' => $kundliData,
+            'locale' => $locale,
+            'lagnaSvg' => $lagnaSvg,
+            'chandraSvg' => $chandraSvg,
+            'fontRegular' => $fontRegular,
+            'fontBold' => $fontBold,
+        ])->render();
+
+        return $this->premiumPdfService->renderHtmlViaChromium($html, 'kundli_');
+    }
+
+    /**
+     * Render PDF using Dompdf fallback with embedded Noto Sans Devanagari fonts.
+     */
+    public function renderDompdf(array $kundliData, string $locale, ?string $lagnaSvg, ?string $chandraSvg): string
+    {
         $fontDir = storage_path('fonts');
         if (!is_dir($fontDir)) {
             @mkdir($fontDir, 0755, true);
         }
+
+        $this->premiumPdfService->ensureSvgFontAssets($fontDir);
+
+        $fontRegular = str_replace('\\', '/', resource_path('fonts/NotoSansDevanagari-Regular.ttf'));
+        $fontBold = str_replace('\\', '/', resource_path('fonts/NotoSansDevanagari-Bold.ttf'));
 
         $options = new Options();
         $options->set('isHtml5ParserEnabled', true);
@@ -64,7 +110,7 @@ class KundliPdfService
         $options->set('fontDir', $fontDir);
         $options->set('fontCache', $fontDir);
         $options->set('chroot', [base_path()]);
-        $options->set('defaultFont', $locale === 'hi' ? 'Noto Sans Devanagari' : 'DejaVu Sans');
+        $options->set('defaultFont', $locale === 'hi' ? 'NotoDevanagari' : 'DejaVu Sans');
 
         $dompdf = new Dompdf($options);
 
@@ -73,15 +119,20 @@ class KundliPdfService
             'locale' => $locale,
             'lagnaSvg' => $lagnaSvg,
             'chandraSvg' => $chandraSvg,
-            'fontRegular' => str_replace('\\', '/', resource_path('fonts/NotoSansDevanagari-Regular.ttf')),
-            'fontBold' => str_replace('\\', '/', resource_path('fonts/NotoSansDevanagari-Bold.ttf')),
+            'fontRegular' => $fontRegular,
+            'fontBold' => $fontBold,
         ])->render();
 
         $dompdf->loadHtml($html, 'UTF-8');
         $dompdf->setPaper('A4', 'portrait');
         $dompdf->render();
 
-        return (string) $dompdf->output();
+        $output = $dompdf->output();
+        if ($output === null || $output === '') {
+            throw new \RuntimeException('Dompdf failed to produce PDF output.');
+        }
+
+        return (string) $output;
     }
 
     /**
@@ -110,7 +161,7 @@ class KundliPdfService
         $svg .= '<line x1="0" y1="400" x2="400" y2="0" stroke="#C59B27" stroke-width="1.8"/>';
         $svg .= '<polygon points="200,0 400,200 200,400 0,200" fill="none" stroke="#C59B27" stroke-width="1.8"/>';
 
-        $fontFamily = $locale === 'hi' ? "'Noto Sans Devanagari', 'DejaVu Sans', sans-serif" : "DejaVu Sans, Arial, sans-serif";
+        $fontFamily = $locale === 'hi' ? "'NotoDevanagari', 'Noto Sans Devanagari', 'DejaVu Sans', sans-serif" : "DejaVu Sans, Arial, sans-serif";
 
         // House labels and planet placements
         for ($hNum = 1; $hNum <= 12; $hNum++) {
