@@ -208,11 +208,52 @@ class CalculationJobManager
     }
 
     /**
-     * Mark a job completed and record the result cache key.
+     * Atomically renew the lease for an active calculation job if owned by $workerId and not expired.
+     *
+     * @param AstrologyCalculationJob $job
+     * @param string $workerId
+     * @param int $additionalSeconds
+     * @return bool True if lease was successfully renewed; false if ownership was lost or lease expired
      */
-    public function markCompleted(AstrologyCalculationJob $job, string $resultCacheKey): void
+    public function renewLease(AstrologyCalculationJob $job, string $workerId, int $additionalSeconds = 60): bool
     {
-        $job->update([
+        $affected = AstrologyCalculationJob::where('id', $job->id)
+            ->where('status', AstrologyCalculationJob::STATUS_PROCESSING)
+            ->where('worker_id', $workerId)
+            ->where('lease_expires_at', '>', now())
+            ->update([
+                'lease_expires_at' => now()->addSeconds($additionalSeconds),
+            ]);
+
+        return $affected > 0;
+    }
+
+    /**
+     * Verify whether a worker currently owns a valid, unexpired lease on the job.
+     */
+    public function verifyOwnership(AstrologyCalculationJob $job, string $workerId): bool
+    {
+        return AstrologyCalculationJob::where('id', $job->id)
+            ->where('status', AstrologyCalculationJob::STATUS_PROCESSING)
+            ->where('worker_id', $workerId)
+            ->where('lease_expires_at', '>', now())
+            ->exists();
+    }
+
+    /**
+     * Mark a job completed and record the result cache key, with optional ownership fencing.
+     */
+    public function markCompleted(AstrologyCalculationJob $job, string $resultCacheKey, ?string $workerId = null): bool
+    {
+        $query = AstrologyCalculationJob::where('id', $job->id);
+
+        if ($workerId !== null) {
+            $query->where('status', AstrologyCalculationJob::STATUS_PROCESSING)
+                ->where('worker_id', $workerId)
+                ->where('lease_expires_at', '>', now());
+        }
+
+        $affected = $query->update([
             'status' => AstrologyCalculationJob::STATUS_COMPLETED,
             'active_key' => null,
             'completed_at' => now(),
@@ -221,16 +262,25 @@ class CalculationJobManager
             'error_message' => null,
             'error_context' => null,
         ]);
+
+        return $affected > 0;
     }
 
     /**
-     * Mark a job failed or return to pending if attempts remain.
+     * Mark a job failed or return to pending if attempts remain, with optional ownership fencing.
      */
-    public function markFailed(AstrologyCalculationJob $job, string $errorMessage, ?array $context = null): void
+    public function markFailed(AstrologyCalculationJob $job, string $errorMessage, ?array $context = null, ?string $workerId = null): bool
     {
         $hasRemainingAttempts = $job->attempts < $job->max_attempts;
 
-        $job->update([
+        $query = AstrologyCalculationJob::where('id', $job->id);
+
+        if ($workerId !== null) {
+            $query->where('status', AstrologyCalculationJob::STATUS_PROCESSING)
+                ->where('worker_id', $workerId);
+        }
+
+        $affected = $query->update([
             'status' => $hasRemainingAttempts ? AstrologyCalculationJob::STATUS_PENDING : AstrologyCalculationJob::STATUS_FAILED,
             'active_key' => $hasRemainingAttempts ? "{$job->calculation_type}:{$job->canonical_key}" : null,
             'error_message' => $errorMessage,
@@ -238,6 +288,8 @@ class CalculationJobManager
             'lease_expires_at' => null,
             'worker_id' => null,
         ]);
+
+        return $affected > 0;
     }
 
     /**

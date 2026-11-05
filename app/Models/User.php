@@ -122,6 +122,16 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(\App\Models\NotificationDelivery::class);
     }
 
+    public function reportPurchases(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\ReportPurchase::class);
+    }
+
+    public function kundliReports(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\KundliReport::class);
+    }
+
     public static function generateReferralCode(): string
     {
         do {

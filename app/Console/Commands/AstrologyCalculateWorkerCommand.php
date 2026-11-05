@@ -78,8 +78,8 @@ class AstrologyCalculateWorkerCommand extends Command
                     // Store result in durable cache / storage
                     $cacheKey = $handler->storeResult($job->canonical_key, $result, $job->payload);
 
-                    // Mark completed
-                    $jobManager->markCompleted($job, $cacheKey);
+                    // Mark completed with ownership fencing
+                    $jobManager->markCompleted($job, $cacheKey, $workerId);
 
                     $durationMs = round((microtime(true) - $jobStartTime) * 1000, 2);
                     $this->info("Job [{$job->job_id}] completed successfully in {$durationMs}ms.");
@@ -102,7 +102,8 @@ class AstrologyCalculateWorkerCommand extends Command
                             'exception' => get_class($e),
                             'file' => $e->getFile(),
                             'line' => $e->getLine(),
-                        ]
+                        ],
+                        $workerId
                     );
 
                     $processedCount++;

@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\CalculationStatusController;
 use App\Http\Controllers\Api\DailyPanchangController;
 use App\Http\Controllers\Api\DailyHoroscopeApiController;
 use App\Http\Controllers\Api\KundliApiController;
+use App\Http\Controllers\Api\KundliReportDeliveryController;
 use App\Http\Controllers\Api\PersonalizedInsightsApiController;
 use App\Http\Controllers\Api\GeoController;
 use Carbon\Carbon;
@@ -160,5 +161,14 @@ Route::prefix('v1')->group(function () {
         Route::post('/notifications/devices/remove', [\App\Http\Controllers\Api\NotificationSettingsApiController::class, 'removeDevice']);
         Route::get('/notifications/preferences', [\App\Http\Controllers\Api\NotificationSettingsApiController::class, 'getPreferences']);
         Route::put('/notifications/preferences', [\App\Http\Controllers\Api\NotificationSettingsApiController::class, 'updatePreferences']);
+
+        // M9.2 Work Package A4: Detailed Kundli Report Commerce, Lifecycle & Delivery
+        Route::post('/kundli/reports/purchase', [KundliReportDeliveryController::class, 'purchase']);
+        Route::get('/kundli/reports/{reportUuid}/status', [KundliReportDeliveryController::class, 'status']);
+        Route::get('/kundli/reports/{reportUuid}/download-url', [KundliReportDeliveryController::class, 'downloadUrl']);
     });
+
+    // M9.2 Work Package A4: Temporary Signed Download Route (signature-validated)
+    Route::get('/kundli/reports/download/{reportUuid}', [KundliReportDeliveryController::class, 'download'])
+        ->name('kundli.reports.download');
 });
