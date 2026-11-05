@@ -340,6 +340,82 @@ class BasicKundliHindiFontTest extends TestCase
         $pdfService->generatePdf($calcResult, 'hi');
     }
 
+    public function test_controlled_api_error_response_503_when_hindi_renderer_unavailable(): void
+    {
+        $mockPremium = \Mockery::mock(PremiumKundliPdfService::class);
+        $mockPremium->shouldReceive('renderHtmlViaChromium')->andReturn(null);
+
+        $mockPdfService = new KundliPdfService(
+            $mockPremium,
+            app(\App\Services\Astrology\Pdf\SvgVargaRenderer::class)
+        );
+        $this->app->instance(KundliPdfService::class, $mockPdfService);
+
+        $this->primeCalculation();
+        Sanctum::actingAs($this->user);
+
+        $response = $this->getJson("/api/v1/kundli/pdf?profile_id={$this->profile->id}&locale=hi");
+        $response->assertStatus(503)
+            ->assertJson([
+                'success' => false,
+            ]);
+        $this->assertStringContainsString('हिंदी कुण्डली पीडीएफ सेवा वर्तमान में अनुपलब्ध है', $response->json('message'));
+    }
+
+    public function test_english_renderer_falls_back_to_dompdf_when_chromium_unavailable(): void
+    {
+        $mockPremium = \Mockery::mock(PremiumKundliPdfService::class);
+        $mockPremium->shouldReceive('renderHtmlViaChromium')->andReturn(null);
+        $mockPremium->shouldReceive('ensureSvgFontAssets')->andReturn(null);
+
+        $pdfService = new KundliPdfService(
+            $mockPremium,
+            app(\App\Services\Astrology\Pdf\SvgVargaRenderer::class)
+        );
+
+        $this->primeCalculation();
+        $calcResult = app(\App\Services\Astrology\KundliService::class)->calculateForProfile($this->profile);
+        $pdfOutput = $pdfService->generatePdf($calcResult, 'en');
+
+        $this->assertStringStartsWith('%PDF-', $pdfOutput);
+        $this->assertGreaterThan(30000, strlen($pdfOutput));
+    }
+
+    public function test_renderer_detection_and_binary_resolution(): void
+    {
+        /** @var PremiumKundliPdfService $premiumPdfService */
+        $premiumPdfService = app(PremiumKundliPdfService::class);
+        $resolved = $premiumPdfService->resolveChromiumBinary();
+
+        if (PHP_OS_FAMILY === 'Windows') {
+            $this->assertNotNull($resolved);
+            $this->assertFileExists($resolved);
+        } else {
+            // On Linux without Chromium, returns null
+            $this->assertTrue($resolved === null || file_exists($resolved));
+        }
+    }
+
+    public function test_remote_rendering_service_support_when_configured(): void
+    {
+        /** @var PremiumKundliPdfService $premiumPdfService */
+        $premiumPdfService = app(PremiumKundliPdfService::class);
+
+        \Illuminate\Support\Facades\Http::fake([
+            'https://render-test.internal/pdf' => \Illuminate\Support\Facades\Http::response('%PDF-1.4 Mock Remote PDF Output ' . str_repeat('A', 1500), 200),
+        ]);
+
+        putenv('PDF_RENDER_SERVICE_URL=https://render-test.internal/pdf');
+
+        try {
+            $result = $premiumPdfService->renderHtmlViaChromium('<html><body>Test</body></html>');
+            $this->assertNotNull($result);
+            $this->assertStringStartsWith('%PDF-', $result);
+        } finally {
+            putenv('PDF_RENDER_SERVICE_URL');
+        }
+    }
+
     public function test_chart_layout_uses_measured_square_aspect_ratio_and_table_separation(): void
     {
         $this->primeCalculation();

@@ -74,6 +74,28 @@ class PremiumKundliPdfService
      */
     public function renderHtmlViaChromium(string $html, string $tempPrefix = 'report_'): ?string
     {
+        // 1. Check for external/remote Chromium rendering microservice (Option C for shared hosting)
+        $remoteServiceUrl = env('PDF_RENDER_SERVICE_URL') ?: env('CHROME_RENDER_URL');
+        if (!empty($remoteServiceUrl)) {
+            try {
+                $response = \Illuminate\Support\Facades\Http::timeout(30)
+                    ->withHeaders([
+                        'X-Render-Secret' => (string) env('PDF_RENDER_SERVICE_SECRET', ''),
+                        'Accept' => 'application/pdf',
+                    ])
+                    ->post($remoteServiceUrl, [
+                        'html' => $html,
+                    ]);
+
+                if ($response->successful() && strlen($response->body()) > 1000) {
+                    return $response->body();
+                }
+            } catch (\Throwable $remoteEx) {
+                \Illuminate\Support\Facades\Log::warning("Remote PDF render service request failed: {$remoteEx->getMessage()}");
+            }
+        }
+
+        // 2. Resolve local Chromium executable binary
         $chromeBinary = $this->resolveChromiumBinary();
         if ($chromeBinary === null) {
             \Illuminate\Support\Facades\Log::warning('Chromium binary not found across system paths. Falling back to Dompdf engine.');

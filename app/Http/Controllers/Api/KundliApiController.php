@@ -570,17 +570,27 @@ class KundliApiController extends Controller
         try {
             $pdfBinary = $this->pdfService->generatePdf($chartData, $locale);
         } catch (\Throwable $e) {
+            $isRendererUnavailable = str_contains($e->getMessage(), 'Hindi Kundli PDF generation requires headless Chromium');
+
             Log::error("Basic Kundli PDF generation failed: {$e->getMessage()}", [
                 'user_id' => $user->id,
                 'locale' => $locale,
+                'is_renderer_unavailable' => $isRendererUnavailable,
                 'trace' => $e->getTraceAsString(),
             ]);
 
+            $statusCode = $isRendererUnavailable ? 503 : 500;
+            $userMessage = $isRendererUnavailable
+                ? ($locale === 'hi'
+                    ? 'हिंदी कुण्डली पीडीएफ सेवा वर्तमान में अनुपलब्ध है। कृपया कुछ समय बाद पुनः प्रयास करें या अंग्रेजी संस्करण डाउनलोड करें।'
+                    : 'Hindi Kundli PDF rendering service is currently unavailable. Please try downloading the English version or retry shortly.')
+                : 'Failed to generate Kundli PDF report. Please try again.';
+
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to generate Kundli PDF report. Please try again.',
-                'error' => config('app.debug') ? $e->getMessage() : null,
-            ], 500);
+                'message' => $userMessage,
+                'error' => config('app.debug') || $isRendererUnavailable ? $e->getMessage() : null,
+            ], $statusCode);
         }
 
         $fileName = 'kundli_' . preg_replace('/[^a-z0-9_-]/i', '_', $chartData['profile']['name'] ?? 'report') . '.pdf';
