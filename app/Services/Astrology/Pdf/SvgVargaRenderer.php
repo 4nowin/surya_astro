@@ -91,7 +91,7 @@ class SvgVargaRenderer
         $showAscDegree = $options['ascendant_degree'] ?? null;
         $maxChartWidth = $options['max_width'] ?? '240px';
 
-        $svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%" ' .
+        $svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%" preserveAspectRatio="xMidYMid meet" ' .
             'style="max-width:' . htmlspecialchars($maxChartWidth) . ';margin:0 auto;display:block;">';
 
         // Embed Noto Sans Devanagari font in SVG defs for standalone image rendering across all environments
@@ -139,7 +139,7 @@ class SvgVargaRenderer
                     : (string) $rashiId;
 
                 $svg .= sprintf(
-                    '<text x="%d" y="%d" font-family="%s" font-size="12" font-weight="bold" fill="#8C1D40" text-anchor="middle">%s</text>',
+                    '<text x="%d" y="%d" font-family="%s" font-size="14" font-weight="bold" fill="#8C1D40" text-anchor="middle">%s</text>',
                     $coords['rashi_x'],
                     $coords['rashi_y'],
                     $fontFamily,
@@ -180,7 +180,7 @@ class SvgVargaRenderer
                         $lineText = implode(' ', $chunk);
                         $lineY = $startY + ($lineIdx * 13);
                         $svg .= sprintf(
-                            '<text x="%d" y="%d" font-family="%s" font-size="10" font-weight="600" fill="#1A365D" text-anchor="middle">%s</text>',
+                            '<text x="%d" y="%d" font-family="%s" font-size="12" font-weight="bold" fill="#0F2942" text-anchor="middle">%s</text>',
                             $coords['planets_x'],
                             $lineY,
                             $fontFamily,
@@ -194,7 +194,7 @@ class SvgVargaRenderer
         // Optional Ascendant degrees label in Lagna house (House 1)
         if ($showAscDegree !== null && $showAscDegree !== '') {
             $svg .= sprintf(
-                '<text x="200" y="80" font-family="%s" font-size="8" font-weight="500" fill="#718096" text-anchor="middle">%s</text>',
+                '<text x="200" y="80" font-family="%s" font-size="9.5" font-weight="bold" fill="#4A5568" text-anchor="middle">%s</text>',
                 $fontFamily,
                 htmlspecialchars((string) $showAscDegree, ENT_NOQUOTES)
             );

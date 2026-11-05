@@ -136,13 +136,13 @@
             color: #1A202C;
             width: 25%;
         }
-        .chart-container {
+        .chart-table {
             width: 100%;
-            margin-bottom: 6px;
+            border-collapse: collapse;
+            margin-top: 4px;
+            margin-bottom: 8px;
         }
-        .chart-col {
-            width: 48%;
-            display: inline-block;
+        .chart-cell {
             vertical-align: top;
             text-align: center;
         }
@@ -150,7 +150,13 @@
             font-size: 10px;
             font-weight: bold;
             color: #2C5282;
-            margin-bottom: 3px;
+            margin-bottom: 4px;
+        }
+        .chart-img-frame {
+            width: 140pt;
+            height: 140pt;
+            display: block;
+            margin: 0 auto;
         }
         .data-table {
             width: 100%;
@@ -273,23 +279,27 @@
     </div>
 
     <!-- Chart Visualizations -->
-    <div class="chart-container">
+    <table class="chart-table">
         @if($lagnaSvg && $chandraSvg)
-            <div class="chart-col" style="margin-right: 3%;">
-                <div class="chart-heading">{{ $locale === 'hi' ? 'लग्न कुण्डली (D-1)' : 'Lagna Chart (D-1)' }}</div>
-                <img src="data:image/svg+xml;charset=utf-8;base64,{{ base64_encode($lagnaSvg) }}" style="width: 170px; height: 170px; max-width: 170px; max-height: 170px; display: block; margin: 0 auto;" width="170" height="170" alt="Lagna Chart"/>
-            </div>
-            <div class="chart-col">
-                <div class="chart-heading">{{ $locale === 'hi' ? 'चन्द्र कुण्डली' : 'Chandra Chart (Moon)' }}</div>
-                <img src="data:image/svg+xml;charset=utf-8;base64,{{ base64_encode($chandraSvg) }}" style="width: 170px; height: 170px; max-width: 170px; max-height: 170px; display: block; margin: 0 auto;" width="170" height="170" alt="Chandra Chart"/>
-            </div>
+            <tr>
+                <td class="chart-cell" style="width: 50%; padding-right: 8px;">
+                    <div class="chart-heading">{{ $locale === 'hi' ? 'लग्न कुण्डली (D-1)' : 'Lagna Chart (D-1)' }}</div>
+                    <img src="data:image/svg+xml;charset=utf-8;base64,{{ base64_encode($lagnaSvg) }}" class="chart-img-frame" width="140" height="140" style="width: 140pt; height: 140pt; display: block; margin: 0 auto;" alt="Lagna Chart (D-1)"/>
+                </td>
+                <td class="chart-cell" style="width: 50%; padding-left: 8px;">
+                    <div class="chart-heading">{{ $locale === 'hi' ? 'चन्द्र कुण्डली' : 'Chandra Chart (Moon)' }}</div>
+                    <img src="data:image/svg+xml;charset=utf-8;base64,{{ base64_encode($chandraSvg) }}" class="chart-img-frame" width="140" height="140" style="width: 140pt; height: 140pt; display: block; margin: 0 auto;" alt="Chandra Chart (Moon)"/>
+                </td>
+            </tr>
         @elseif($chandraSvg)
-            <div style="text-align: center; width: 100%;">
-                <div class="chart-heading">{{ $locale === 'hi' ? 'चन्द्र कुण्डली' : 'Chandra Kundli (Moon Ascendant)' }}</div>
-                <img src="data:image/svg+xml;charset=utf-8;base64,{{ base64_encode($chandraSvg) }}" style="width: 170px; height: 170px; max-width: 170px; max-height: 170px; display: block; margin: 0 auto;" width="170" height="170" alt="Chandra Chart"/>
-            </div>
+            <tr>
+                <td class="chart-cell" colspan="2" style="width: 100%;">
+                    <div class="chart-heading">{{ $locale === 'hi' ? 'चन्द्र कुण्डली' : 'Chandra Kundli (Moon Ascendant)' }}</div>
+                    <img src="data:image/svg+xml;charset=utf-8;base64,{{ base64_encode($chandraSvg) }}" class="chart-img-frame" width="140" height="140" style="width: 140pt; height: 140pt; display: block; margin: 0 auto;" alt="Chandra Chart (Moon)"/>
+                </td>
+            </tr>
         @endif
-    </div>
+    </table>
 
     <!-- Planetary Positions Table -->
     <div>

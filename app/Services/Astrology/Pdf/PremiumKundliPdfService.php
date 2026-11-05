@@ -94,7 +94,7 @@ class PremiumKundliPdfService
             $fullHtmlUrl = 'file:///' . str_replace('\\', '/', realpath($tempHtml));
 
             $cmd = sprintf(
-                '"%s" --headless --disable-gpu --no-sandbox --disable-dev-shm-usage --allow-file-access-from-files --no-pdf-header-footer --print-to-pdf="%s" "%s"',
+                '"%s" --headless --disable-gpu --no-sandbox --disable-dev-shm-usage --allow-file-access-from-files --run-all-compositor-stages-before-draw --virtual-time-budget=2000 --no-pdf-header-footer --print-to-pdf="%s" "%s"',
                 $chromeBinary,
                 $tempPdf,
                 $fullHtmlUrl

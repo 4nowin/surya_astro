@@ -456,14 +456,27 @@ class KundliPdfService
             ? $this->renderNorthIndianChartSvg($chandraHouses, $locale, 'Chandra Kundli (Moon Chart)')
             : null;
 
-        // 1. Try Chromium renderer for native HarfBuzz complex-script shaping
+        // 1. For Hindi locale: Headless Chromium with native HarfBuzz complex-script shaping is MANDATORY.
+        // Controlled failure: If Chromium is not available, fail cleanly rather than silently producing an unshaped Dompdf document.
+        if ($locale === 'hi') {
+            $chromiumPdf = $this->tryRenderChromium($normalizedData, $locale, $lagnaSvg, $chandraSvg);
+            if ($chromiumPdf !== null && strlen($chromiumPdf) > 1000) {
+                return $chromiumPdf;
+            }
+
+            Log::error("Basic Kundli Hindi PDF generation failed: Headless Chromium with native HarfBuzz complex-script shaping is required for Hindi Devanagari typography, but was not found or failed to execute.");
+            throw new \RuntimeException(
+                'Hindi Kundli PDF generation requires headless Chromium for natural Devanagari script shaping. Chromium binary was not found or failed to render.'
+            );
+        }
+
+        // 2. For English locale: Try Chromium first for optimal vector rendering, with safe fallback to Dompdf
         $chromiumPdf = $this->tryRenderChromium($normalizedData, $locale, $lagnaSvg, $chandraSvg);
         if ($chromiumPdf !== null && strlen($chromiumPdf) > 1000) {
             return $chromiumPdf;
         }
 
-        // 2. Controlled fallback: Dompdf with embedded Noto fonts and SVG image support
-        Log::info("Basic Kundli PDF using Dompdf fallback engine for locale: {$locale}");
+        Log::info("Basic Kundli PDF using Dompdf fallback engine for English locale");
         return $this->renderDompdf($normalizedData, $locale, $lagnaSvg, $chandraSvg);
     }
 
@@ -472,8 +485,17 @@ class KundliPdfService
      */
     protected function tryRenderChromium(array $kundliData, string $locale, ?string $lagnaSvg, ?string $chandraSvg): ?string
     {
-        $fontRegular = 'file:///' . str_replace('\\', '/', resource_path('fonts/NotoSansDevanagari-Regular.ttf'));
-        $fontBold = 'file:///' . str_replace('\\', '/', resource_path('fonts/NotoSansDevanagari-Bold.ttf'));
+        $regPath = resource_path('fonts/NotoSansDevanagari-Regular.ttf');
+        $boldPath = resource_path('fonts/NotoSansDevanagari-Bold.ttf');
+
+        // Pass base64 data URIs so Chromium loads fonts synchronously with zero file-access latency
+        $fontRegular = file_exists($regPath)
+            ? 'data:font/truetype;charset=utf-8;base64,' . base64_encode((string) file_get_contents($regPath))
+            : 'file:///' . str_replace('\\', '/', $regPath);
+
+        $fontBold = file_exists($boldPath)
+            ? 'data:font/truetype;charset=utf-8;base64,' . base64_encode((string) file_get_contents($boldPath))
+            : 'file:///' . str_replace('\\', '/', $boldPath);
 
         $html = View::make('pdf.kundli_report', [
             'kundli' => $kundliData,

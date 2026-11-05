@@ -321,4 +321,52 @@ class BasicKundliHindiFontTest extends TestCase
         $this->assertStringStartsWith('%PDF-', $pdfHi);
         $this->assertGreaterThan(100000, strlen($pdfHi));
     }
+
+    public function test_controlled_failure_when_chromium_unavailable_for_hindi(): void
+    {
+        $mockPremium = \Mockery::mock(PremiumKundliPdfService::class);
+        $mockPremium->shouldReceive('renderHtmlViaChromium')->andReturn(null);
+
+        $pdfService = new KundliPdfService(
+            $mockPremium,
+            app(\App\Services\Astrology\Pdf\SvgVargaRenderer::class)
+        );
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('Hindi Kundli PDF generation requires headless Chromium');
+
+        $this->primeCalculation();
+        $calcResult = app(\App\Services\Astrology\KundliService::class)->calculateForProfile($this->profile);
+        $pdfService->generatePdf($calcResult, 'hi');
+    }
+
+    public function test_chart_layout_uses_measured_square_aspect_ratio_and_table_separation(): void
+    {
+        $this->primeCalculation();
+        $calcResult = app(\App\Services\Astrology\KundliService::class)->calculateForProfile($this->profile);
+
+        $reflection = new \ReflectionClass($this->pdfService);
+        $normMethod = $reflection->getMethod('normalizeKundliDataForView');
+        $normMethod->setAccessible(true);
+        $normalized = $normMethod->invoke($this->pdfService, $calcResult, 'hi');
+
+        $lagnaSvg = $this->pdfService->renderNorthIndianChartSvg($calcResult['houses'], 'hi', 'Lagna Kundli (D-1)');
+        $chandraSvg = $this->pdfService->renderNorthIndianChartSvg($calcResult['chandra_kundli']['houses'], 'hi', 'Chandra Kundli');
+
+        $html = \Illuminate\Support\Facades\View::make('pdf.kundli_report', [
+            'kundli' => $normalized,
+            'locale' => 'hi',
+            'lagnaSvg' => $lagnaSvg,
+            'chandraSvg' => $chandraSvg,
+            'fontRegular' => '',
+            'fontBold' => '',
+        ])->render();
+
+        $this->assertStringContainsString('class="chart-table"', $html);
+        $this->assertStringContainsString('width="140" height="140"', $html);
+        $this->assertStringContainsString('width: 140pt; height: 140pt;', $html);
+        $this->assertStringContainsString('preserveAspectRatio="xMidYMid meet"', $lagnaSvg);
+        $this->assertStringContainsString('font-size="14"', $lagnaSvg); // Readable house numbers
+        $this->assertStringContainsString('font-size="12"', $lagnaSvg); // Readable resident planets
+    }
 }
