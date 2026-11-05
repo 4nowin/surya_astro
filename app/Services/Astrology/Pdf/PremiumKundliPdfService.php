@@ -76,6 +76,7 @@ class PremiumKundliPdfService
     {
         $chromeBinary = $this->resolveChromiumBinary();
         if ($chromeBinary === null) {
+            \Illuminate\Support\Facades\Log::warning('Chromium binary not found across system paths. Falling back to Dompdf engine.');
             return null;
         }
 
@@ -93,7 +94,7 @@ class PremiumKundliPdfService
             $fullHtmlUrl = 'file:///' . str_replace('\\', '/', realpath($tempHtml));
 
             $cmd = sprintf(
-                '"%s" --headless --disable-gpu --no-sandbox --allow-file-access-from-files --no-pdf-header-footer --print-to-pdf="%s" "%s"',
+                '"%s" --headless --disable-gpu --no-sandbox --disable-dev-shm-usage --allow-file-access-from-files --no-pdf-header-footer --print-to-pdf="%s" "%s"',
                 $chromeBinary,
                 $tempPdf,
                 $fullHtmlUrl
@@ -108,9 +109,13 @@ class PremiumKundliPdfService
                 if ($pdfBinary !== false && $pdfBinary !== '') {
                     return $pdfBinary;
                 }
+            } else {
+                \Illuminate\Support\Facades\Log::warning("Chromium PDF execution exited with code {$retCode}. Falling back to Dompdf.", [
+                    'output' => implode("\n", $output),
+                ]);
             }
         } catch (\Throwable $e) {
-            // Log and fallback to Dompdf
+            \Illuminate\Support\Facades\Log::warning("Chromium PDF execution exception: {$e->getMessage()}. Falling back to Dompdf.");
         } finally {
             if (file_exists($tempHtml)) {
                 @unlink($tempHtml);
@@ -142,11 +147,24 @@ class PremiumKundliPdfService
             '/usr/bin/google-chrome-stable',
             '/usr/bin/chromium-browser',
             '/usr/bin/chromium',
+            '/snap/bin/chromium',
+            '/usr/local/bin/google-chrome',
+            '/usr/local/bin/chromium',
+            '/usr/bin/google-chrome-unstable',
         ];
 
         foreach ($candidates as $c) {
             if (file_exists($c)) {
                 return $c;
+            }
+        }
+
+        if (DIRECTORY_SEPARATOR === '/') {
+            foreach (['google-chrome', 'chromium-browser', 'chromium', 'google-chrome-stable'] as $bin) {
+                $found = trim((string) @shell_exec("which {$bin} 2>/dev/null"));
+                if ($found !== '' && file_exists($found)) {
+                    return $found;
+                }
             }
         }
 

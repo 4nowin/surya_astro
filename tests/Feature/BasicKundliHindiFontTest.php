@@ -21,12 +21,15 @@ class BasicKundliHindiFontTest extends TestCase
 
     protected User $user;
     protected UserAstrologyProfile $profile;
+    protected KundliPdfService $pdfService;
 
     protected function setUp(): void
     {
         parent::setUp();
         Cache::flush();
         CalculationWorkerLauncher::setLaunchHook(fn () => true);
+
+        $this->pdfService = app(KundliPdfService::class);
 
         $this->user = User::factory()->create([
             'email' => 'basic_hindi_user@example.com',
@@ -96,9 +99,156 @@ class BasicKundliHindiFontTest extends TestCase
         $content = $response->getContent();
 
         $this->assertStringStartsWith('%PDF-', $content);
-
-        // Verify PDF binary structure contains Devanagari text / font streams
         $this->assertStringContainsString('Noto', $content);
+    }
+
+    public function test_hindi_localisation_of_all_12_zodiac_signs(): void
+    {
+        $expected = [
+            'Aries' => 'मेष',
+            'Taurus' => 'वृषभ',
+            'Gemini' => 'मिथुन',
+            'Cancer' => 'कर्क',
+            'Leo' => 'सिंह',
+            'Virgo' => 'कन्या',
+            'Libra' => 'तुला',
+            'Scorpio' => 'वृश्चिक',
+            'Sagittarius' => 'धनु',
+            'Capricorn' => 'मकर',
+            'Aquarius' => 'कुम्भ',
+            'Pisces' => 'मीन',
+        ];
+
+        foreach ($expected as $en => $hi) {
+            $this->assertSame($hi, $this->pdfService->localizeZodiac($en, 'hi'));
+            $this->assertSame($en, $this->pdfService->localizeZodiac($en, 'en'));
+        }
+
+        for ($id = 1; $id <= 12; $id++) {
+            $this->assertSame($expected[KundliPdfService::ZODIAC_MAP[$id]['en']], $this->pdfService->localizeZodiac($id, 'hi'));
+        }
+    }
+
+    public function test_hindi_localisation_of_all_27_nakshatras(): void
+    {
+        $expected = [
+            'Ashwini' => 'अश्विनी',
+            'Bharani' => 'भरणी',
+            'Krittika' => 'कृत्तिका',
+            'Rohini' => 'रोहिणी',
+            'Mrigashira' => 'मृगशिरा',
+            'Ardra' => 'आर्द्रा',
+            'Punarvasu' => 'पुनर्वसु',
+            'Pushya' => 'पुष्य',
+            'Ashlesha' => 'आश्लेषा',
+            'Magha' => 'मघा',
+            'Purva Phalguni' => 'पूर्वा फाल्गुनी',
+            'Uttara Phalguni' => 'उत्तरा फाल्गुनी',
+            'Hasta' => 'हस्त',
+            'Chitra' => 'चित्रा',
+            'Swati' => 'स्वाति',
+            'Vishakha' => 'विशाखा',
+            'Anuradha' => 'अनुराधा',
+            'Jyeshtha' => 'ज्येष्ठा',
+            'Mula' => 'मूल',
+            'Purva Ashadha' => 'पूर्वाषाढ़ा',
+            'Uttara Ashadha' => 'उत्तराषाढ़ा',
+            'Shravana' => 'श्रवण',
+            'Dhanishta' => 'धनिष्ठा',
+            'Shatabhisha' => 'शतभिषा',
+            'Purva Bhadrapada' => 'पूर्वा भाद्रपद',
+            'Uttara Bhadrapada' => 'उत्तरा भाद्रपद',
+            'Revati' => 'रेवती',
+        ];
+
+        foreach ($expected as $en => $hi) {
+            $this->assertSame($hi, $this->pdfService->localizeNakshatra($en, 'hi'));
+            $this->assertSame($en, $this->pdfService->localizeNakshatra($en, 'en'));
+        }
+
+        // Test combined/unspaced versions
+        $this->assertSame('पूर्वाषाढ़ा', $this->pdfService->localizeNakshatra('PurvaAshadha', 'hi'));
+        $this->assertSame('उत्तराषाढ़ा', $this->pdfService->localizeNakshatra('UttaraAshadha', 'hi'));
+    }
+
+    public function test_hindi_localisation_of_all_nine_planetary_names(): void
+    {
+        $expected = [
+            'Sun' => 'सूर्य',
+            'Moon' => 'चन्द्र',
+            'Mars' => 'मंगल',
+            'Mercury' => 'बुध',
+            'Jupiter' => 'बृहस्पति',
+            'Venus' => 'शुक्र',
+            'Saturn' => 'शनि',
+            'Rahu' => 'राहु',
+            'Ketu' => 'केतु',
+            'Ascendant' => 'लग्न',
+        ];
+
+        foreach ($expected as $en => $hi) {
+            $this->assertSame($hi, $this->pdfService->localizePlanet($en, 'hi'));
+            $this->assertSame($en, $this->pdfService->localizePlanet($en, 'en'));
+        }
+
+        // Test aliases
+        $this->assertSame('बृहस्पति', $this->pdfService->localizePlanet('Guru', 'hi'));
+        $this->assertSame('मंगल', $this->pdfService->localizePlanet('Kuja', 'hi'));
+    }
+
+    public function test_hindi_localisation_of_12_house_placements(): void
+    {
+        $houses = [];
+        for ($i = 1; $i <= 12; $i++) {
+            $houses[$i] = [
+                'house_number' => $i,
+                'sign_id' => $i,
+                'sign_name' => KundliPdfService::ZODIAC_MAP[$i]['en'],
+                'sign_lord' => 'Sun',
+                'planets' => [
+                    ['name' => 'Mars', 'key' => 'mars'],
+                ],
+            ];
+        }
+
+        $dummy = [
+            'profile' => ['precision' => 'verified'],
+            'houses' => $houses,
+        ];
+
+        $normalizedHi = $this->pdfService->normalizeKundliDataForView($dummy, 'hi');
+        $this->assertSame('मेष', $normalizedHi['houses'][1]['localized_sign_name']);
+        $this->assertSame('सूर्य', $normalizedHi['houses'][1]['localized_sign_lord']);
+        $this->assertSame('मंगल', $normalizedHi['houses'][1]['localized_residents']);
+        $this->assertSame('मीन', $normalizedHi['houses'][12]['localized_sign_name']);
+    }
+
+    public function test_correct_svg_chart_embedding_and_geometry(): void
+    {
+        $houses = [];
+        for ($i = 1; $i <= 12; $i++) {
+            $houses[$i] = [
+                'house_number' => $i,
+                'sign_id' => $i,
+                'planets' => [
+                    ['key' => 'sun', 'name' => 'Sun', 'abbr' => 'Su', 'abbr_hi' => 'सू', 'is_retrograde' => false, 'is_combust' => false],
+                ],
+            ];
+        }
+
+        $svgHi = $this->pdfService->renderNorthIndianChartSvg($houses, 'hi', 'Lagna Kundli (D-1)');
+        $this->assertStringContainsString('viewBox="0 0 400 400"', $svgHi);
+        $this->assertStringContainsString('polygon points="200,0 400,200 200,400 0,200"', $svgHi);
+        $this->assertStringContainsString('line x1="0" y1="0" x2="400" y2="400"', $svgHi);
+        $this->assertStringContainsString('line x1="0" y1="400" x2="400" y2="0"', $svgHi);
+        $this->assertStringContainsString('NotoDevanagari', $svgHi);
+        $this->assertStringContainsString('सू', $svgHi);
+        $this->assertStringContainsString('१', $svgHi); // Devanagari numerals
+
+        $svgEn = $this->pdfService->renderNorthIndianChartSvg($houses, 'en', 'Lagna Chart');
+        $this->assertStringContainsString('DejaVu Sans', $svgEn);
+        $this->assertStringContainsString('Su', $svgEn);
+        $this->assertStringContainsString('1', $svgEn);
     }
 
     public function test_english_basic_pdf_generation_remains_functional(): void

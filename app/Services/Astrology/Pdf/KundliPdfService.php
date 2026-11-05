@@ -6,20 +6,113 @@ namespace App\Services\Astrology\Pdf;
 
 use Dompdf\Dompdf;
 use Dompdf\Options;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\View;
 
 /**
  * Service for rendering high quality, branded Vedic Janam Kundli PDF reports.
  *
- * Implements M6 of the Astro Setu Product Roadmap.
- * Uses Dompdf with embedded vector SVG North Indian charts.
+ * Implements M6 of the Astro Setu Product Roadmap with M9.2 typography and chart standards.
+ * Supports primary rendering via headless Chromium with HarfBuzz complex-script shaping,
+ * with controlled fallback to Dompdf with embedded Noto Sans Devanagari fonts.
  */
 class KundliPdfService
 {
     /**
-     * House text anchor coordinates on a 400x400 SVG canvas.
+     * Canonical 12 Zodiac signs in English and Hindi.
      */
-    protected const HOUSE_COORDINATES = [
+    public const ZODIAC_MAP = [
+        1  => ['en' => 'Aries',       'hi' => 'मेष'],
+        2  => ['en' => 'Taurus',      'hi' => 'वृषभ'],
+        3  => ['en' => 'Gemini',      'hi' => 'मिथुन'],
+        4  => ['en' => 'Cancer',      'hi' => 'कर्क'],
+        5  => ['en' => 'Leo',         'hi' => 'सिंह'],
+        6  => ['en' => 'Virgo',       'hi' => 'कन्या'],
+        7  => ['en' => 'Libra',       'hi' => 'तुला'],
+        8  => ['en' => 'Scorpio',     'hi' => 'वृश्चिक'],
+        9  => ['en' => 'Sagittarius', 'hi' => 'धनु'],
+        10 => ['en' => 'Capricorn',   'hi' => 'मकर'],
+        11 => ['en' => 'Aquarius',    'hi' => 'कुम्भ'],
+        12 => ['en' => 'Pisces',      'hi' => 'मीन'],
+    ];
+
+    /**
+     * Canonical 27 Nakshatras in English and Hindi.
+     */
+    public const NAKSHATRA_MAP = [
+        1  => ['en' => 'Ashwini',           'hi' => 'अश्विनी'],
+        2  => ['en' => 'Bharani',           'hi' => 'भरणी'],
+        3  => ['en' => 'Krittika',          'hi' => 'कृत्तिका'],
+        4  => ['en' => 'Rohini',            'hi' => 'रोहिणी'],
+        5  => ['en' => 'Mrigashira',        'hi' => 'मृगशिरा'],
+        6  => ['en' => 'Ardra',             'hi' => 'आर्द्रा'],
+        7  => ['en' => 'Punarvasu',         'hi' => 'पुनर्वसु'],
+        8  => ['en' => 'Pushya',            'hi' => 'पुष्य'],
+        9  => ['en' => 'Ashlesha',          'hi' => 'आश्लेषा'],
+        10 => ['en' => 'Magha',             'hi' => 'मघा'],
+        11 => ['en' => 'Purva Phalguni',    'hi' => 'पूर्वा फाल्गुनी'],
+        12 => ['en' => 'Uttara Phalguni',   'hi' => 'उत्तरा फाल्गुनी'],
+        13 => ['en' => 'Hasta',             'hi' => 'हस्त'],
+        14 => ['en' => 'Chitra',            'hi' => 'चित्रा'],
+        15 => ['en' => 'Swati',             'hi' => 'स्वाति'],
+        16 => ['en' => 'Vishakha',          'hi' => 'विशाखा'],
+        17 => ['en' => 'Anuradha',          'hi' => 'अनुराधा'],
+        18 => ['en' => 'Jyeshtha',          'hi' => 'ज्येष्ठा'],
+        19 => ['en' => 'Mula',              'hi' => 'मूल'],
+        20 => ['en' => 'Purva Ashadha',     'hi' => 'पूर्वाषाढ़ा'],
+        21 => ['en' => 'Uttara Ashadha',    'hi' => 'उत्तराषाढ़ा'],
+        22 => ['en' => 'Shravana',          'hi' => 'श्रवण'],
+        23 => ['en' => 'Dhanishta',         'hi' => 'धनिष्ठा'],
+        24 => ['en' => 'Shatabhisha',       'hi' => 'शतभिषा'],
+        25 => ['en' => 'Purva Bhadrapada',  'hi' => 'पूर्वा भाद्रपद'],
+        26 => ['en' => 'Uttara Bhadrapada', 'hi' => 'उत्तरा भाद्रपद'],
+        27 => ['en' => 'Revati',            'hi' => 'रेवती'],
+    ];
+
+    /**
+     * Canonical Nine Grahas + Ascendant in English and Hindi.
+     */
+    public const PLANET_MAP = [
+        'sun'       => ['en' => 'Sun',       'hi' => 'सूर्य'],
+        'moon'      => ['en' => 'Moon',      'hi' => 'चन्द्र'],
+        'mars'      => ['en' => 'Mars',      'hi' => 'मंगल'],
+        'mercury'   => ['en' => 'Mercury',   'hi' => 'बुध'],
+        'jupiter'   => ['en' => 'Jupiter',   'hi' => 'बृहस्पति'],
+        'venus'     => ['en' => 'Venus',     'hi' => 'शुक्र'],
+        'saturn'    => ['en' => 'Saturn',    'hi' => 'शनि'],
+        'rahu'      => ['en' => 'Rahu',      'hi' => 'राहु'],
+        'ketu'      => ['en' => 'Ketu',      'hi' => 'केतु'],
+        'ascendant' => ['en' => 'Ascendant', 'hi' => 'लग्न'],
+    ];
+
+    /**
+     * Planetary Dignity mapping.
+     */
+    public const DIGNITY_MAP = [
+        'neutral'      => ['en' => 'Neutral',      'hi' => 'सम'],
+        'own_sign'     => ['en' => 'Own Sign',     'hi' => 'स्वराशि'],
+        'own'          => ['en' => 'Own Sign',     'hi' => 'स्वराशि'],
+        'exalted'      => ['en' => 'Exalted',      'hi' => 'उच्च'],
+        'debilitated'  => ['en' => 'Debilitated',  'hi' => 'नीच'],
+        'friendly'     => ['en' => 'Friend',       'hi' => 'मित्र'],
+        'friend'       => ['en' => 'Friend',       'hi' => 'मित्र'],
+        'enemy'        => ['en' => 'Enemy',        'hi' => 'शत्रु'],
+        'moolatrikona' => ['en' => 'Moolatrikona', 'hi' => 'मूलत्रिकोण'],
+    ];
+
+    /**
+     * Nakshatra Gana mapping.
+     */
+    public const GANA_MAP = [
+        'deva'     => ['en' => 'Deva',     'hi' => 'देव'],
+        'manushya' => ['en' => 'Manushya', 'hi' => 'मनुष्य'],
+        'rakshasa' => ['en' => 'Rakshasa', 'hi' => 'राक्षस'],
+    ];
+
+    /**
+     * House text anchor coordinates on a 400x400 SVG canvas (legacy compatibility).
+     */
+    public const HOUSE_COORDINATES = [
         1  => ['rashi_x' => 200, 'rashi_y' => 60,  'planets_x' => 200, 'planets_y' => 110],
         2  => ['rashi_x' => 100, 'rashi_y' => 35,  'planets_x' => 90,  'planets_y' => 65],
         3  => ['rashi_x' => 45,  'rashi_y' => 90,  'planets_x' => 50,  'planets_y' => 125],
@@ -35,9 +128,311 @@ class KundliPdfService
     ];
 
     public function __construct(
-        protected ?PremiumKundliPdfService $premiumPdfService = null
+        protected ?PremiumKundliPdfService $premiumPdfService = null,
+        protected ?SvgVargaRenderer $svgRenderer = null
     ) {
         $this->premiumPdfService ??= app(PremiumKundliPdfService::class);
+        $this->svgRenderer ??= app(SvgVargaRenderer::class);
+    }
+
+    /**
+     * Localize zodiac sign names deterministically.
+     */
+    public function localizeZodiac(string|int|null $sign, string $locale = 'en'): string
+    {
+        if ($sign === null || $sign === '') {
+            return '-';
+        }
+
+        if (is_int($sign) || (is_string($sign) && ctype_digit($sign))) {
+            $id = (int) $sign;
+            if ($id >= 1 && $id <= 12) {
+                return $locale === 'hi' ? self::ZODIAC_MAP[$id]['hi'] : self::ZODIAC_MAP[$id]['en'];
+            }
+        }
+
+        $str = trim((string) $sign);
+        $lower = strtolower($str);
+
+        foreach (self::ZODIAC_MAP as $item) {
+            if (strtolower($item['en']) === $lower || strtolower($item['hi']) === $lower) {
+                return $locale === 'hi' ? $item['hi'] : $item['en'];
+            }
+        }
+
+        // Common Sanskrit/Vedic transliterations
+        $vedicSignMap = [
+            'mesha' => 'मेष', 'vrishabha' => 'वृषभ', 'mithuna' => 'मिथुन', 'karka' => 'कर्क',
+            'simha' => 'सिंह', 'kanya' => 'कन्या', 'tula' => 'तुला', 'vrishchika' => 'वृश्चिक',
+            'dhanu' => 'धनु', 'makara' => 'मकर', 'kumbha' => 'कुम्भ', 'meena' => 'मीन',
+        ];
+
+        if ($locale === 'hi' && isset($vedicSignMap[$lower])) {
+            return $vedicSignMap[$lower];
+        }
+
+        return $str;
+    }
+
+    /**
+     * Localize Nakshatra names deterministically across all 27 nakshatras.
+     */
+    public function localizeNakshatra(string|int|null $nak, string $locale = 'en'): string
+    {
+        if ($nak === null || $nak === '') {
+            return '-';
+        }
+
+        if (is_int($nak) || (is_string($nak) && ctype_digit($nak))) {
+            $id = (int) $nak;
+            if ($id >= 1 && $id <= 27) {
+                return $locale === 'hi' ? self::NAKSHATRA_MAP[$id]['hi'] : self::NAKSHATRA_MAP[$id]['en'];
+            }
+        }
+
+        $str = trim((string) $nak);
+        $clean = strtolower(str_replace([' ', '_', '-'], '', $str));
+
+        foreach (self::NAKSHATRA_MAP as $item) {
+            $itemCleanEn = strtolower(str_replace([' ', '_', '-'], '', $item['en']));
+            $itemCleanHi = strtolower(str_replace([' ', '_', '-'], '', $item['hi']));
+
+            if ($itemCleanEn === $clean || $itemCleanHi === $clean) {
+                return $locale === 'hi' ? $item['hi'] : $item['en'];
+            }
+        }
+
+        return $str;
+    }
+
+    /**
+     * Localize Planet names deterministically across all 9 planets + ascendant.
+     */
+    public function localizePlanet(string|null $planet, string $locale = 'en'): string
+    {
+        if ($planet === null || $planet === '') {
+            return '-';
+        }
+
+        $key = strtolower(trim($planet));
+
+        // Alias mappings (e.g. guru, mangal, shukra)
+        $aliases = [
+            'guru' => 'jupiter',
+            'brihaspati' => 'jupiter',
+            'shukra' => 'venus',
+            'shani' => 'saturn',
+            'mangal' => 'mars',
+            'kuja' => 'mars',
+            'budh' => 'mercury',
+            'budha' => 'mercury',
+            'surya' => 'sun',
+            'ravi' => 'sun',
+            'chandra' => 'moon',
+            'soma' => 'moon',
+            'lagna' => 'ascendant',
+        ];
+
+        if (isset($aliases[$key])) {
+            $key = $aliases[$key];
+        }
+
+        if (isset(self::PLANET_MAP[$key])) {
+            return $locale === 'hi' ? self::PLANET_MAP[$key]['hi'] : self::PLANET_MAP[$key]['en'];
+        }
+
+        return ucfirst($planet);
+    }
+
+    /**
+     * Localize Dignity status.
+     */
+    public function localizeDignity(string|null $dignity, string $locale = 'en'): string
+    {
+        if ($dignity === null || $dignity === '') {
+            return $locale === 'hi' ? 'सम' : 'Neutral';
+        }
+
+        $key = strtolower(trim(str_replace([' ', '-'], '_', $dignity)));
+        if (isset(self::DIGNITY_MAP[$key])) {
+            return $locale === 'hi' ? self::DIGNITY_MAP[$key]['hi'] : self::DIGNITY_MAP[$key]['en'];
+        }
+
+        return $locale === 'hi' ? 'सम' : ucfirst($dignity);
+    }
+
+    /**
+     * Localize Gana classifications.
+     */
+    public function localizeGana(string|null $gana, string $locale = 'en'): string
+    {
+        if ($gana === null || $gana === '') {
+            return '-';
+        }
+
+        $key = strtolower(trim($gana));
+        if (isset(self::GANA_MAP[$key])) {
+            return $locale === 'hi' ? self::GANA_MAP[$key]['hi'] : self::GANA_MAP[$key]['en'];
+        }
+
+        return $gana;
+    }
+
+    /**
+     * Localize Birth Time Precision.
+     */
+    public function localizePrecision(string|null $precision, string $locale = 'en'): string
+    {
+        $key = strtolower(trim((string) $precision));
+        if ($key === 'verified') {
+            return $locale === 'hi' ? 'सत्यापित' : 'Verified';
+        }
+        if ($key === 'approximate') {
+            return $locale === 'hi' ? 'अनुमानित' : 'Approximate';
+        }
+        if ($key === 'unknown') {
+            return $locale === 'hi' ? 'अज्ञात' : 'Unknown';
+        }
+
+        return ucfirst($key !== '' ? $key : 'verified');
+    }
+
+    /**
+     * Localize Motion descriptions (Vakri / Asta).
+     */
+    public function localizeMotion(bool $isRetrograde, bool $isCombust, string $locale = 'en'): string
+    {
+        $parts = [];
+        if ($isRetrograde) {
+            $parts[] = $locale === 'hi' ? 'वक्री' : 'Retro';
+        }
+        if ($isCombust) {
+            $parts[] = $locale === 'hi' ? 'अस्त' : 'Combust';
+        }
+
+        return !empty($parts) ? implode(' / ', $parts) : '-';
+    }
+
+    /**
+     * Normalize and comprehensively localize Kundli data structure for template rendering.
+     *
+     * @param array<string, mixed> $kundliData
+     * @param string $locale
+     * @return array<string, mixed>
+     */
+    public function normalizeKundliDataForView(array $kundliData, string $locale = 'en'): array
+    {
+        $normalized = $kundliData;
+
+        // 1. Profile Normalization
+        if (isset($normalized['profile'])) {
+            $rawPrecision = $normalized['profile']['precision'] ?? 'verified';
+            $normalized['profile']['localized_precision'] = $this->localizePrecision($rawPrecision, $locale);
+
+            if (!empty($normalized['profile']['birth_time'])) {
+                $timeStr = (string) $normalized['profile']['birth_time'];
+                $normalized['profile']['formatted_birth_time'] = sprintf(
+                    '%s (%s)',
+                    $timeStr,
+                    $normalized['profile']['localized_precision']
+                );
+            }
+        }
+
+        // 2. Ascendant Sign Normalization
+        if (isset($normalized['ascendant'])) {
+            $ascSign = $normalized['ascendant']['name'] ?? ($normalized['ascendant']['id'] ?? null);
+            $normalized['ascendant']['localized_name'] = $this->localizeZodiac($ascSign, $locale);
+        }
+
+        // 3. Moon Sign Normalization
+        if (isset($normalized['planets']['moon']['rashi'])) {
+            $moonSign = $normalized['planets']['moon']['rashi']['name'] ?? ($normalized['planets']['moon']['rashi']['id'] ?? null);
+            $normalized['planets']['moon']['rashi']['localized_name'] = $this->localizeZodiac($moonSign, $locale);
+        }
+
+        // 4. Planetary Positions Normalization
+        if (isset($normalized['planets']) && is_array($normalized['planets'])) {
+            foreach ($normalized['planets'] as $key => &$p) {
+                $p['localized_name'] = $this->localizePlanet($p['name'] ?? $key, $locale);
+
+                if (isset($p['rashi'])) {
+                    $rashiVal = $p['rashi']['name'] ?? ($p['rashi']['id'] ?? null);
+                    $p['rashi']['localized_name'] = $this->localizeZodiac($rashiVal, $locale);
+                }
+
+                if (isset($p['nakshatra'])) {
+                    $nakVal = $p['nakshatra']['name'] ?? ($p['nakshatra']['id'] ?? null);
+                    $p['nakshatra']['localized_name'] = $this->localizeNakshatra($nakVal, $locale);
+                    $p['nakshatra']['localized_lord'] = $this->localizePlanet($p['nakshatra']['lord'] ?? '', $locale);
+                }
+
+                $p['localized_dignity'] = $this->localizeDignity($p['dignity'] ?? 'neutral', $locale);
+                $p['localized_motion'] = $this->localizeMotion(
+                    !empty($p['is_retrograde']),
+                    !empty($p['is_combust']),
+                    $locale
+                );
+            }
+            unset($p);
+        }
+
+        // 5. 12 House Placements Normalization
+        if (isset($normalized['houses']) && is_array($normalized['houses'])) {
+            foreach ($normalized['houses'] as &$h) {
+                $signVal = $h['sign_name'] ?? ($h['sign_id'] ?? null);
+                $h['localized_sign_name'] = $this->localizeZodiac($signVal, $locale);
+                $h['localized_sign_lord'] = $this->localizePlanet($h['sign_lord'] ?? '', $locale);
+
+                $rawResidents = $h['planets'] ?? ($h['resident_planets'] ?? []);
+                $localizedResidents = [];
+                foreach ($rawResidents as $rp) {
+                    $pName = $rp['name'] ?? ($rp['key'] ?? '');
+                    $localizedResidents[] = $this->localizePlanet($pName, $locale);
+                }
+                $h['localized_residents'] = !empty($localizedResidents) ? implode(', ', $localizedResidents) : '-';
+            }
+            unset($h);
+        }
+
+        // 6. Janma Nakshatra Details Normalization
+        $interpNak = $normalized['interpretations'][$locale]['nakshatra']
+            ?? ($normalized['interpretations']['en']['nakshatra'] ?? null);
+
+        if ($interpNak) {
+            $nakName = $interpNak['name'] ?? ($interpNak['id'] ?? null);
+            $interpNak['localized_name'] = $this->localizeNakshatra($nakName, $locale);
+            $interpNak['localized_lord'] = $this->localizePlanet($interpNak['lord'] ?? '', $locale);
+            $interpNak['localized_gana'] = $this->localizeGana($interpNak['gana'] ?? '', $locale);
+
+            $normalized['janma_nakshatra_normalized'] = $interpNak;
+        }
+
+        // 7. Vimshottari Dasha Normalization
+        if (isset($normalized['dasha'])) {
+            if (!empty($normalized['dasha']['current_dasha'])) {
+                $curr = &$normalized['dasha']['current_dasha'];
+                if (isset($curr['mahadasha']['lord'])) {
+                    $curr['mahadasha']['localized_lord'] = $this->localizePlanet($curr['mahadasha']['lord'], $locale);
+                }
+                if (isset($curr['antardasha']['lord'])) {
+                    $curr['antardasha']['localized_lord'] = $this->localizePlanet($curr['antardasha']['lord'], $locale);
+                }
+                unset($curr);
+            }
+
+            if (!empty($normalized['dasha']['mahadashas']) && is_array($normalized['dasha']['mahadashas'])) {
+                foreach ($normalized['dasha']['mahadashas'] as &$md) {
+                    $md['localized_lord'] = $this->localizePlanet($md['lord'] ?? '', $locale);
+                    $md['localized_status'] = !empty($md['is_current'])
+                        ? ($locale === 'hi' ? 'सक्रिय' : 'Active')
+                        : '-';
+                }
+                unset($md);
+            }
+        }
+
+        return $normalized;
     }
 
     /**
@@ -49,6 +444,8 @@ class KundliPdfService
      */
     public function generatePdf(array $kundliData, string $locale = 'en'): string
     {
+        $normalizedData = $this->normalizeKundliDataForView($kundliData, $locale);
+
         $lagnaSvg = null;
         if (($kundliData['ascendant']['status'] ?? null) === 'confirmed' && !empty($kundliData['houses'])) {
             $lagnaSvg = $this->renderNorthIndianChartSvg($kundliData['houses'], $locale, 'Lagna Kundli (D-1)');
@@ -60,13 +457,14 @@ class KundliPdfService
             : null;
 
         // 1. Try Chromium renderer for native HarfBuzz complex-script shaping
-        $chromiumPdf = $this->tryRenderChromium($kundliData, $locale, $lagnaSvg, $chandraSvg);
-        if ($chromiumPdf !== null && $chromiumPdf !== '') {
+        $chromiumPdf = $this->tryRenderChromium($normalizedData, $locale, $lagnaSvg, $chandraSvg);
+        if ($chromiumPdf !== null && strlen($chromiumPdf) > 1000) {
             return $chromiumPdf;
         }
 
-        // 2. Deterministic zero-dependency fallback: Dompdf with embedded Noto fonts
-        return $this->renderDompdf($kundliData, $locale, $lagnaSvg, $chandraSvg);
+        // 2. Controlled fallback: Dompdf with embedded Noto fonts and SVG image support
+        Log::info("Basic Kundli PDF using Dompdf fallback engine for locale: {$locale}");
+        return $this->renderDompdf($normalizedData, $locale, $lagnaSvg, $chandraSvg);
     }
 
     /**
@@ -136,80 +534,19 @@ class KundliPdfService
     }
 
     /**
-     * Generate an inline vector SVG string representing a traditional North Indian Diamond chart.
+     * Generate vector SVG string representing a traditional North Indian Diamond chart.
+     * Delegates to the battle-tested SvgVargaRenderer for authentic geometry and font embedding.
      *
      * @param array<int, array<string, mixed>> $houses
      * @param string $locale
      * @param string $chartTitle
      * @return string SVG XML markup
      */
-    public function renderNorthIndianChartSvg(array $houses, string $locale, string $chartTitle): string
+    public function renderNorthIndianChartSvg(array $houses, string $locale, string $chartTitle = ''): string
     {
-        $houseMap = [];
-        foreach ($houses as $h) {
-            $hNum = (int) $h['house_number'];
-            $houseMap[$hNum] = $h;
-        }
-
-        $svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%" style="max-width:360px;margin:0 auto;display:block;">';
-
-        // Background styling
-        $svg .= '<rect x="0" y="0" width="400" height="400" fill="#FFFDF8" stroke="#D4AF37" stroke-width="3" rx="4"/>';
-
-        // Outer diamond and diagonal lines
-        $svg .= '<line x1="0" y1="0" x2="400" y2="400" stroke="#C59B27" stroke-width="1.8"/>';
-        $svg .= '<line x1="0" y1="400" x2="400" y2="0" stroke="#C59B27" stroke-width="1.8"/>';
-        $svg .= '<polygon points="200,0 400,200 200,400 0,200" fill="none" stroke="#C59B27" stroke-width="1.8"/>';
-
-        $fontFamily = $locale === 'hi' ? "'NotoDevanagari', 'Noto Sans Devanagari', 'DejaVu Sans', sans-serif" : "DejaVu Sans, Arial, sans-serif";
-
-        // House labels and planet placements
-        for ($hNum = 1; $hNum <= 12; $hNum++) {
-            $coords = self::HOUSE_COORDINATES[$hNum];
-            $hData = $houseMap[$hNum] ?? null;
-
-            if ($hData) {
-                // Rashi number in Roman/Devanagari digit
-                $rashiId = (int) ($hData['sign_id'] ?? ($hData['rashi']['id'] ?? 1));
-                $svg .= sprintf(
-                    '<text x="%d" y="%d" font-family="%s" font-size="12" font-weight="bold" fill="#8C1D40" text-anchor="middle">%d</text>',
-                    $coords['rashi_x'],
-                    $coords['rashi_y'],
-                    $fontFamily,
-                    $rashiId
-                );
-
-                // Resident planets
-                $residents = $hData['planets'] ?? ($hData['resident_planets'] ?? []);
-                if (!empty($residents)) {
-                    $abbrs = [];
-                    foreach ($residents as $rp) {
-                        $abbr = $locale === 'hi'
-                            ? ($rp['abbr_hi'] ?? ($rp['abbr'] ?? ($rp['name'] ?? ($rp['key'] ?? ''))))
-                            : ($rp['abbr'] ?? ($rp['name'] ?? ($rp['key'] ?? '')));
-                        if (!empty($rp['is_retrograde'])) {
-                            $abbr .= '(R)';
-                        }
-                        if (!empty($rp['is_combust'])) {
-                            $abbr .= '*';
-                        }
-                        $abbrs[] = $abbr;
-                    }
-
-                    $planetText = implode(' ', $abbrs);
-                    $svg .= sprintf(
-                        '<text x="%d" y="%d" font-family="%s" font-size="11" font-weight="600" fill="#1A365D" text-anchor="middle">%s</text>',
-                        $coords['planets_x'],
-                        $coords['planets_y'],
-                        $fontFamily,
-                        htmlspecialchars($planetText, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8')
-                    );
-                }
-            }
-        }
-
-        $svg .= '</svg>';
-
-        return $svg;
+        return $this->svgRenderer->renderChart($houses, $locale, '', [
+            'max_width' => '360px',
+            'devanagari_numerals' => ($locale === 'hi'),
+        ]);
     }
 }

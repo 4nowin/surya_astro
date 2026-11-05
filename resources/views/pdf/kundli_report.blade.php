@@ -1,95 +1,100 @@
 <!DOCTYPE html>
 <html lang="{{ $locale }}">
 <head>
+    <meta charset="UTF-8">
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
-    <title>{{ $locale === 'hi' ? 'वैदिक जन्म पत्रिका - एस्ट्रो सेतु' : 'Vedic Janam Kundli - Astro Setu' }}</title>
+    <title>{{ $locale === 'hi' ? 'वैदिक जन्म पत्रिका - एस्ट्रो सेतु' : 'Janam Kundli Report - Astro Setu' }}</title>
     <style>
         @font-face {
             font-family: 'NotoDevanagari';
-            font-style: normal;
-            font-weight: 400;
             src: url('{{ $fontRegular }}') format('truetype');
+            font-weight: normal;
+            font-style: normal;
         }
         @font-face {
             font-family: 'NotoDevanagari';
-            font-style: normal;
-            font-weight: 700;
             src: url('{{ $fontBold }}') format('truetype');
+            font-weight: bold;
+            font-style: normal;
         }
         @font-face {
             font-family: 'NotoDevanagari';
-            font-style: italic;
-            font-weight: 400;
             src: url('{{ $fontRegular }}') format('truetype');
+            font-weight: normal;
+            font-style: italic;
         }
         @font-face {
             font-family: 'NotoDevanagari';
-            font-style: italic;
-            font-weight: 700;
             src: url('{{ $fontBold }}') format('truetype');
+            font-weight: bold;
+            font-style: italic;
         }
+
         @font-face {
             font-family: 'Noto Sans Devanagari';
-            font-style: normal;
-            font-weight: 400;
             src: url('{{ $fontRegular }}') format('truetype');
-        }
-        @font-face {
-            font-family: 'Noto Sans Devanagari';
+            font-weight: normal;
             font-style: normal;
-            font-weight: 700;
-            src: url('{{ $fontBold }}') format('truetype');
         }
         @font-face {
             font-family: 'Noto Sans Devanagari';
-            font-style: italic;
-            font-weight: 400;
+            src: url('{{ $fontBold }}') format('truetype');
+            font-weight: bold;
+            font-style: normal;
+        }
+        @font-face {
+            font-family: 'Noto Sans Devanagari';
             src: url('{{ $fontRegular }}') format('truetype');
+            font-weight: normal;
+            font-style: italic;
         }
         @font-face {
             font-family: 'Noto Sans Devanagari';
-            font-style: italic;
-            font-weight: 700;
             src: url('{{ $fontBold }}') format('truetype');
+            font-weight: bold;
+            font-style: italic;
         }
+
         @page {
-            margin: 20px 28px 24px 28px;
+            margin: 18px 26px 20px 26px;
             size: A4 portrait;
         }
+
+        body {
+            font-family: {!! $locale === 'hi' ? 'NotoDevanagari, "Noto Sans Devanagari", sans-serif' : "'DejaVu Sans', sans-serif" !!};
+            color: #1A202C;
+            font-size: 8.5px;
+            line-height: 1.35;
+        }
+
         body, table, td, th, div, span, p, em, strong, b, i {
             font-family: {!! $locale === 'hi' ? 'NotoDevanagari, "Noto Sans Devanagari", sans-serif' : "'DejaVu Sans', sans-serif" !!};
         }
-        body {
-            font-size: 9.5px;
-            color: #2D3748;
-            line-height: 1.4;
-            background-color: #FFFFFF;
-        }
-        .devanagari {
-            font-family: NotoDevanagari, "Noto Sans Devanagari", sans-serif !important;
-        }
+
         .header {
-            border-bottom: 2px solid #D4AF37;
-            padding-bottom: 6px;
-            margin-bottom: 10px;
+            width: 100%;
+            border-bottom: 2px solid #8C1D40;
+            padding-bottom: 5px;
+            margin-bottom: 6px;
         }
         .header table {
             width: 100%;
+            border-collapse: collapse;
         }
         .brand-title {
-            font-size: 18px;
+            font-size: 17px;
             font-weight: bold;
             color: #8C1D40;
             letter-spacing: 0.5px;
         }
         .brand-sub {
-            font-size: 8.5px;
+            font-size: 8px;
             color: #718096;
-            margin-top: 2px;
+            margin-top: 1px;
         }
         .report-title {
             text-align: right;
-            font-size: 13px;
+            font-size: 12.5px;
             font-weight: bold;
             color: #2B6CB0;
         }
@@ -102,24 +107,24 @@
             background-color: #F7FAFC;
             border: 1px solid #E2E8F0;
             border-radius: 4px;
-            padding: 6px 8px;
-            margin-bottom: 8px;
+            padding: 5px 8px;
+            margin-bottom: 6px;
         }
         .section-title {
-            font-size: 11px;
+            font-size: 10.5px;
             font-weight: bold;
             color: #8C1D40;
             border-bottom: 1px solid #E2E8F0;
-            padding-bottom: 3px;
-            margin-bottom: 5px;
+            padding-bottom: 2px;
+            margin-bottom: 4px;
         }
         .meta-grid {
             width: 100%;
             border-collapse: collapse;
         }
         .meta-grid td {
-            padding: 2.5px 4px;
-            font-size: 8.5px;
+            padding: 2px 4px;
+            font-size: 8px;
             vertical-align: top;
         }
         .meta-label {
@@ -133,7 +138,7 @@
         }
         .chart-container {
             width: 100%;
-            margin-bottom: 10px;
+            margin-bottom: 6px;
         }
         .chart-col {
             width: 48%;
@@ -142,29 +147,29 @@
             text-align: center;
         }
         .chart-heading {
-            font-size: 10.5px;
+            font-size: 10px;
             font-weight: bold;
             color: #2C5282;
-            margin-bottom: 4px;
+            margin-bottom: 3px;
         }
         .data-table {
             width: 100%;
             border-collapse: collapse;
-            margin-top: 4px;
-            margin-bottom: 8px;
+            margin-top: 3px;
+            margin-bottom: 6px;
         }
         .data-table th {
             background-color: #EDF2F7;
             color: #2D3748;
             font-weight: bold;
-            font-size: 8px;
-            padding: 4px 4px;
+            font-size: 7.5px;
+            padding: 3px 4px;
             border: 1px solid #CBD5E0;
             text-align: left;
         }
         .data-table td {
             font-size: 7.5px;
-            padding: 3px 4px;
+            padding: 2.5px 4px;
             border: 1px solid #E2E8F0;
             vertical-align: middle;
         }
@@ -173,20 +178,19 @@
         }
         .dignity-badge {
             font-weight: bold;
-            text-transform: capitalize;
         }
         .dignity-exalted { color: #22543D; font-weight: bold; }
-        .dignity-own { color: #2B6CB0; font-weight: bold; }
+        .dignity-own, .dignity-own_sign { color: #2B6CB0; font-weight: bold; }
         .dignity-debilitated { color: #9B2C2C; font-weight: bold; }
         .disclaimer-box {
             background-color: #FFFDF0;
             border: 1px solid #F6E05E;
             border-radius: 4px;
-            padding: 8px 10px;
-            font-size: 7.5px;
+            padding: 6px 8px;
+            font-size: 7px;
             color: #744210;
             line-height: 1.35;
-            margin-top: 14px;
+            margin-top: 8px;
             page-break-inside: avoid;
         }
         .page-break {
@@ -201,7 +205,7 @@
             font-size: 7.5px;
             color: #A0AEC0;
             border-top: 1px solid #E2E8F0;
-            padding-top: 4px;
+            padding-top: 3px;
         }
     </style>
 </head>
@@ -211,7 +215,7 @@
         Astro Setu • {{ $locale === 'hi' ? 'वैदिक ज्योतिष विश्लेषण (पराशर प्रणाली)' : 'Vedic Astrological Analysis (Parashara System)' }} • True Chitra Paksha Lahiri Ayanamsha
     </div>
 
-    <!-- Header Section -->
+    <!-- PAGE 1: Header, Profile, Charts, Planetary Positions, Janma Nakshatra -->
     <div class="header">
         <table>
             <tr>
@@ -229,7 +233,7 @@
 
     <!-- Birth Profile Information -->
     <div class="section-box">
-        <div class="section-title">{{ $locale === 'hi' ? 'जन्म विवरण (Birth Details)' : 'Birth Profile Details' }}</div>
+        <div class="section-title">{{ $locale === 'hi' ? 'जन्म विवरण' : 'Birth Profile Details' }}</div>
         <table class="meta-grid">
             <tr>
                 <td class="meta-label">{{ $locale === 'hi' ? 'नाम' : 'Name' }}:</td>
@@ -240,11 +244,10 @@
             <tr>
                 <td class="meta-label">{{ $locale === 'hi' ? 'जन्म समय' : 'Birth Time' }}:</td>
                 <td class="meta-value">
-                    {{ $kundli['profile']['birth_time'] ?? ($locale === 'hi' ? 'अनुमानित' : 'Approximate') }}
-                    ({{ ucfirst($kundli['profile']['precision'] ?? 'verified') }})
+                    {{ $kundli['profile']['formatted_birth_time'] ?? ($kundli['profile']['birth_time'] ?? '-') }}
                 </td>
                 <td class="meta-label">{{ $locale === 'hi' ? 'जन्म स्थान' : 'Birth City' }}:</td>
-                <td class="meta-value">{{ $kundli['profile']['birth_city'] ?? '-' }}</td>
+                <td class="meta-value">{{ $kundli['profile']['birth_city'] ?? ($kundli['profile']['place_of_birth'] ?? '-') }}</td>
             </tr>
             <tr>
                 <td class="meta-label">{{ $locale === 'hi' ? 'अक्षांश / देशांतर' : 'Coordinates' }}:</td>
@@ -256,17 +259,14 @@
                 <td class="meta-label">{{ $locale === 'hi' ? 'लग्न राशि' : 'Ascendant (Lagna)' }}:</td>
                 <td class="meta-value">
                     @if(($kundli['ascendant']['status'] ?? '') === 'confirmed')
-                        <strong>{{ $locale === 'hi' ? ($kundli['ascendant']['vedic_name'] ?? ($kundli['ascendant']['name'] ?? '-')) : ($kundli['ascendant']['name'] ?? '-') }}</strong>
+                        <strong>{{ $kundli['ascendant']['localized_name'] ?? ($kundli['ascendant']['name'] ?? '-') }}</strong>
                     @else
                         <em>{{ $locale === 'hi' ? 'समय अनिश्चित' : 'Deferred (Approx Time)' }}</em>
                     @endif
                 </td>
                 <td class="meta-label">{{ $locale === 'hi' ? 'चंद्र राशि' : 'Moon Sign (Rashi)' }}:</td>
                 <td class="meta-value">
-                    @php
-                        $moonRashi = $kundli['planets']['moon']['rashi'] ?? [];
-                    @endphp
-                    <strong>{{ $locale === 'hi' ? ($moonRashi['vedic_name'] ?? ($moonRashi['name'] ?? '-')) : ($moonRashi['name'] ?? '-') }}</strong>
+                    <strong>{{ $kundli['planets']['moon']['rashi']['localized_name'] ?? ($kundli['planets']['moon']['rashi']['name'] ?? '-') }}</strong>
                 </td>
             </tr>
         </table>
@@ -276,24 +276,24 @@
     <div class="chart-container">
         @if($lagnaSvg && $chandraSvg)
             <div class="chart-col" style="margin-right: 3%;">
-                <div class="chart-heading">{{ $locale === 'hi' ? 'लग्न कुंडली (Lagna D-1)' : 'Lagna Chart (D-1)' }}</div>
-                {!! $lagnaSvg !!}
+                <div class="chart-heading">{{ $locale === 'hi' ? 'लग्न कुण्डली (D-1)' : 'Lagna Chart (D-1)' }}</div>
+                <img src="data:image/svg+xml;charset=utf-8;base64,{{ base64_encode($lagnaSvg) }}" style="width: 170px; height: 170px; max-width: 170px; max-height: 170px; display: block; margin: 0 auto;" width="170" height="170" alt="Lagna Chart"/>
             </div>
             <div class="chart-col">
-                <div class="chart-heading">{{ $locale === 'hi' ? 'चन्द्र कुंडली (Chandra Chart)' : 'Chandra Chart (Moon)' }}</div>
-                {!! $chandraSvg !!}
+                <div class="chart-heading">{{ $locale === 'hi' ? 'चन्द्र कुण्डली' : 'Chandra Chart (Moon)' }}</div>
+                <img src="data:image/svg+xml;charset=utf-8;base64,{{ base64_encode($chandraSvg) }}" style="width: 170px; height: 170px; max-width: 170px; max-height: 170px; display: block; margin: 0 auto;" width="170" height="170" alt="Chandra Chart"/>
             </div>
         @elseif($chandraSvg)
             <div style="text-align: center; width: 100%;">
-                <div class="chart-heading">{{ $locale === 'hi' ? 'चन्द्र कुंडली (Chandra Kundli)' : 'Chandra Kundli (Moon Ascendant)' }}</div>
-                {!! $chandraSvg !!}
+                <div class="chart-heading">{{ $locale === 'hi' ? 'चन्द्र कुण्डली' : 'Chandra Kundli (Moon Ascendant)' }}</div>
+                <img src="data:image/svg+xml;charset=utf-8;base64,{{ base64_encode($chandraSvg) }}" style="width: 170px; height: 170px; max-width: 170px; max-height: 170px; display: block; margin: 0 auto;" width="170" height="170" alt="Chandra Chart"/>
             </div>
         @endif
     </div>
 
     <!-- Planetary Positions Table -->
-    <div style="margin-top: 10px;">
-        <div class="section-title">{{ $locale === 'hi' ? 'ग्रह स्थिति एवं बल (Planetary Positions)' : 'Planetary Positions & Dignities' }}</div>
+    <div>
+        <div class="section-title">{{ $locale === 'hi' ? 'ग्रह स्थिति एवं बल' : 'Planetary Positions & Dignities' }}</div>
         <table class="data-table">
             <thead>
                 <tr>
@@ -313,42 +313,70 @@
                     $pNak = $p['nakshatra'] ?? [];
                 @endphp
                 <tr>
-                    <td><strong>{{ $locale === 'hi' ? ($p['name_hi'] ?? ($p['name'] ?? $key)) : ($p['name'] ?? $key) }}</strong></td>
-                    <td>{{ $locale === 'hi' ? ($pRashi['vedic_name'] ?? ($pRashi['name'] ?? '-')) : ($pRashi['name'] ?? '-') }}</td>
+                    <td><strong>{{ $p['localized_name'] ?? ($p['name'] ?? $key) }}</strong></td>
+                    <td>{{ $pRashi['localized_name'] ?? ($pRashi['name'] ?? '-') }}</td>
                     <td>{{ $p['degree_dms'] ?? (isset($p['longitude']) ? round((float)$p['longitude'], 2) . '°' : '-') }}</td>
-                    <td>{{ $locale === 'hi' ? ($pNak['name_hi'] ?? ($pNak['name'] ?? '-')) : ($pNak['name'] ?? '-') }} ({{ $pNak['pada'] ?? 1 }})</td>
-                    <td>{{ $locale === 'hi' ? ($pNak['lord_hi'] ?? ($pNak['lord'] ?? '-')) : ($pNak['lord'] ?? '-') }}</td>
+                    <td>{{ $pNak['localized_name'] ?? ($pNak['name'] ?? '-') }} ({{ $pNak['pada'] ?? 1 }})</td>
+                    <td>{{ $pNak['localized_lord'] ?? ($pNak['lord'] ?? '-') }}</td>
                     <td>
                         <span class="dignity-badge dignity-{{ $p['dignity'] ?? 'neutral' }}">
-                            {{ ucfirst($p['dignity'] ?? 'neutral') }}
+                            {{ $p['localized_dignity'] ?? ucfirst($p['dignity'] ?? 'neutral') }}
                         </span>
                     </td>
-                    <td>
-                        {{ !empty($p['is_retrograde']) ? ($locale === 'hi' ? 'वक्री ' : 'Retro ') : '' }}
-                        {{ !empty($p['is_combust']) ? ($locale === 'hi' ? 'अस्त' : 'Combust') : '' }}
-                        {{ (empty($p['is_retrograde']) && empty($p['is_combust'])) ? '-' : '' }}
-                    </td>
+                    <td>{{ $p['localized_motion'] ?? '-' }}</td>
                 </tr>
                 @endforeach
             </tbody>
         </table>
     </div>
 
+    <!-- Janma Nakshatra Details (Positioned on Page 1 to balance vertical space) -->
+    @php
+        $nakshatraData = $kundli['janma_nakshatra_normalized']
+            ?? ($kundli['interpretations'][$locale]['nakshatra']
+            ?? ($kundli['interpretations']['en']['nakshatra'] ?? null));
+    @endphp
+    @if($nakshatraData)
+    <div class="section-box" style="margin-top: 4px;">
+        <div class="section-title">{{ $locale === 'hi' ? 'जन्म नक्षत्र विवरण' : 'Janma Nakshatra Details' }}</div>
+        <table class="meta-grid">
+            <tr>
+                <td class="meta-label">{{ $locale === 'hi' ? 'नक्षत्र नाम' : 'Nakshatra' }}:</td>
+                <td class="meta-value"><strong>{{ $nakshatraData['localized_name'] ?? ($nakshatraData['name'] ?? '-') }}</strong> ({{ $locale === 'hi' ? 'पाद' : 'Pada' }} {{ $nakshatraData['pada'] ?? 1 }})</td>
+                <td class="meta-label">{{ $locale === 'hi' ? 'नक्षत्र स्वामी' : 'Ruling Lord' }}:</td>
+                <td class="meta-value">{{ $nakshatraData['localized_lord'] ?? ($nakshatraData['lord'] ?? '-') }}</td>
+            </tr>
+            <tr>
+                <td class="meta-label">{{ $locale === 'hi' ? 'अधिष्ठाता देवता' : 'Presiding Deity' }}:</td>
+                <td class="meta-value">{{ $nakshatraData['deity'] ?? '-' }}</td>
+                <td class="meta-label">{{ $locale === 'hi' ? 'प्रतीक चिन्ह' : 'Symbol' }}:</td>
+                <td class="meta-value">{{ $nakshatraData['symbol'] ?? '-' }}</td>
+            </tr>
+            <tr>
+                <td class="meta-label">{{ $locale === 'hi' ? 'गण' : 'Gana' }}:</td>
+                <td class="meta-value">{{ $nakshatraData['localized_gana'] ?? ($nakshatraData['gana'] ?? '-') }}</td>
+                <td class="meta-label">{{ $locale === 'hi' ? 'पारंपरिक महत्व' : 'Significance' }}:</td>
+                <td class="meta-value">{{ $nakshatraData['significance'] ?? '-' }}</td>
+            </tr>
+        </table>
+    </div>
+    @endif
+
     <div class="page-break"></div>
 
-    <!-- Page 2: Houses & Dasha -->
+    <!-- PAGE 2: 12 House Placements, Vimshottari Dasha, Disclaimer -->
     @if(!empty($kundli['houses']))
-    <div style="margin-top: 10px;">
-        <div class="section-title">{{ $locale === 'hi' ? 'द्वादश भाव विवरण (12 House Placements)' : '12 House (Bhava) Details' }}</div>
+    <div>
+        <div class="section-title">{{ $locale === 'hi' ? 'द्वादश भाव विवरण' : '12 House (Bhava) Details' }}</div>
         <table class="data-table">
             <thead>
                 <tr>
-                    <th style="width: 8%;">{{ $locale === 'hi' ? 'भाव' : 'House' }}</th>
-                    <th style="width: 18%;">{{ $locale === 'hi' ? 'संज्ञा' : 'Bhava Title' }}</th>
-                    <th style="width: 15%;">{{ $locale === 'hi' ? 'राशि' : 'Sign' }}</th>
-                    <th style="width: 12%;">{{ $locale === 'hi' ? 'भावेश' : 'Lord' }}</th>
-                    <th style="width: 20%;">{{ $locale === 'hi' ? 'उपस्थित ग्रह' : 'Resident Planets' }}</th>
-                    <th style="width: 27%;">{{ $locale === 'hi' ? 'महत्व' : 'Traditional Significance' }}</th>
+                    <th style="width: 7%;">{{ $locale === 'hi' ? 'भाव' : 'House' }}</th>
+                    <th style="width: 19%;">{{ $locale === 'hi' ? 'संज्ञा' : 'Bhava Title' }}</th>
+                    <th style="width: 14%;">{{ $locale === 'hi' ? 'राशि' : 'Sign' }}</th>
+                    <th style="width: 13%;">{{ $locale === 'hi' ? 'भावेश' : 'Lord' }}</th>
+                    <th style="width: 19%;">{{ $locale === 'hi' ? 'उपस्थित ग्रह' : 'Resident Planets' }}</th>
+                    <th style="width: 28%;">{{ $locale === 'hi' ? 'महत्व' : 'Traditional Significance' }}</th>
                 </tr>
             </thead>
             <tbody>
@@ -359,24 +387,13 @@
                 @php
                     $hNum = $h['house_number'] ?? 0;
                     $hInfo = $interpHouses[$hNum] ?? null;
-                    $residents = [];
-                    $rawResidents = $h['planets'] ?? ($h['resident_planets'] ?? []);
-                    foreach($rawResidents as $rp) {
-                        $residents[] = $locale === 'hi' ? ($rp['name_hi'] ?? ($rp['name'] ?? ($rp['key'] ?? ''))) : ($rp['name'] ?? ($rp['key'] ?? ''));
-                    }
-                    $signName = $locale === 'hi'
-                        ? ($h['sign_vedic_name'] ?? ($h['rashi']['vedic_name'] ?? ($h['sign_name'] ?? ($h['rashi']['name'] ?? '-'))))
-                        : ($h['sign_name'] ?? ($h['rashi']['name'] ?? '-'));
-                    $lordName = $locale === 'hi'
-                        ? ($hInfo['lord_hi'] ?? ($h['sign_lord'] ?? '-'))
-                        : ($hInfo['lord'] ?? ($h['sign_lord'] ?? '-'));
                 @endphp
                 <tr>
                     <td style="text-align: center; font-weight: bold;">{{ $hNum }}</td>
                     <td>{{ $hInfo['title'] ?? ($hNum . 'th House') }}</td>
-                    <td>{{ $signName }}</td>
-                    <td>{{ $lordName }}</td>
-                    <td>{{ count($residents) > 0 ? implode(', ', $residents) : '-' }}</td>
+                    <td>{{ $h['localized_sign_name'] ?? ($h['sign_name'] ?? '-') }}</td>
+                    <td>{{ $h['localized_sign_lord'] ?? ($h['sign_lord'] ?? '-') }}</td>
+                    <td>{{ $h['localized_residents'] ?? '-' }}</td>
                     <td>{{ $hInfo['significance'] ?? '-' }}</td>
                 </tr>
                 @endforeach
@@ -385,49 +402,19 @@
     </div>
     @endif
 
-    <!-- Janma Nakshatra Details -->
-    @php
-        $nakshatraData = $kundli['interpretations'][$locale]['nakshatra'] ?? ($kundli['interpretations']['en']['nakshatra'] ?? null);
-    @endphp
-    @if($nakshatraData)
-    <div class="section-box" style="margin-top: 10px;">
-        <div class="section-title">{{ $locale === 'hi' ? 'जन्म नक्षत्र विवरण (Janma Nakshatra)' : 'Janma Nakshatra Details' }}</div>
-        <table class="meta-grid">
-            <tr>
-                <td class="meta-label">{{ $locale === 'hi' ? 'नक्षत्र नाम' : 'Nakshatra' }}:</td>
-                <td class="meta-value"><strong>{{ $locale === 'hi' ? ($nakshatraData['name_hi'] ?? ($nakshatraData['name'] ?? '-')) : ($nakshatraData['name'] ?? '-') }}</strong> ({{ $locale === 'hi' ? 'पाद' : 'Pada' }} {{ $nakshatraData['pada'] ?? 1 }})</td>
-                <td class="meta-label">{{ $locale === 'hi' ? 'नक्षत्र स्वामी' : 'Ruling Lord' }}:</td>
-                <td class="meta-value">{{ $locale === 'hi' ? ($nakshatraData['lord_hi'] ?? ($nakshatraData['lord'] ?? '-')) : ($nakshatraData['lord'] ?? '-') }}</td>
-            </tr>
-            <tr>
-                <td class="meta-label">{{ $locale === 'hi' ? 'अधिष्ठाता देवता' : 'Presiding Deity' }}:</td>
-                <td class="meta-value">{{ $nakshatraData['deity'] ?? '-' }}</td>
-                <td class="meta-label">{{ $locale === 'hi' ? 'प्रतीक चिन्ह' : 'Symbol' }}:</td>
-                <td class="meta-value">{{ $nakshatraData['symbol'] ?? '-' }}</td>
-            </tr>
-            <tr>
-                <td class="meta-label">{{ $locale === 'hi' ? 'गण' : 'Gana' }}:</td>
-                <td class="meta-value">{{ $nakshatraData['gana'] ?? '-' }}</td>
-                <td class="meta-label">{{ $locale === 'hi' ? 'पारंपरिक महत्व' : 'Significance' }}:</td>
-                <td class="meta-value">{{ $nakshatraData['significance'] ?? '-' }}</td>
-            </tr>
-        </table>
-    </div>
-    @endif
-
     <!-- Vimshottari Dasha Section -->
     @if(!empty($kundli['dasha']) && ($kundli['dasha']['status'] ?? '') === 'available')
-    <div style="margin-top: 10px;">
-        <div class="section-title">{{ $locale === 'hi' ? 'विंशोत्तरी दशा चक्र (Vimshottari Dasha - 120 Years)' : 'Vimshottari Dasha Timeline (120-Year Cycle)' }}</div>
+    <div style="margin-top: 6px;">
+        <div class="section-title">{{ $locale === 'hi' ? 'विंशोत्तरी दशा चक्र' : 'Vimshottari Dasha Timeline (120-Year Cycle)' }}</div>
 
         @if(!empty($kundli['dasha']['current_dasha']))
         @php
             $curr = $kundli['dasha']['current_dasha'];
-            $mdLord = $locale === 'hi' ? ($curr['mahadasha']['lord_hi'] ?? ($curr['mahadasha']['lord'] ?? '-')) : ($curr['mahadasha']['lord'] ?? '-');
-            $adLord = $locale === 'hi' ? ($curr['antardasha']['lord_hi'] ?? ($curr['antardasha']['lord'] ?? '-')) : ($curr['antardasha']['lord'] ?? '-');
+            $mdLord = $curr['mahadasha']['localized_lord'] ?? ($curr['mahadasha']['lord'] ?? '-');
+            $adLord = $curr['antardasha']['localized_lord'] ?? ($curr['antardasha']['lord'] ?? '-');
             $endDate = !empty($curr['antardasha']['end_date']) ? \Carbon\Carbon::parse($curr['antardasha']['end_date'])->format('d M Y') : '-';
         @endphp
-        <div style="background-color: #EBF8FF; border-left: 3px solid #3182CE; padding: 6px 10px; margin-bottom: 8px; font-size: 8.5px;">
+        <div style="background-color: #EBF8FF; border-left: 3px solid #3182CE; padding: 5px 8px; margin-bottom: 6px; font-size: 8px;">
             <strong>{{ $locale === 'hi' ? 'वर्तमान दशा:' : 'Active Dasha:' }}</strong>
             {{ $mdLord }} - {{ $adLord }}
             ({{ $locale === 'hi' ? 'समाप्ति:' : 'Until:' }} {{ $endDate }})
@@ -447,7 +434,7 @@
             <tbody>
                 @foreach(($kundli['dasha']['mahadashas'] ?? []) as $md)
                 @php
-                    $mdLord = $locale === 'hi' ? ($md['lord_hi'] ?? ($md['lord'] ?? '-')) : ($md['lord'] ?? '-');
+                    $mdLord = $md['localized_lord'] ?? ($md['lord'] ?? '-');
                     $mdStart = !empty($md['start_date']) ? \Carbon\Carbon::parse($md['start_date'])->format('d M Y') : '-';
                     $mdEnd = !empty($md['end_date']) ? \Carbon\Carbon::parse($md['end_date'])->format('d M Y') : '-';
                 @endphp
@@ -456,7 +443,7 @@
                     <td>{{ $md['years'] ?? 0 }} {{ $locale === 'hi' ? 'वर्ष' : 'Yrs' }}</td>
                     <td>{{ $mdStart }}</td>
                     <td>{{ $mdEnd }}</td>
-                    <td>{{ !empty($md['is_current']) ? ($locale === 'hi' ? 'सक्रिय (Current)' : 'Active') : '-' }}</td>
+                    <td>{{ $md['localized_status'] ?? '-' }}</td>
                 </tr>
                 @endforeach
             </tbody>
