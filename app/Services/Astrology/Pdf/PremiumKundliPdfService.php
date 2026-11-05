@@ -31,13 +31,132 @@ class PremiumKundliPdfService
      */
     public function generatePdf(array $reportData, string $locale = 'en'): string
     {
+        // 1. Try Chromium renderer for native HarfBuzz complex-script shaping
+        $chromiumPdf = $this->tryRenderChromium($reportData, $locale);
+        if ($chromiumPdf !== null && $chromiumPdf !== '') {
+            return $chromiumPdf;
+        }
+
+        // 2. Deterministic zero-dependency fallback: Dompdf with embedded Noto fonts
+        return $this->renderDompdf($reportData, $locale);
+    }
+
+    /**
+     * Render PDF using headless Chromium for native HarfBuzz complex-script shaping.
+     */
+    protected function tryRenderChromium(array $reportData, string $locale): ?string
+    {
+        $chromeBinary = $this->resolveChromiumBinary();
+        if ($chromeBinary === null) {
+            return null;
+        }
+
+        $fontRegular = 'file:///' . str_replace('\\', '/', resource_path('fonts/NotoSansDevanagari-Regular.ttf'));
+        $fontBold = 'file:///' . str_replace('\\', '/', resource_path('fonts/NotoSansDevanagari-Bold.ttf'));
+
+        $logoPath = public_path('images/header/logo.png');
+        $logoBase64 = null;
+        if (file_exists($logoPath)) {
+            $logoData = file_get_contents($logoPath);
+            if ($logoData !== false) {
+                $logoBase64 = 'data:image/png;base64,' . base64_encode($logoData);
+            }
+        }
+
+        $html = View::make('pdf.detailed_kundli_report', [
+            'report' => $reportData,
+            'locale' => $locale,
+            'fontRegular' => $fontRegular,
+            'fontBold' => $fontBold,
+            'logoBase64' => $logoBase64,
+        ])->render();
+
+        $tempDir = storage_path('app/temp_pdf');
+        if (!is_dir($tempDir)) {
+            @mkdir($tempDir, 0755, true);
+        }
+
+        $id = uniqid('report_', true);
+        $tempHtml = $tempDir . '/' . $id . '.html';
+        $tempPdf = $tempDir . '/' . $id . '.pdf';
+
+        try {
+            file_put_contents($tempHtml, $html);
+            $fullHtmlUrl = 'file:///' . str_replace('\\', '/', realpath($tempHtml));
+
+            $cmd = sprintf(
+                '"%s" --headless --disable-gpu --no-sandbox --allow-file-access-from-files --no-pdf-header-footer --print-to-pdf="%s" "%s"',
+                $chromeBinary,
+                $tempPdf,
+                $fullHtmlUrl
+            );
+
+            $output = [];
+            $retCode = 0;
+            exec($cmd, $output, $retCode);
+
+            if ($retCode === 0 && file_exists($tempPdf) && filesize($tempPdf) > 1000) {
+                $pdfBinary = file_get_contents($tempPdf);
+                if ($pdfBinary !== false && $pdfBinary !== '') {
+                    return $pdfBinary;
+                }
+            }
+        } catch (\Throwable $e) {
+            // Log and fallback to Dompdf
+        } finally {
+            if (file_exists($tempHtml)) {
+                @unlink($tempHtml);
+            }
+            if (file_exists($tempPdf)) {
+                @unlink($tempPdf);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Resolve Chromium binary path across common environments.
+     */
+    protected function resolveChromiumBinary(): ?string
+    {
+        $custom = env('CHROME_PATH') ?? env('PUPPETEER_EXECUTABLE_PATH');
+        if ($custom && file_exists((string) $custom)) {
+            return (string) $custom;
+        }
+
+        $candidates = [
+            'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+            'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
+            'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+            'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
+            '/usr/bin/google-chrome',
+            '/usr/bin/google-chrome-stable',
+            '/usr/bin/chromium-browser',
+            '/usr/bin/chromium',
+        ];
+
+        foreach ($candidates as $c) {
+            if (file_exists($c)) {
+                return $c;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Render PDF using Dompdf with embedded Noto Sans Devanagari fonts.
+     */
+    public function renderDompdf(array $reportData, string $locale = 'en'): string
+    {
         $fontDir = storage_path('fonts');
         if (!is_dir($fontDir)) {
             @mkdir($fontDir, 0755, true);
         }
 
-        $fontRegular = resource_path('fonts/NotoSansDevanagari-Regular.ttf');
-        $fontBold = resource_path('fonts/NotoSansDevanagari-Bold.ttf');
+        $fontRegular = str_replace('\\', '/', resource_path('fonts/NotoSansDevanagari-Regular.ttf'));
+        $fontBold = str_replace('\\', '/', resource_path('fonts/NotoSansDevanagari-Bold.ttf'));
 
         $options = new Options();
         $options->set('isHtml5ParserEnabled', true);
@@ -46,7 +165,9 @@ class PremiumKundliPdfService
         $options->set('fontDir', $fontDir);
         $options->set('fontCache', $fontDir);
         $options->set('chroot', [base_path()]);
-        $options->set('defaultFont', $locale === 'hi' ? 'Noto Sans Devanagari' : 'DejaVu Sans');
+        $options->set('defaultFont', $locale === 'hi' ? 'NotoDevanagari' : 'DejaVu Sans');
+
+        $this->ensureSvgFontAssets($fontDir);
 
         $dompdf = new Dompdf($options);
 
@@ -88,5 +209,58 @@ class PremiumKundliPdfService
         // Simple and robust regex counting /Type /Page (excluding /Pages)
         $count = preg_match_all('/\/Type\s*\/Page(?=[ \t\r\n\/>])/s', $pdfBinary);
         return max(1, (int) $count);
+    }
+
+    /**
+     * Ensure Dompdf named font metrics and TTF files are in place for SVG font resolution.
+     */
+    protected function ensureSvgFontAssets(string $fontDir): void
+    {
+        $regTtf = resource_path('fonts/NotoSansDevanagari-Regular.ttf');
+        $boldTtf = resource_path('fonts/NotoSansDevanagari-Bold.ttf');
+
+        // Target aliases for Cpdf / php-svg-lib direct resolution
+        $targets = [
+            'NotoDevanagari' => $regTtf,
+            'NotoDevanagari-Bold' => $boldTtf,
+        ];
+
+        foreach ($targets as $alias => $srcTtf) {
+            $destStorageTtf = $fontDir . '/' . $alias . '.ttf';
+            $destBaseTtf = base_path($alias . '.ttf');
+
+            if (!file_exists($destStorageTtf) && file_exists($srcTtf)) {
+                @copy($srcTtf, $destStorageTtf);
+            }
+            if (!file_exists($destBaseTtf) && file_exists($srcTtf)) {
+                @copy($srcTtf, $destBaseTtf);
+            }
+
+            // Also check for generated UFM from Dompdf font registration
+            $prefix = strtolower($alias);
+            $matchingUfm = glob($fontDir . '/' . $prefix . '_*.ufm')[0] ?? null;
+            if ($matchingUfm !== null) {
+                $destUfm = $fontDir . '/' . $alias . '.ufm';
+                $destBaseUfm = base_path($alias . '.ufm');
+                if (!file_exists($destUfm)) {
+                    @copy($matchingUfm, $destUfm);
+                }
+                if (!file_exists($destBaseUfm)) {
+                    @copy($matchingUfm, $destBaseUfm);
+                }
+
+                $matchingJson = str_replace('.ufm', '.ufm.json', $matchingUfm);
+                if (file_exists($matchingJson)) {
+                    $destJson = $fontDir . '/' . $alias . '.ufm.json';
+                    $destBaseJson = base_path($alias . '.ufm.json');
+                    if (!file_exists($destJson)) {
+                        @copy($matchingJson, $destJson);
+                    }
+                    if (!file_exists($destBaseJson)) {
+                        @copy($matchingJson, $destBaseJson);
+                    }
+                }
+            }
+        }
     }
 }

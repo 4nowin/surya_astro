@@ -1,4 +1,8 @@
 {
+    "notodevanagari": {
+        "normal": "C:\\wamp64\\www\\astro_setu\\storage\\fonts\/notodevanagari_normal_57e32c4abe473de8bb76691af3daae84",
+        "bold": "notodevanagari_bold_c5540cd39888bec9ebda0512976476c7"
+    },
     "noto sans devanagari": {
         "normal": "C:\\wamp64\\www\\astro_setu\\storage\\fonts\/noto_sans_devanagari_normal_57e32c4abe473de8bb76691af3daae84",
         "bold": "noto_sans_devanagari_bold_c5540cd39888bec9ebda0512976476c7"

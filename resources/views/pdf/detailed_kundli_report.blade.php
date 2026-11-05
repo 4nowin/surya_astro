@@ -4,7 +4,30 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
     <title>{{ $report['sections']['sec1_cover']['title'] ?? 'Astro Setu Detailed Kundli Report' }}</title>
     <style>
-@if($locale === 'hi')
+        @font-face {
+            font-family: 'NotoDevanagari';
+            font-style: normal;
+            font-weight: 400;
+            src: url('{{ $fontRegular }}') format('truetype');
+        }
+        @font-face {
+            font-family: 'NotoDevanagari';
+            font-style: normal;
+            font-weight: 700;
+            src: url('{{ $fontBold }}') format('truetype');
+        }
+        @font-face {
+            font-family: 'NotoDevanagari';
+            font-style: italic;
+            font-weight: 400;
+            src: url('{{ $fontRegular }}') format('truetype');
+        }
+        @font-face {
+            font-family: 'NotoDevanagari';
+            font-style: italic;
+            font-weight: 700;
+            src: url('{{ $fontBold }}') format('truetype');
+        }
         @font-face {
             font-family: 'Noto Sans Devanagari';
             font-style: normal;
@@ -17,17 +40,21 @@
             font-weight: 700;
             src: url('{{ $fontBold }}') format('truetype');
         }
-@endif
         @page {
             margin: 28px 30px 32px 30px;
             size: A4 portrait;
         }
+        body, table, td, th, div, span, p {
+            font-family: {!! $locale === 'hi' ? 'NotoDevanagari, sans-serif' : "'DejaVu Sans', sans-serif" !!};
+        }
         body {
-            font-family: {{ $locale === 'hi' ? "'Noto Sans Devanagari', 'DejaVu Sans', sans-serif" : "'DejaVu Sans', Arial, sans-serif" }};
             font-size: 9px;
             color: #2D3748;
             line-height: 1.45;
             background-color: #FFFFFF;
+        }
+        .devanagari {
+            font-family: NotoDevanagari, sans-serif !important;
         }
         .page-break {
             page-break-after: always;
@@ -76,8 +103,8 @@
             background-color: #FAFCFE;
             border: 1px solid #E2E8F0;
             border-radius: 4px;
-            padding: 8px 10px;
-            margin-bottom: 11px;
+            padding: 6px 10px;
+            margin-bottom: 8px;
             page-break-inside: avoid;
         }
         .section-title {
@@ -196,18 +223,7 @@
         }
     </style>
 </head>
-<body>
-
-    {{-- Script for Dompdf dynamic page footer --}}
-    <script type="text/php">
-        if (isset($pdf)) {
-            $font = $fontMetrics->getFont("DejaVu Sans", "normal");
-            $size = 8;
-            $brandText = "Astro Setu — Vedic Astrology Platform";
-            $pdf->page_text(30, 815, $brandText, $font, $size, [0.45, 0.5, 0.58]);
-            $pdf->page_text(485, 815, "{{ $locale === 'hi' ? 'पृष्ठ' : 'Page' }} " . $PAGE_NUM . " / " . $PAGE_COUNT, $font, $size, [0.45, 0.5, 0.58]);
-        }
-    </script>
+<body class="locale-{{ $locale }}">
 
     @php
         $sec1 = $report['sections']['sec1_cover'] ?? [];
@@ -262,7 +278,7 @@
                 <th style="width: 25%;">{{ $locale === 'hi' ? 'जन्म तिथि' : 'Date of Birth' }}</th>
                 <td style="width: 25%; font-weight: bold;">{{ $sec1['date_of_birth'] ?? '—' }}</td>
                 <th style="width: 25%;">{{ $locale === 'hi' ? 'जन्म समय' : 'Birth Time' }}</th>
-                <td style="width: 25%; font-weight: bold;">{{ $sec1['birth_time'] ?? ($locale === 'hi' ? 'अज्ञात / अनुमानित' : 'Unknown / Approximate') }}</td>
+                <td style="width: 25%; font-weight: bold;">{{ $sec1['birth_time_formatted'] ?? $sec1['birth_time'] ?? '—' }}</td>
             </tr>
             <tr>
                 <th>{{ $locale === 'hi' ? 'जन्म स्थान' : 'Birth Location' }}</th>
@@ -272,13 +288,13 @@
             </tr>
             <tr>
                 <th>{{ $locale === 'hi' ? 'अक्षांश एवं देशांतर' : 'Coordinates' }}</th>
-                <td>{{ round($sec1['latitude'] ?? 0, 4) }}°, {{ round($sec1['longitude'] ?? 0, 4) }}°</td>
+                <td>{{ $sec1['coordinates_formatted'] ?? (round($sec1['latitude'] ?? 0, 4) . '°, ' . round($sec1['longitude'] ?? 0, 4) . '°') }}</td>
                 <th>{{ $locale === 'hi' ? 'समय क्षेत्र' : 'Timezone' }}</th>
-                <td>{{ $sec1['timezone'] ?? 'UTC' }}</td>
+                <td>{{ $sec1['timezone_formatted'] ?? $sec1['timezone'] ?? 'UTC' }}</td>
             </tr>
             <tr>
                 <th>{{ $locale === 'hi' ? 'अयनांश प्रणाली' : 'Ayanamsha' }}</th>
-                <td>{{ $sec1['ayanamsa'] ?? 'True Chitra Lahiri' }}</td>
+                <td>{{ $sec1['ayanamsa'] ?? 'True Chitra Paksha Lahiri' }}</td>
                 <th>{{ $locale === 'hi' ? 'खगोलीय इंजन' : 'Ephemeris Engine' }}</th>
                 <td>{{ $sec1['calculation_engine'] ?? 'Jayesh Mepani Moshier FFI' }}</td>
             </tr>
@@ -408,7 +424,7 @@
                 <tr>
                     <td style="width: 42%; vertical-align: middle; text-align: center;">
                         @if(!empty($sec3['svg']))
-                            {!! $sec3['svg'] !!}
+                            <img src="data:image/svg+xml;charset=utf-8;base64,{{ base64_encode($sec3['svg']) }}" style="width: 185px; height: 185px; max-width: 185px; max-height: 185px; display: block; margin: 0 auto;" width="185" height="185" alt="D-1 Lagna Kundli"/>
                         @endif
                     </td>
                     <td style="width: 58%; vertical-align: top; padding-left: 2%;">
@@ -437,7 +453,7 @@
                                         <td>{{ $p['rashi'] }}</td>
                                         <td style="text-align: center;">{{ $p['house'] }}</td>
                                         <td>{{ $p['nakshatra'] }} ({{ $p['pada'] }})</td>
-                                        <td>{{ $p['is_retrograde'] ? 'वक्री / Ret' : 'मार्गी / Dir' }}</td>
+                                        <td>{{ $p['is_retrograde'] ? ($locale === 'hi' ? 'वक्री' : 'Retrograde') : ($locale === 'hi' ? 'मार्गी' : 'Direct') }}</td>
                                     </tr>
                                 @endforeach
                             </tbody>
@@ -469,7 +485,7 @@
                 <tr>
                     <td style="width: 42%; vertical-align: middle; text-align: center;">
                         @if(!empty($sec4['svg']))
-                            {!! $sec4['svg'] !!}
+                            <img src="data:image/svg+xml;charset=utf-8;base64,{{ base64_encode($sec4['svg']) }}" style="width: 185px; height: 185px; max-width: 185px; max-height: 185px; display: block; margin: 0 auto;" width="185" height="185" alt="Chandra Kundli"/>
                         @endif
                     </td>
                     <td style="width: 58%; vertical-align: middle; padding-left: 2%;">
@@ -498,7 +514,7 @@
             <tr>
                 <td style="width: 42%; vertical-align: middle; text-align: center;">
                     @if(!empty($sec5['svg']))
-                        {!! $sec5['svg'] !!}
+                        <img src="data:image/svg+xml;charset=utf-8;base64,{{ base64_encode($sec5['svg']) }}" style="width: 185px; height: 185px; max-width: 185px; max-height: 185px; display: block; margin: 0 auto;" width="185" height="185" alt="D-9 Navamsha Chart"/>
                     @endif
                 </td>
                 <td style="width: 58%; vertical-align: top; padding-left: 2%;">
@@ -610,7 +626,7 @@
                 <td colspan="3">{{ $sec7['guidance'] ?? '' }}</td>
             </tr>
         </table>
-        <div style="font-size: 8px; color: #4A5568; font-style: italic;">
+        <div style="font-size: 8px; color: #4A5568;">
             {{ $sec7['pada_note'] ?? '' }}
         </div>
     </div>
@@ -721,7 +737,7 @@
                     <div style="font-size: 8px; color: #2D3748; margin-bottom: 3px;">
                         <strong>{{ $locale === 'hi' ? 'फल प्रभाव: ' : 'Manifested Qualities: ' }}</strong>{{ $yoga['qualities'] }}
                     </div>
-                    <div style="font-size: 8px; color: #744210; font-style: italic;">
+                    <div style="font-size: 8px; color: #744210;">
                         <strong>{{ $locale === 'hi' ? 'नैतिक मार्गदर्शन: ' : 'Ethical Advice: ' }}</strong>{{ $yoga['ethical_advice'] }}
                     </div>
                 </div>
@@ -807,7 +823,7 @@
                 </div>
                 <div style="font-size: 8px; margin-top: 2px;">
                     <strong>{{ $locale === 'hi' ? 'वैदिक बीज मंत्र: ' : 'Vedic Beej Mantra: ' }}</strong>
-                    <span style="color: #2B6CB0; font-family: monospace;">{{ $rem['mantra'] }}</span>
+                    <span class="devanagari" style="color: #2B6CB0; font-weight: bold;">{{ $rem['mantra'] }}</span>
                 </div>
                 <div style="font-size: 8px; margin-top: 2px;">
                     <strong>{{ $locale === 'hi' ? 'सात्विक दान: ' : 'Satvik Dana: ' }}</strong>{{ $rem['dana'] }}
@@ -887,13 +903,13 @@
                         <td>{{ $row['section'] }}</td>
                         <td style="text-align: center;">
                             @if($row['status_key'] === 'certified')
-                                <span class="badge badge-certified">CERTIFIED / प्रमाणित</span>
+                                <span class="badge badge-certified">{{ $locale === 'hi' ? 'प्रमाणित' : 'CERTIFIED' }}</span>
                             @elseif($row['status_key'] === 'qualified')
-                                <span class="badge badge-qualified">QUALIFIED / सशर्त</span>
+                                <span class="badge badge-qualified">{{ $locale === 'hi' ? 'सशर्त' : 'QUALIFIED' }}</span>
                             @elseif($row['status_key'] === 'fallback')
-                                <span class="badge badge-fallback">QUALITATIVE FALLBACK / गुणात्मक</span>
+                                <span class="badge badge-fallback">{{ $locale === 'hi' ? 'गुणात्मक' : 'QUALITATIVE FALLBACK' }}</span>
                             @else
-                                <span class="badge badge-suppressed">SUPPRESSED / स्थगित</span>
+                                <span class="badge badge-suppressed">{{ $locale === 'hi' ? 'स्थगित' : 'SUPPRESSED' }}</span>
                             @endif
                         </td>
                     </tr>
@@ -917,5 +933,17 @@
         </div>
     </div>
 
+    {{-- Script for Dompdf dynamic page footer (evaluated after document completion) --}}
+    <script type="text/php">
+        if (isset($pdf)) {
+            $isHi = ("{{ $locale }}" === 'hi');
+            $font = $fontMetrics->getFont($isHi ? "NotoDevanagari" : "DejaVu Sans", "normal");
+            $size = 8;
+            $brandText = $isHi ? "एस्ट्रो सेतु — वैदिक ज्योतिष मंच" : "Astro Setu — Vedic Astrology Platform";
+            $pdf->page_text(30, 815, $brandText, $font, $size, [0.45, 0.5, 0.58]);
+            $pagePattern = $isHi ? "पृष्ठ {PAGE_NUM} / {PAGE_COUNT}" : "Page {PAGE_NUM} of {PAGE_COUNT}";
+            $pdf->page_text(485, 815, $pagePattern, $font, $size, [0.45, 0.5, 0.58]);
+        }
+    </script>
 </body>
 </html>
