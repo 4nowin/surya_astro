@@ -290,4 +290,32 @@ class A4SecureReportDeliveryTest extends TestCase
             'status' => 'queued',
         ]);
     }
+
+    /**
+     * Test tampering with the report identifier in a signed URL invalidates access (403).
+     * Proves that changing the report UUID in a signed link causes signature validation to fail.
+     */
+    public function test_tampering_with_report_identifier_in_signed_url_is_rejected(): void
+    {
+        $user1 = User::factory()->create(['name' => 'Report One User']);
+        $user2 = User::factory()->create(['name' => 'Report Two User']);
+
+        $report1 = $this->createReportForUser($user1, 'completed');
+        $report2 = $this->createReportForUser($user2, 'completed');
+
+        // Legitimate signed URL for report1
+        $signedUrl1 = URL::temporarySignedRoute(
+            'kundli.reports.download',
+            now()->addMinutes(20),
+            ['reportUuid' => $report1->uuid]
+        );
+
+        // Attacker tampers with URL by replacing report1's UUID with report2's UUID
+        $tamperedUrl = str_replace($report1->uuid, $report2->uuid, $signedUrl1);
+
+        $response = $this->getJson($tamperedUrl);
+        $response->assertStatus(403)
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('message', 'Invalid or expired report download link.');
+    }
 }

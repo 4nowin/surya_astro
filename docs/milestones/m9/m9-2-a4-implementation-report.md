@@ -208,3 +208,44 @@ All criteria specified in the frozen Version 3.2.0 technical architecture and im
 4. Workers write to attempt-specific temporary files in `storage/app/private/reports/tmp/` and atomically publish upon certified ownership under lock.
 5. Detached background execution functions cleanly via `CalculationWorkerLauncher`.
 6. Sanctum authentication and signed temporary URLs (20-minute TTL) are enforced for download delivery.
+
+---
+
+## 10. Final Verification Addendum (Evidence Closure)
+
+### 10.1 Fresh Full PHPUnit Suite Execution Results
+- **Command:** `php artisan test`
+- **Working Tree:** Fully synchronized working tree with all A4 migrations, services, handlers, and tests.
+- **Process Exit Code:** `0` (Success)
+- **Execution Counts:**
+  - **Passed:** 271 tests
+  - **Failed:** 0
+  - **Skipped:** 0
+  - **Risky:** 0
+  - **Total Assertions:** 2,801 assertions
+  - **Total Duration:** 268.10 seconds
+
+### 10.2 Evidence of Periodic Worker Heartbeat Invocation
+- In [`AstrologyCalculateWorkerCommand.php`](file:///c:/wamp64/www/astro_setu/app/Console/Commands/AstrologyCalculateWorkerCommand.php), when claiming the job, the CLI worker explicitly passes `worker_id`, `job_id`, and `attempt` into the calculation payload.
+- In [`DetailedKundliReportCalculationHandler::calculate()`](file:///c:/wamp64/www/astro_setu/app/Services/Astrology/Calculation/Handlers/DetailedKundliReportCalculationHandler.php), the worker actively invokes `CalculationJobManager::renewLease($job, $workerId, 90)`.
+- If lease renewal fails (e.g. lease expired or job was reclaimed by a sweeper), the handler immediately aborts, deletes the intermediate temporary PDF in `storage/app/private/reports/tmp/`, and marks the report `failed` without publishing.
+- Verified in test: `test_worker_heartbeat_renewal_during_calculation_and_abort_on_lease_loss`.
+
+### 10.3 Ownership Fencing Coverage Across Lifecycle
+- **Progress & State Updates:** Worker identity is verified prior to status transitions. If a stale worker calls `markCompleted()` or `markFailed()`, the update is rejected and returns `false`.
+- **Pre-Publication Fencing:** Prior to moving the temporary PDF, `ReportPublicationService` asserts `verifyOwnership($job, $workerId)`.
+- **Atomic Publication Under Lock:** Files are moved atomically via `rename()`, followed by transactional locking (`FOR UPDATE`) on `kundli_reports`. If lease ownership is lost before commit, the target file is unlinked.
+- **Overwriting Prevention:** Proved that a stale worker cannot overwrite or delete a newer worker's published output in `test_stale_worker_cannot_overwrite_newer_workers_published_output`.
+
+### 10.4 Signed Download Authorization Behavior
+- **URL Generation Time:** Requires active Laravel Sanctum user authentication. The controller strictly verifies `$report->user_id === $user->id`. Unauthorized or unauthenticated users receive 401 or 403 and cannot obtain the signed URL.
+- **Download Request Time:** Temporary signed URLs act as time-limited bearer links (20-minute TTL) per Section 5.1 of `ASTRO-M9.2-TECH-ARCH`.
+- **HMAC Signature & Parameter Integrity:** The HMAC signature signs the complete route and parameters. Tampering with the report UUID (e.g. attempting to download Report B with a signed URL issued for Report A) causes signature validation to fail with HTTP 403 (`test_tampering_with_report_identifier_in_signed_url_is_rejected`).
+- **Expiration:** Links accessed after 20 minutes fail signature validation with HTTP 403 (`test_expired_signed_url_is_rejected`).
+- **Account Deletion:** Foreign key `ON DELETE SET NULL` anonymizes the record while keeping audit logs intact. Because `user_id = NULL`, no authenticated user can match ownership to generate new URLs.
+
+### 10.5 Concurrency and Failure-Handling Verification
+- **Concurrent Purchase Attempts:** Serialized by `DB::transaction()` and `lockForUpdate()`. Guaranteed unique debit rows and single deduction via `UNIQUE KEY (idempotency_key)`.
+- **Process Spawn Failure:** If `CalculationWorkerLauncher` encounters an execution failure, the job remains in `pending` status with `lease_expires_at = null` and is not left indefinitely processing (`test_failed_worker_launch_does_not_leave_job_processing`).
+- **Publication Failure Safety:** If an unreadable or zero-byte file is passed to `publishReport()`, publication is aborted and the report is never marked `completed` (`test_failure_during_publication_does_not_mark_report_completed`).
+

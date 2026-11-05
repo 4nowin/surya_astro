@@ -270,4 +270,181 @@ class A4WorkerLeaseAndPublicationTest extends TestCase
         $this->publicationService->cleanupTempFile($tmpPath);
         $this->assertFileDoesNotExist($tmpPath);
     }
+
+    /**
+     * Test actual worker heartbeat integration during calculation:
+     * When worker owns job, renewLease is called and extends lease.
+     * When worker loses ownership, calculation aborts safely, cleans up temp file, and does not publish.
+     */
+    public function test_worker_heartbeat_renewal_during_calculation_and_abort_on_lease_loss(): void
+    {
+        $workerId = 'worker_heartbeat_test';
+        $job = $this->createProcessingJob($workerId, 30);
+        $report = $this->createReportWithDebit('queued');
+
+        $handler = app(\App\Services\Astrology\Calculation\Handlers\DetailedKundliReportCalculationHandler::class);
+
+        // 1. Successful heartbeat and calculation
+        $result = $handler->calculate([
+            'report_uuid' => $report->uuid,
+            'worker_id' => $workerId,
+            'job_id' => $job->job_id,
+            'attempt' => 1,
+            'language' => 'en',
+        ]);
+
+        $this->assertSame('completed', $result['status']);
+        $this->assertSame(KundliReport::STATUS_COMPLETED, $report->fresh()->status);
+
+        // 2. Failure case: worker lost lease prior to calculation
+        $report2 = $this->createReportWithDebit('queued');
+        $job2 = $this->createProcessingJob($workerId, 10);
+
+        // Advance time so lease expires
+        $this->travel(15)->seconds();
+
+        $this->expectException(\RuntimeException::class);
+        $this->expectExceptionMessage('lost lease');
+
+        try {
+            $handler->calculate([
+                'report_uuid' => $report2->uuid,
+                'worker_id' => $workerId,
+                'job_id' => $job2->job_id,
+                'attempt' => 1,
+                'language' => 'en',
+            ]);
+        } finally {
+            // Report must NOT be completed
+            $this->assertNotEquals(KundliReport::STATUS_COMPLETED, $report2->fresh()->status);
+            $this->assertSame(KundliReport::STATUS_FAILED, $report2->fresh()->status);
+
+            // Temp file must be cleaned up
+            $tmpPath = $this->publicationService->getAttemptTempPath($report2->uuid, $workerId, 1);
+            $this->assertFileDoesNotExist($tmpPath);
+        }
+    }
+
+    /**
+     * Test failed worker launch does not leave job indefinitely marked as processing.
+     * When worker launcher fails, the job remains in 'pending' status so it can be retried.
+     */
+    public function test_failed_worker_launch_does_not_leave_job_processing(): void
+    {
+        \App\Services\Astrology\Calculation\CalculationWorkerLauncher::setLaunchHook(function () {
+            throw new \RuntimeException('Simulated process spawn failure on shared hosting');
+        });
+
+        $user = User::factory()->create();
+        $jobManager = app(CalculationJobManager::class);
+
+        // Find or create a new job
+        $jobInfo = $jobManager->findOrCreateJob('detailed_kundli_report', [
+            'report_uuid' => (string) Str::uuid(),
+            'language' => 'en',
+        ], $user->id);
+
+        $job = $jobInfo['job'];
+        $this->assertSame(AstrologyCalculationJob::STATUS_PENDING, $job->status);
+
+        // Attempt launch
+        $launcher = app(\App\Services\Astrology\Calculation\CalculationWorkerLauncher::class);
+        $launchResult = $launcher->launchWorkerIfNeeded();
+
+        $this->assertFalse($launchResult['launched']);
+        $this->assertSame('test_hook_exception', $launchResult['reason']);
+
+        // Job must NOT be in processing status; remains pending
+        $job->refresh();
+        $this->assertSame(AstrologyCalculationJob::STATUS_PENDING, $job->status);
+        $this->assertNull($job->worker_id);
+        $this->assertNull($job->lease_expires_at);
+
+        \App\Services\Astrology\Calculation\CalculationWorkerLauncher::setLaunchHook(null);
+    }
+
+    /**
+     * Test a stale worker cannot overwrite or delete a newer worker's published output.
+     */
+    public function test_stale_worker_cannot_overwrite_newer_workers_published_output(): void
+    {
+        $workerNew = 'worker_new';
+        $workerStale = 'worker_stale';
+
+        $report = $this->createReportWithDebit('processing');
+
+        // Worker New publishes valid report
+        $jobNew = $this->createProcessingJob($workerNew, 120);
+        $tmpNew = $this->publicationService->getAttemptTempPath($report->uuid, $workerNew, 1);
+        File::put($tmpNew, '%PDF-1.4 Legitimate Content from Worker New');
+
+        $published = $this->publicationService->publishReport(
+            report: $report,
+            tempFilePath: $tmpNew,
+            workerId: $workerNew,
+            job: $jobNew,
+            durationMs: 1200,
+            pageCount: 10
+        );
+        $this->assertTrue($published);
+
+        $paths = $this->publicationService->getFinalStoragePath($report->uuid);
+        $legitimateHash = hash_file('sha256', $paths['absolute']);
+        $this->assertSame($legitimateHash, $report->fresh()->file_hash);
+
+        // Now stale worker with expired job attempts to publish malicious/stale file
+        $jobStale = $this->createProcessingJob($workerStale, 10);
+        $this->travel(15)->seconds(); // Stale lease expires
+
+        $tmpStale = $this->publicationService->getAttemptTempPath($report->uuid, $workerStale, 2);
+        File::put($tmpStale, '%PDF-1.4 Stale Content to be Blocked');
+
+        $stalePublishResult = $this->publicationService->publishReport(
+            report: $report->fresh(),
+            tempFilePath: $tmpStale,
+            workerId: $workerStale,
+            job: $jobStale,
+            durationMs: 3000
+        );
+
+        $this->assertFalse($stalePublishResult, "Stale worker publication must be rejected");
+
+        // The legitimate published file must be preserved intact!
+        $this->assertFileExists($paths['absolute']);
+        $this->assertSame($legitimateHash, hash_file('sha256', $paths['absolute']));
+        $this->assertSame($legitimateHash, $report->fresh()->file_hash);
+
+        // Stale tmp file must be cleaned up
+        $this->assertFileDoesNotExist($tmpStale);
+
+        @unlink($paths['absolute']);
+    }
+
+    /**
+     * Test failure during publication does not mark report completed:
+     * If temporary file is missing or corrupted, publication fails and report does not complete.
+     */
+    public function test_failure_during_publication_does_not_mark_report_completed(): void
+    {
+        $workerId = 'worker_corrupted';
+        $job = $this->createProcessingJob($workerId, 120);
+        $report = $this->createReportWithDebit('processing');
+
+        // Missing/non-existent temporary file
+        $missingPath = storage_path('app/private/reports/tmp/non_existent.pdf');
+
+        $published = $this->publicationService->publishReport(
+            report: $report,
+            tempFilePath: $missingPath,
+            workerId: $workerId,
+            job: $job,
+            durationMs: 500
+        );
+
+        $this->assertFalse($published);
+
+        // Report must NOT be marked completed
+        $this->assertSame(KundliReport::STATUS_PROCESSING, $report->fresh()->status);
+        $this->assertNull($report->fresh()->file_path);
+    }
 }

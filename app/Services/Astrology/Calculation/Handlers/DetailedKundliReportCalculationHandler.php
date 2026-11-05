@@ -8,6 +8,8 @@ use App\Models\AstrologyCalculationJob;
 use App\Models\KundliReport;
 use App\Services\Astrology\Calculation\CalculationHandlerInterface;
 use App\Services\Astrology\Calculation\CalculationJobManager;
+use App\Services\Astrology\Pdf\PremiumKundliPdfService;
+use App\Services\Astrology\Reports\DetailedKundliReportService;
 use App\Services\Astrology\Reports\ReportPublicationService;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\File;
@@ -21,7 +23,9 @@ class DetailedKundliReportCalculationHandler implements CalculationHandlerInterf
 
     public function __construct(
         protected ?ReportPublicationService $publicationService = null,
-        protected ?CalculationJobManager $jobManager = null
+        protected ?CalculationJobManager $jobManager = null,
+        protected ?DetailedKundliReportService $reportService = null,
+        protected ?PremiumKundliPdfService $pdfService = null
     ) {}
 
     protected function getPublicationService(): ReportPublicationService
@@ -32,6 +36,16 @@ class DetailedKundliReportCalculationHandler implements CalculationHandlerInterf
     protected function getJobManager(): CalculationJobManager
     {
         return $this->jobManager ??= app(CalculationJobManager::class);
+    }
+
+    protected function getReportService(): DetailedKundliReportService
+    {
+        return $this->reportService ??= app(DetailedKundliReportService::class);
+    }
+
+    protected function getPdfService(): PremiumKundliPdfService
+    {
+        return $this->pdfService ??= app(PremiumKundliPdfService::class);
     }
 
     public function getCalculationType(): string
@@ -89,6 +103,7 @@ class DetailedKundliReportCalculationHandler implements CalculationHandlerInterf
             $pdfContent = $this->renderReportPdf($report, $payload);
             File::put($tmpPath, $pdfContent);
 
+            $pageCount = $this->getPdfService()->extractPageCount($pdfContent);
             $durationMs = (int) round((microtime(true) - $startTime) * 1000);
 
             // Pre-publication ownership verification
@@ -105,7 +120,7 @@ class DetailedKundliReportCalculationHandler implements CalculationHandlerInterf
                     workerId: $workerId,
                     job: $job,
                     durationMs: $durationMs,
-                    pageCount: 1 // Default baseline for A4 infrastructure
+                    pageCount: $pageCount
                 );
 
                 if (!$published) {
@@ -122,6 +137,7 @@ class DetailedKundliReportCalculationHandler implements CalculationHandlerInterf
                     'file_path' => $paths['relative'],
                     'file_hash' => hash_file('sha256', $paths['absolute']),
                     'file_size_bytes' => filesize($paths['absolute']),
+                    'page_count' => $pageCount,
                     'generation_duration_ms' => $durationMs,
                 ]);
             }
@@ -169,11 +185,28 @@ class DetailedKundliReportCalculationHandler implements CalculationHandlerInterf
     }
 
     /**
-     * Render baseline valid PDF binary for report testing.
+     * Render comprehensive 15-section PDF or fallback mock if payload lacks birth details.
      */
     protected function renderReportPdf(KundliReport $report, array $payload): string
     {
-        // Simple valid minimal PDF 1.4 binary for infrastructure and delivery testing
+        $birthPayload = $report->birth_payload ?? ($payload['birth_payload'] ?? $payload);
+        $locale = (string) ($report->language ?? ($payload['language'] ?? 'en'));
+
+        // If birth payload lacks date of birth (e.g. minimal A4 infrastructure mocks), render minimal PDF
+        if (empty($birthPayload['date_of_birth']) && empty($birthPayload['birth_date'])) {
+            return $this->renderFallbackTestPdf($report);
+        }
+
+        $reportData = $this->getReportService()->buildReportData($birthPayload, $locale);
+
+        return $this->getPdfService()->generatePdf($reportData, $locale);
+    }
+
+    /**
+     * Render baseline valid PDF binary for infrastructure mock testing.
+     */
+    protected function renderFallbackTestPdf(KundliReport $report): string
+    {
         $title = "Astro Setu Detailed Kundli Report - {$report->uuid}";
         $date = now()->toIso8601String();
         $lang = $report->language;

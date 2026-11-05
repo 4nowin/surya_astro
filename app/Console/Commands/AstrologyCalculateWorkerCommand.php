@@ -72,8 +72,15 @@ class AstrologyCalculateWorkerCommand extends Command
                 try {
                     $handler = $registry->get($job->calculation_type);
 
+                    // Pass worker ownership context and attempt to handler payload
+                    $jobPayload = array_merge($job->payload, [
+                        'worker_id' => $workerId,
+                        'job_id' => $job->job_id,
+                        'attempt' => $job->attempts,
+                    ]);
+
                     // Perform the calculation
-                    $result = $handler->calculate($job->payload);
+                    $result = $handler->calculate($jobPayload);
 
                     // Store result in durable cache / storage
                     $cacheKey = $handler->storeResult($job->canonical_key, $result, $job->payload);
