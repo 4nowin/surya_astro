@@ -1,0 +1,95 @@
+{
+  "provenance": {
+    "source_title": "Notable Horoscopes & Three Hundred Important Combinations",
+    "author": "Dr. B.V. Raman",
+    "publisher": "Motilal Banarsidass / Raman Publications, Bangalore",
+    "chapter_or_chart_id": "Notable Horoscopes: Chapter 66 (pp. 351–354), Chart No. 66; Three Hundred Important Combinations: Yoga No. 21 (Sasa Yoga), Chart No. 21 (p. 16)",
+    "subject_name": "King George VI",
+    "birth_date": "1895-12-14",
+    "birth_time": "03:05:00",
+    "birthplace": "Sandringham, Norfolk, England",
+    "coordinates": {
+      "latitude": 52.85,
+      "longitude": 0.5167
+    },
+    "timezone": "Europe/London",
+    "birth_time_precision": "verified",
+    "time_reliability": "Official royal birth circular (3:05 AM LMT/GMT)."
+  },
+  "published_data": {
+    "ayanamsha": "Raman Ayanamsha (~20° 57' for 1895)",
+    "published_lagna": "Libra 4° 0' (184° 00')",
+    "published_planetary_positions": {
+      "saturn": "Libra (House 1, exalted)",
+      "venus": "Libra (House 1, own sign)",
+      "jupiter": "Cancer (House 10, exalted)",
+      "sun": "Scorpio (House 2)",
+      "moon": "Scorpio (House 2)",
+      "mars": "Scorpio (House 2)",
+      "mercury": "Scorpio (House 2)"
+    }
+  },
+  "evidence_classification": {
+    "sasa_yoga": {
+      "category": "Category A",
+      "documented": true,
+      "citation": "Three Hundred Important Combinations, Yoga No. 21, Chart No. 21 (p. 16); Notable Horoscopes, Ch. 66 (p. 352)",
+      "notes": "Sasa Yoga is explicitly cited by Dr. Raman under Chart No. 21 as formed by Saturn exalted in Libra in the 1st Kendra (Lagna)."
+    },
+    "malavya_yoga": {
+      "category": "Category A",
+      "documented": true,
+      "citation": "Notable Horoscopes, Ch. 66 (p. 352)",
+      "notes": "Dr. Raman explicitly writes: 'Venus occupies Lagna which is his own sign causing Malavya Yoga' (Notable Horoscopes, p. 352)."
+    },
+    "hamsa_yoga": {
+      "category": "Category B",
+      "documented": false,
+      "citation": "Notable Horoscopes, Ch. 66",
+      "notes": "Jupiter is published in Cancer (exalted) in the 10th Kendra from Libra Lagna; Hamsa Yoga is independently derived from published coordinates."
+    },
+    "manglik_dosha": {
+      "category": "Category B",
+      "documented": false,
+      "citation": "Notable Horoscopes, Ch. 66",
+      "notes": "Mars occupies the 2nd house in Scorpio (not 1, 4, 7, 8, 12); non-Manglik status (no_dosha) is independently derived from published coordinates."
+    }
+  },
+  "astro_setu_benchmark_assertions": {
+    "lagna_rashi_id": 7,
+    "lagna_name": "Libra",
+    "yogas": {
+      "panch_mahapurusha": {
+        "has_any_mahapurusha": true,
+        "formed_yogas": ["hamsa", "malavya", "sasa"],
+        "sasa": {
+          "is_formed": true,
+          "house": 1,
+          "planet": "saturn",
+          "sign_id": 7
+        },
+        "hamsa": {
+          "is_formed": true,
+          "house": 10,
+          "planet": "jupiter",
+          "sign_id": 4
+        },
+        "malavya": {
+          "is_formed": true,
+          "house": 1,
+          "planet": "venus",
+          "sign_id": 7
+        }
+      },
+      "gaja_kesari": {
+        "is_formed": false,
+        "house_from_moon": 9
+      }
+    },
+    "manglik_dosha": {
+      "is_manglik_formed": false,
+      "source_house": 2,
+      "final_status": "no_dosha"
+    }
+  }
+}

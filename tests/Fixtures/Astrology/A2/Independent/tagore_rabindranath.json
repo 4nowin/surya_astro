@@ -1,0 +1,53 @@
+{
+  "provenance": {
+    "source_title": "Notable Horoscopes",
+    "author": "Dr. B.V. Raman",
+    "publisher": "Motilal Banarsidass / Raman Publications, Bangalore",
+    "chapter_or_chart_id": "Notable Horoscopes: Chapter 35 (pp. 188–193), Chart No. 35",
+    "subject_name": "Rabindranath Tagore",
+    "birth_date": "1861-05-07",
+    "birth_time": "02:51:00",
+    "birthplace": "Calcutta, India",
+    "coordinates": {
+      "latitude": 22.5667,
+      "longitude": 88.3667
+    },
+    "timezone": "Asia/Kolkata",
+    "birth_time_precision": "uncertain",
+    "time_reliability": "Published by Raman in Chapter 35 as 2:51 AM LMT. Bengali family records (Thakur Bari diary) record 21 danda 45 pal after sunset (~2:38 AM LMT). Web aggregators previously cited 4:02 AM without historical provenance. Unsuitable for reliable birth-time/Lagna-dependent benchmarks; retained solely for time-independent planetary conjunction analysis (Sun & Mercury in Aries)."
+  },
+  "published_data": {
+    "ayanamsha": "Raman Ayanamsha (~20° 28' for 1861)",
+    "published_lagna": "Pisces (approx 27° 12' / 357° 12' at Raman's adopted time)",
+    "published_planetary_positions": {
+      "sun": "Aries 24° 53'",
+      "mercury": "Aries 17° 23'",
+      "moon": "Pisces (Revati Nakshatra)",
+      "jupiter": "Cancer (exalted)",
+      "venus": "Aries",
+      "saturn": "Leo",
+      "mars": "Gemini"
+    }
+  },
+  "evidence_classification": {
+    "budhaditya_yoga": {
+      "category": "Category B",
+      "documented": false,
+      "citation": "Notable Horoscopes, Ch. 35 (pp. 188–193)",
+      "notes": "Sun and Mercury both occupy Aries throughout the entire civil day of May 7, 1861. Budhaditya Yoga is independently derived from planetary coordinates (invariant to birth-time variation within May 7, 1861)."
+    },
+    "lagna_dependent_yogas": {
+      "category": "Category C",
+      "documented": false,
+      "notes": "Lagna-dependent yogas and house assignments are classified as Category C (unreliable / unsuitable) due to historical discrepancies between 2:38 AM, 2:51 AM, and 4:02 AM."
+    }
+  },
+  "astro_setu_benchmark_assertions": {
+    "yogas": {
+      "budhaditya": {
+        "is_formed": true,
+        "sign_id": 1
+      }
+    }
+  }
+}

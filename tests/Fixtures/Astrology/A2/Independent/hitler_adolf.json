@@ -1,0 +1,82 @@
+{
+  "provenance": {
+    "source_title": "Notable Horoscopes & Three Hundred Important Combinations",
+    "author": "Dr. B.V. Raman",
+    "publisher": "Motilal Banarsidass / Raman Publications, Bangalore",
+    "chapter_or_chart_id": "Notable Horoscopes: Chapter 58 (pp. 311–316), Chart No. 58; Three Hundred Important Combinations: Yoga No. 22 (Ruchaka Yoga), Chart No. 23 (p. 17)",
+    "subject_name": "Adolf Hitler",
+    "birth_date": "1889-04-20",
+    "birth_time": "18:30:00",
+    "birthplace": "Braunau am Inn, Austria",
+    "coordinates": {
+      "latitude": 48.0,
+      "longitude": 13.0333
+    },
+    "timezone": "Europe/Vienna",
+    "birth_time_precision": "verified",
+    "time_reliability": "Official civil birth registry entry (6:30 PM LMT / approx 17:38 UTC)."
+  },
+  "published_data": {
+    "ayanamsha": "Raman Ayanamsha (~20° 52' for 1889)",
+    "published_lagna": "Libra 1° 0' (181° 00')",
+    "published_planetary_positions": {
+      "sun": "Aries 9° 56' (House 7)",
+      "moon": "Sagittarius 255° 46' (House 3)",
+      "mars": "Aries 25° 31' (House 7, own sign)",
+      "mercury": "Aries 4° 48' (House 7)",
+      "jupiter": "Sagittarius 257° 23' (House 3)",
+      "venus": "Aries 25° 50' (House 7)",
+      "saturn": "Cancer 112° 35' (House 10)"
+    }
+  },
+  "evidence_classification": {
+    "ruchaka_yoga": {
+      "category": "Category A",
+      "documented": true,
+      "citation": "Three Hundred Important Combinations, Yoga No. 22, Chart No. 23 (p. 17); Notable Horoscopes, Ch. 58 (p. 312)",
+      "notes": "Ruchaka Yoga is explicitly documented by Dr. Raman as formed by Mars occupying its own sign Aries in the 7th Kendra from Libra Lagna."
+    },
+    "manglik_dosha": {
+      "category": "Category A",
+      "documented": true,
+      "citation": "Notable Horoscopes, Ch. 58 (p. 312)",
+      "notes": "Kuja Dosha in 7th house explicitly analyzed by Dr. Raman as a severe affliction. Jupiter's aspect from Sagittarius is ineligible for cancellation because Libra Lagna makes Jupiter lord of 3rd and 6th (functional malefic). Dosha confirmed."
+    },
+    "budhaditya_yoga": {
+      "category": "Category B",
+      "documented": false,
+      "citation": "Notable Horoscopes, Ch. 58",
+      "notes": "Sun and Mercury both occupy Aries in the 7th house; Budhaditya Yoga is independently derived from published coordinates."
+    }
+  },
+  "astro_setu_benchmark_assertions": {
+    "lagna_rashi_id": 7,
+    "lagna_name": "Libra",
+    "yogas": {
+      "panch_mahapurusha": {
+        "has_any_mahapurusha": true,
+        "formed_yogas": ["ruchaka"],
+        "ruchaka": {
+          "is_formed": true,
+          "house": 7,
+          "planet": "mars",
+          "sign_id": 1
+        }
+      },
+      "gaja_kesari": {
+        "is_formed": true,
+        "house_from_moon": 1
+      },
+      "budhaditya": {
+        "is_formed": true,
+        "is_combust": true
+      }
+    },
+    "manglik_dosha": {
+      "is_manglik_formed": true,
+      "source_house": 7,
+      "final_status": "dosha_confirmed",
+      "applied_bhangas": []
+    }
+  }
+}

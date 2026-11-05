@@ -1,0 +1,68 @@
+{
+  "provenance": {
+    "source_title": "My Experiences in Astrology & Notable Horoscopes (Preface)",
+    "author": "Dr. B.V. Raman",
+    "publisher": "UBS Publishers' Distributors / Raman Publications, Bangalore",
+    "chapter_or_chart_id": "My Experiences in Astrology: Author Birth Data (p. 1); Notable Horoscopes (Preface)",
+    "subject_name": "Dr. B.V. Raman",
+    "birth_date": "1912-08-08",
+    "birth_time": "19:42:44",
+    "birthplace": "Nedathur / Bangalore, India",
+    "coordinates": {
+      "latitude": 13.0,
+      "longitude": 77.5833
+    },
+    "timezone": "Asia/Kolkata",
+    "birth_time_precision": "verified",
+    "time_reliability": "Rectified and documented by Dr. Raman as 7:42:44 PM IST (My Experiences in Astrology); earlier unrectified estimates cited 7:35 PM / 7:40 PM IST."
+  },
+  "published_data": {
+    "ayanamsha": "Raman Ayanamsha (~21° 11' for 1912)",
+    "published_lagna": "Aquarius (approx 9° 41')",
+    "published_planetary_positions": {
+      "moon": "Taurus (Mrigashira Nakshatra Pada 1; 23° 20' to 26° 40' Taurus); un-interpolated noon ephemeris position was 19° 07' Taurus (Rohini)",
+      "saturn": "Taurus 10° 08' (House 4)",
+      "jupiter": "Scorpio 12° 57' (House 10)",
+      "mars": "Leo (House 7)",
+      "sun": "Cancer 23° (House 6)",
+      "mercury": "Leo 13° (House 7)",
+      "venus": "Leo 2° (House 7)"
+    }
+  },
+  "evidence_classification": {
+    "gaja_kesari_yoga": {
+      "category": "Category A",
+      "documented": true,
+      "citation": "Autobiography of a Vedic Astrologer; My Experiences in Astrology; Notable Horoscopes",
+      "notes": "Gaja Kesari Yoga explicitly documented by Dr. Raman as the foundational pillar of his nativity, formed along the 4th/10th Kendra axis between Moon in Taurus (4th house) and Jupiter in Scorpio (10th house)."
+    },
+    "manglik_dosha": {
+      "category": "Category B",
+      "documented": false,
+      "citation": "My Experiences in Astrology",
+      "notes": "Mars is placed in the 7th house in Leo from Aquarius Lagna. Manglik Dosha is formed and confirmed (Leo placement cancels only in the 1st house under Bhanga 5, not the 7th); independently derived from published coordinates."
+    }
+  },
+  "astro_setu_benchmark_assertions": {
+    "lagna_rashi_id": 11,
+    "lagna_name": "Aquarius",
+    "yogas": {
+      "panch_mahapurusha": {
+        "has_any_mahapurusha": false
+      },
+      "gaja_kesari": {
+        "is_formed": true,
+        "house_from_moon": 7
+      },
+      "budhaditya": {
+        "is_formed": false
+      }
+    },
+    "manglik_dosha": {
+      "is_manglik_formed": true,
+      "source_house": 7,
+      "final_status": "dosha_confirmed",
+      "applied_bhangas": []
+    }
+  }
+}

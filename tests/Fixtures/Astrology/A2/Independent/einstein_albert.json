@@ -1,0 +1,82 @@
+{
+  "provenance": {
+    "source_title": "Notable Horoscopes",
+    "author": "Dr. B.V. Raman",
+    "publisher": "Motilal Banarsidass / Raman Publications, Bangalore",
+    "chapter_or_chart_id": "Notable Horoscopes: Chapter 45 (pp. 244–248), Chart No. 45",
+    "subject_name": "Albert Einstein",
+    "birth_date": "1879-03-14",
+    "birth_time": "11:30:00",
+    "birthplace": "Ulm, Germany",
+    "coordinates": {
+      "latitude": 48.4,
+      "longitude": 10.0
+    },
+    "timezone": "Europe/Berlin",
+    "birth_time_precision": "verified",
+    "time_reliability": "Official birth certificate record (11:30 AM LMT / approx 10:50 UTC)."
+  },
+  "published_data": {
+    "ayanamsha": "Raman Ayanamsha (~20° 43' for 1879)",
+    "published_lagna": "Gemini 15° 14' (75° 14', in Ardra Nakshatra Pada 3)",
+    "published_planetary_positions": {
+      "sun": "Pisces (House 10)",
+      "moon": "Scorpio (House 6, Jyeshtha Nakshatra)",
+      "mars": "Capricorn (House 8, exalted)",
+      "mercury": "Pisces (House 10, Lagna lord)",
+      "jupiter": "Aquarius (House 9)",
+      "venus": "Pisces (House 10, exalted)",
+      "saturn": "Pisces (House 10)"
+    }
+  },
+  "evidence_classification": {
+    "malavya_yoga": {
+      "category": "Category B",
+      "documented": false,
+      "citation": "Notable Horoscopes, Ch. 45 (pp. 244–248)",
+      "notes": "Venus is published as exalted in Pisces in the 10th Kendra from Gemini Lagna; Malavya Yoga is independently derived from published coordinates."
+    },
+    "budhaditya_yoga": {
+      "category": "Category B",
+      "documented": false,
+      "citation": "Notable Horoscopes, Ch. 45 (pp. 244–248)",
+      "notes": "Sun and Mercury conjunction in 10th house Pisces analyzed by Dr. Raman in context of intellectual breakthrough (Buddhi Chaturya / Neechabhanga). Budhaditya Yoga is independently derived from published coordinates."
+    },
+    "manglik_dosha": {
+      "category": "Category B",
+      "documented": false,
+      "citation": "Notable Horoscopes, Ch. 45 (pp. 244–248)",
+      "notes": "Mars is published in the 8th house in its exaltation sign Capricorn. Kuja Dosha is formed in 8th house and cancelled via Bhanga 3 (BHANGA_3_CAPRICORN_7TH_8TH); independently derived from published coordinates."
+    }
+  },
+  "astro_setu_benchmark_assertions": {
+    "lagna_rashi_id": 3,
+    "lagna_name": "Gemini",
+    "yogas": {
+      "panch_mahapurusha": {
+        "has_any_mahapurusha": true,
+        "formed_yogas": ["malavya"],
+        "malavya": {
+          "is_formed": true,
+          "house": 10,
+          "planet": "venus",
+          "sign_id": 12
+        }
+      },
+      "gaja_kesari": {
+        "is_formed": true,
+        "house_from_moon": 4
+      },
+      "budhaditya": {
+        "is_formed": true,
+        "is_combust": true
+      }
+    },
+    "manglik_dosha": {
+      "is_manglik_formed": true,
+      "source_house": 8,
+      "final_status": "dosha_cancelled",
+      "applied_bhangas": ["BHANGA_3_CAPRICORN_7TH_8TH"]
+    }
+  }
+}

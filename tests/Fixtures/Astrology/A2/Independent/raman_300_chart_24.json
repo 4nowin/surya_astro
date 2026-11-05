@@ -1,0 +1,75 @@
+{
+  "provenance": {
+    "source_title": "Three Hundred Important Combinations",
+    "author": "Dr. B.V. Raman",
+    "publisher": "Motilal Banarsidass / Raman Publications, Bangalore",
+    "chapter_or_chart_id": "Three Hundred Important Combinations: Yoga No. 23/24 (Bhadra Yoga), Chart No. 24 (pp. 18–19)",
+    "subject_name": "Chart No. 24 (Illustrative Bhadra Yoga)",
+    "birth_date": "1883-10-23",
+    "birth_time": "10:18:00",
+    "birthplace": "Southern India",
+    "coordinates": {
+      "latitude": 12.0,
+      "longitude": 77.5667
+    },
+    "timezone": "Asia/Kolkata",
+    "birth_time_precision": "verified",
+    "time_reliability": "Gh. 10-45 after sunrise recorded in traditional Hindu time units (approx 10:18 AM LMT)."
+  },
+  "published_data": {
+    "ayanamsha": "Raman Ayanamsha (~20° 47' for 1883)",
+    "published_lagna": "Sagittarius (approx 5° 43' / 245° 43')",
+    "published_planetary_positions": {
+      "mercury": "Virgo 168° 59' (House 10, own and exalted sign)",
+      "sun": "Libra (House 11)",
+      "moon": "Cancer 100° (House 8)",
+      "mars": "Cancer 102° (House 8, debilitated)",
+      "jupiter": "Cancer 100° (House 8, exalted)",
+      "venus": "Libra 195° (House 11)",
+      "saturn": "Taurus 47° (House 6)"
+    }
+  },
+  "evidence_classification": {
+    "bhadra_yoga": {
+      "category": "Category A",
+      "documented": true,
+      "citation": "Three Hundred Important Combinations, Yoga No. 23/24, Chart No. 24 (pp. 18–19)",
+      "notes": "Bhadra Yoga is explicitly cited by Dr. Raman as Chart No. 24, formed by Mercury occupying the 10th Kendra from Sagittarius Lagna in its own/exaltation sign Virgo without malefic affliction."
+    },
+    "manglik_dosha": {
+      "category": "Category B",
+      "documented": false,
+      "citation": "Three Hundred Important Combinations, Chart 24",
+      "notes": "Mars is published in Cancer in the 8th house (debilitated). Kuja Dosha is formed; debilitation in Cancer strictly does not receive a placement-based cancellation. Status: dosha_confirmed; independently derived from published coordinates."
+    }
+  },
+  "astro_setu_benchmark_assertions": {
+    "lagna_rashi_id": 9,
+    "lagna_name": "Sagittarius",
+    "yogas": {
+      "panch_mahapurusha": {
+        "has_any_mahapurusha": true,
+        "formed_yogas": ["bhadra"],
+        "bhadra": {
+          "is_formed": true,
+          "house": 10,
+          "planet": "mercury",
+          "sign_id": 6
+        }
+      },
+      "gaja_kesari": {
+        "is_formed": true,
+        "house_from_moon": 1
+      },
+      "budhaditya": {
+        "is_formed": false
+      }
+    },
+    "manglik_dosha": {
+      "is_manglik_formed": true,
+      "source_house": 8,
+      "final_status": "dosha_confirmed",
+      "applied_bhangas": []
+    }
+  }
+}
