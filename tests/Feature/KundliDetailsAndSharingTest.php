@@ -237,4 +237,101 @@ class KundliDetailsAndSharingTest extends TestCase
             ->assertJsonPath('success', true)
             ->assertJsonPath('data.status', 'pending');
     }
+
+    public function test_pdf_download_from_saved_kundli_returns_valid_pdf(): void
+    {
+        $this->primeCalculation();
+        Sanctum::actingAs($this->user);
+
+        // Save snapshot
+        $saveRes = $this->postJson('/api/v1/kundli/save', [
+            'profile_id' => $this->profile->id,
+            'title' => 'Snapshot For PDF Test',
+        ]);
+        $saveRes->assertStatus(201);
+        $savedId = $saveRes->json('data.id');
+
+        // Request PDF via saved_id (both EN and HI)
+        $resEn = $this->get("/api/v1/kundli/pdf?saved_id={$savedId}&locale=en");
+        $resEn->assertStatus(200)
+            ->assertHeader('Content-Type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF-', $resEn->getContent());
+
+        $resHi = $this->get("/api/v1/kundli/pdf?saved_id={$savedId}&locale=hi");
+        $resHi->assertStatus(200)
+            ->assertHeader('Content-Type', 'application/pdf');
+        $this->assertStringStartsWith('%PDF-', $resHi->getContent());
+    }
+
+    public function test_pdf_download_fails_with_403_for_other_users_saved_kundli(): void
+    {
+        $this->primeCalculation();
+        Sanctum::actingAs($this->user);
+
+        $saveRes = $this->postJson('/api/v1/kundli/save', [
+            'profile_id' => $this->profile->id,
+            'title' => 'Private Snapshot',
+        ]);
+        $savedId = $saveRes->json('data.id');
+
+        $otherUser = User::factory()->create();
+        Sanctum::actingAs($otherUser);
+
+        $res = $this->getJson("/api/v1/kundli/pdf?saved_id={$savedId}&locale=en");
+        $res->assertStatus(403)
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('message', 'Unauthorized access to saved Kundli.');
+    }
+
+    public function test_pdf_download_fails_with_403_for_other_users_profile_id(): void
+    {
+        $otherUser = User::factory()->create();
+        Sanctum::actingAs($otherUser);
+
+        $res = $this->getJson("/api/v1/kundli/pdf?profile_id={$this->profile->id}&locale=en");
+        $res->assertStatus(403)
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('message', 'Unauthorized access to astrology profile.');
+    }
+
+    public function test_pdf_download_fails_with_404_for_non_existent_saved_or_profile_id(): void
+    {
+        Sanctum::actingAs($this->user);
+
+        $resSaved = $this->getJson('/api/v1/kundli/pdf?saved_id=999999');
+        $resSaved->assertStatus(404)
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('message', 'Saved Kundli not found.');
+
+        $resProfile = $this->getJson('/api/v1/kundli/pdf?profile_id=999999');
+        $resProfile->assertStatus(404)
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('message', 'Astrology profile not found.');
+    }
+
+    public function test_pdf_download_returns_422_when_saved_chart_data_is_incomplete(): void
+    {
+        Sanctum::actingAs($this->user);
+
+        $corruptSaved = SavedKundli::create([
+            'user_id' => $this->user->id,
+            'profile_id' => $this->profile->id,
+            'title' => 'Corrupted Chart',
+            'person_name' => 'Aditya',
+            'canonical_key' => $this->profile->computeCanonicalKey(),
+            'date_of_birth' => $this->profile->date_of_birth,
+            'birth_time' => $this->profile->birth_time,
+            'birth_time_precision' => $this->profile->birth_time_precision,
+            'birth_city' => $this->profile->birth_city,
+            'latitude' => $this->profile->latitude,
+            'longitude' => $this->profile->longitude,
+            'timezone' => $this->profile->timezone,
+            'chart_data' => ['incomplete' => true],
+        ]);
+
+        $res = $this->getJson("/api/v1/kundli/pdf?saved_id={$corruptSaved->id}");
+        $res->assertStatus(422)
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('message', 'Kundli calculation data is incomplete or unprocessable for PDF generation.');
+    }
 }

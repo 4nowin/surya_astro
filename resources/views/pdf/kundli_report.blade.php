@@ -217,14 +217,17 @@
                 <td class="meta-label">{{ $locale === 'hi' ? 'लग्न राशि' : 'Ascendant (Lagna)' }}:</td>
                 <td class="meta-value">
                     @if(($kundli['ascendant']['status'] ?? '') === 'confirmed')
-                        <strong>{{ $locale === 'hi' ? ($kundli['ascendant']['vedic_name'] ?? $kundli['ascendant']['name']) : $kundli['ascendant']['name'] }}</strong>
+                        <strong>{{ $locale === 'hi' ? ($kundli['ascendant']['vedic_name'] ?? ($kundli['ascendant']['name'] ?? '-')) : ($kundli['ascendant']['name'] ?? '-') }}</strong>
                     @else
                         <em>{{ $locale === 'hi' ? 'समय अनिश्चित' : 'Deferred (Approx Time)' }}</em>
                     @endif
                 </td>
                 <td class="meta-label">{{ $locale === 'hi' ? 'चंद्र राशि' : 'Moon Sign (Rashi)' }}:</td>
                 <td class="meta-value">
-                    <strong>{{ $locale === 'hi' ? ($kundli['planets']['moon']['rashi']['vedic_name'] ?? $kundli['planets']['moon']['rashi']['name']) : $kundli['planets']['moon']['rashi']['name'] }}</strong>
+                    @php
+                        $moonRashi = $kundli['planets']['moon']['rashi'] ?? [];
+                    @endphp
+                    <strong>{{ $locale === 'hi' ? ($moonRashi['vedic_name'] ?? ($moonRashi['name'] ?? '-')) : ($moonRashi['name'] ?? '-') }}</strong>
                 </td>
             </tr>
         </table>
@@ -266,12 +269,16 @@
             </thead>
             <tbody>
                 @foreach($kundli['planets'] ?? [] as $key => $p)
+                @php
+                    $pRashi = $p['rashi'] ?? [];
+                    $pNak = $p['nakshatra'] ?? [];
+                @endphp
                 <tr>
-                    <td><strong>{{ $locale === 'hi' ? ($p['name_hi'] ?? $p['name']) : $p['name'] }}</strong></td>
-                    <td>{{ $locale === 'hi' ? ($p['rashi']['vedic_name'] ?? $p['rashi']['name']) : $p['rashi']['name'] }}</td>
-                    <td>{{ $p['degree_dms'] ?? round((float)($p['longitude'] ?? 0), 2) . '°' }}</td>
-                    <td>{{ $locale === 'hi' ? ($p['nakshatra']['name_hi'] ?? $p['nakshatra']['name']) : $p['nakshatra']['name'] }} ({{ $p['nakshatra']['pada'] ?? 1 }})</td>
-                    <td>{{ $locale === 'hi' ? ($p['nakshatra']['lord_hi'] ?? $p['nakshatra']['lord']) : $p['nakshatra']['lord'] }}</td>
+                    <td><strong>{{ $locale === 'hi' ? ($p['name_hi'] ?? ($p['name'] ?? $key)) : ($p['name'] ?? $key) }}</strong></td>
+                    <td>{{ $locale === 'hi' ? ($pRashi['vedic_name'] ?? ($pRashi['name'] ?? '-')) : ($pRashi['name'] ?? '-') }}</td>
+                    <td>{{ $p['degree_dms'] ?? (isset($p['longitude']) ? round((float)$p['longitude'], 2) . '°' : '-') }}</td>
+                    <td>{{ $locale === 'hi' ? ($pNak['name_hi'] ?? ($pNak['name'] ?? '-')) : ($pNak['name'] ?? '-') }} ({{ $pNak['pada'] ?? 1 }})</td>
+                    <td>{{ $locale === 'hi' ? ($pNak['lord_hi'] ?? ($pNak['lord'] ?? '-')) : ($pNak['lord'] ?? '-') }}</td>
                     <td>
                         <span class="dignity-badge dignity-{{ $p['dignity'] ?? 'neutral' }}">
                             {{ ucfirst($p['dignity'] ?? 'neutral') }}
@@ -309,14 +316,14 @@
                 @php
                     $interpHouses = $kundli['interpretations'][$locale]['houses'] ?? ($kundli['interpretations']['en']['houses'] ?? []);
                 @endphp
-                @foreach($kundli['houses'] as $h)
+                @foreach(($kundli['houses'] ?? []) as $h)
                 @php
-                    $hNum = $h['house_number'];
+                    $hNum = $h['house_number'] ?? 0;
                     $hInfo = $interpHouses[$hNum] ?? null;
                     $residents = [];
                     $rawResidents = $h['planets'] ?? ($h['resident_planets'] ?? []);
                     foreach($rawResidents as $rp) {
-                        $residents[] = $locale === 'hi' ? ($rp['name_hi'] ?? $rp['name']) : $rp['name'];
+                        $residents[] = $locale === 'hi' ? ($rp['name_hi'] ?? ($rp['name'] ?? ($rp['key'] ?? ''))) : ($rp['name'] ?? ($rp['key'] ?? ''));
                     }
                     $signName = $locale === 'hi'
                         ? ($h['sign_vedic_name'] ?? ($h['rashi']['vedic_name'] ?? ($h['sign_name'] ?? ($h['rashi']['name'] ?? '-'))))
@@ -327,7 +334,7 @@
                 @endphp
                 <tr>
                     <td style="text-align: center; font-weight: bold;">{{ $hNum }}</td>
-                    <td>{{ $hInfo['title'] ?? ($h['house_number'] . 'th House') }}</td>
+                    <td>{{ $hInfo['title'] ?? ($hNum . 'th House') }}</td>
                     <td>{{ $signName }}</td>
                     <td>{{ $lordName }}</td>
                     <td>{{ count($residents) > 0 ? implode(', ', $residents) : '-' }}</td>
@@ -349,9 +356,9 @@
         <table class="meta-grid">
             <tr>
                 <td class="meta-label">{{ $locale === 'hi' ? 'नक्षत्र नाम' : 'Nakshatra' }}:</td>
-                <td class="meta-value"><strong>{{ $locale === 'hi' ? $nakshatraData['name_hi'] : $nakshatraData['name'] }}</strong> ({{ $locale === 'hi' ? 'पाद' : 'Pada' }} {{ $nakshatraData['pada'] }})</td>
+                <td class="meta-value"><strong>{{ $locale === 'hi' ? ($nakshatraData['name_hi'] ?? ($nakshatraData['name'] ?? '-')) : ($nakshatraData['name'] ?? '-') }}</strong> ({{ $locale === 'hi' ? 'पाद' : 'Pada' }} {{ $nakshatraData['pada'] ?? 1 }})</td>
                 <td class="meta-label">{{ $locale === 'hi' ? 'नक्षत्र स्वामी' : 'Ruling Lord' }}:</td>
-                <td class="meta-value">{{ $locale === 'hi' ? $nakshatraData['lord_hi'] : $nakshatraData['lord'] }}</td>
+                <td class="meta-value">{{ $locale === 'hi' ? ($nakshatraData['lord_hi'] ?? ($nakshatraData['lord'] ?? '-')) : ($nakshatraData['lord'] ?? '-') }}</td>
             </tr>
             <tr>
                 <td class="meta-label">{{ $locale === 'hi' ? 'अधिष्ठाता देवता' : 'Presiding Deity' }}:</td>
@@ -377,11 +384,14 @@
         @if(!empty($kundli['dasha']['current_dasha']))
         @php
             $curr = $kundli['dasha']['current_dasha'];
+            $mdLord = $locale === 'hi' ? ($curr['mahadasha']['lord_hi'] ?? ($curr['mahadasha']['lord'] ?? '-')) : ($curr['mahadasha']['lord'] ?? '-');
+            $adLord = $locale === 'hi' ? ($curr['antardasha']['lord_hi'] ?? ($curr['antardasha']['lord'] ?? '-')) : ($curr['antardasha']['lord'] ?? '-');
+            $endDate = !empty($curr['antardasha']['end_date']) ? \Carbon\Carbon::parse($curr['antardasha']['end_date'])->format('d M Y') : '-';
         @endphp
         <div style="background-color: #EBF8FF; border-left: 3px solid #3182CE; padding: 6px 10px; margin-bottom: 8px; font-size: 8.5px;">
             <strong>{{ $locale === 'hi' ? 'वर्तमान दशा:' : 'Active Dasha:' }}</strong>
-            {{ $locale === 'hi' ? $curr['mahadasha']['lord_hi'] : $curr['mahadasha']['lord'] }} - {{ $locale === 'hi' ? $curr['antardasha']['lord_hi'] : $curr['antardasha']['lord'] }}
-            ({{ $locale === 'hi' ? 'समाप्ति:' : 'Until:' }} {{ \Carbon\Carbon::parse($curr['antardasha']['end_date'])->format('d M Y') }})
+            {{ $mdLord }} - {{ $adLord }}
+            ({{ $locale === 'hi' ? 'समाप्ति:' : 'Until:' }} {{ $endDate }})
         </div>
         @endif
 
@@ -396,12 +406,17 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach($kundli['dasha']['mahadashas'] as $md)
+                @foreach(($kundli['dasha']['mahadashas'] ?? []) as $md)
+                @php
+                    $mdLord = $locale === 'hi' ? ($md['lord_hi'] ?? ($md['lord'] ?? '-')) : ($md['lord'] ?? '-');
+                    $mdStart = !empty($md['start_date']) ? \Carbon\Carbon::parse($md['start_date'])->format('d M Y') : '-';
+                    $mdEnd = !empty($md['end_date']) ? \Carbon\Carbon::parse($md['end_date'])->format('d M Y') : '-';
+                @endphp
                 <tr style="{{ !empty($md['is_current']) ? 'background-color: #FEFCBF; font-weight: bold;' : '' }}">
-                    <td>{{ $locale === 'hi' ? $md['lord_hi'] : $md['lord'] }}</td>
-                    <td>{{ $md['years'] }} {{ $locale === 'hi' ? 'वर्ष' : 'Yrs' }}</td>
-                    <td>{{ \Carbon\Carbon::parse($md['start_date'])->format('d M Y') }}</td>
-                    <td>{{ \Carbon\Carbon::parse($md['end_date'])->format('d M Y') }}</td>
+                    <td>{{ $mdLord }}</td>
+                    <td>{{ $md['years'] ?? 0 }} {{ $locale === 'hi' ? 'वर्ष' : 'Yrs' }}</td>
+                    <td>{{ $mdStart }}</td>
+                    <td>{{ $mdEnd }}</td>
                     <td>{{ !empty($md['is_current']) ? ($locale === 'hi' ? 'सक्रिय (Current)' : 'Active') : '-' }}</td>
                 </tr>
                 @endforeach

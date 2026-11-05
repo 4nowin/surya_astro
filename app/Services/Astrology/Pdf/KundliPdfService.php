@@ -73,8 +73,8 @@ class KundliPdfService
             'locale' => $locale,
             'lagnaSvg' => $lagnaSvg,
             'chandraSvg' => $chandraSvg,
-            'fontRegular' => resource_path('fonts/NotoSansDevanagari-Regular.ttf'),
-            'fontBold' => resource_path('fonts/NotoSansDevanagari-Bold.ttf'),
+            'fontRegular' => str_replace('\\', '/', resource_path('fonts/NotoSansDevanagari-Regular.ttf')),
+            'fontBold' => str_replace('\\', '/', resource_path('fonts/NotoSansDevanagari-Bold.ttf')),
         ])->render();
 
         $dompdf->loadHtml($html, 'UTF-8');
@@ -133,7 +133,9 @@ class KundliPdfService
                 if (!empty($residents)) {
                     $abbrs = [];
                     foreach ($residents as $rp) {
-                        $abbr = $locale === 'hi' ? ($rp['abbr_hi'] ?? $rp['abbr']) : $rp['abbr'];
+                        $abbr = $locale === 'hi'
+                            ? ($rp['abbr_hi'] ?? ($rp['abbr'] ?? ($rp['name'] ?? ($rp['key'] ?? ''))))
+                            : ($rp['abbr'] ?? ($rp['name'] ?? ($rp['key'] ?? '')));
                         if (!empty($rp['is_retrograde'])) {
                             $abbr .= '(R)';
                         }

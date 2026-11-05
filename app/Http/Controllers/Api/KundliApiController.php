@@ -502,15 +502,38 @@ class KundliApiController extends Controller
 
         $chartData = null;
         if ($request->filled('saved_id')) {
-            $saved = SavedKundli::where('user_id', $user->id)->find($request->input('saved_id'));
-            if ($saved) {
-                $chartData = $saved->chart_data;
+            $savedId = $request->input('saved_id');
+            $savedExistsAny = SavedKundli::find($savedId);
+            if ($savedExistsAny && $savedExistsAny->user_id !== $user->id) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthorized access to saved Kundli.',
+                ], 403);
             }
-        }
-
-        if (!$chartData) {
+            if (!$savedExistsAny) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Saved Kundli not found.',
+                ], 404);
+            }
+            $chartData = $savedExistsAny->chart_data;
+        } else {
             if ($request->filled('profile_id')) {
-                $profile = $user->astrologyProfiles()->find($request->input('profile_id'));
+                $profileId = $request->input('profile_id');
+                $profileExistsAny = UserAstrologyProfile::find($profileId);
+                if ($profileExistsAny && $profileExistsAny->user_id !== $user->id) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Unauthorized access to astrology profile.',
+                    ], 403);
+                }
+                if (!$profileExistsAny) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Astrology profile not found.',
+                    ], 404);
+                }
+                $profile = $profileExistsAny;
             } else {
                 $profile = $user->astrologyProfiles()->where('is_default', true)->first()
                     ?? $user->astrologyProfiles()->first();
@@ -537,7 +560,29 @@ class KundliApiController extends Controller
             }
         }
 
-        $pdfBinary = $this->pdfService->generatePdf($chartData, $locale);
+        if (!is_array($chartData) || empty($chartData['planets']) || empty($chartData['houses']) || empty($chartData['profile'])) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Kundli calculation data is incomplete or unprocessable for PDF generation.',
+            ], 422);
+        }
+
+        try {
+            $pdfBinary = $this->pdfService->generatePdf($chartData, $locale);
+        } catch (\Throwable $e) {
+            Log::error("Basic Kundli PDF generation failed: {$e->getMessage()}", [
+                'user_id' => $user->id,
+                'locale' => $locale,
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to generate Kundli PDF report. Please try again.',
+                'error' => config('app.debug') ? $e->getMessage() : null,
+            ], 500);
+        }
+
         $fileName = 'kundli_' . preg_replace('/[^a-z0-9_-]/i', '_', $chartData['profile']['name'] ?? 'report') . '.pdf';
 
         return response($pdfBinary, 200, [
