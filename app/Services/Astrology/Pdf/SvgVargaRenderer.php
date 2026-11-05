@@ -58,6 +58,11 @@ class SvgVargaRenderer
     ];
 
     /**
+     * Cached base64 encoded NotoSansDevanagari font data for standalone SVG embedding.
+     */
+    protected static ?string $devanagariFontBase64 = null;
+
+    /**
      * Render a standard North Indian diamond chart SVG.
      *
      * @param array<int, array<string, mixed>> $houses Keyed or indexed array of houses (1..12)
@@ -79,15 +84,39 @@ class SvgVargaRenderer
         }
 
         $fontFamily = $locale === 'hi'
-            ? "'Noto Sans Devanagari', 'DejaVu Sans', sans-serif"
-            : "'DejaVu Sans', Arial, sans-serif";
+            ? 'NotoDevanagari'
+            : 'DejaVu Sans';
 
         $useDevanagariNumerals = (bool) ($options['devanagari_numerals'] ?? ($locale === 'hi'));
         $showAscDegree = $options['ascendant_degree'] ?? null;
-        $maxChartWidth = $options['max_width'] ?? '320px';
+        $maxChartWidth = $options['max_width'] ?? '240px';
 
         $svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="100%" height="100%" ' .
             'style="max-width:' . htmlspecialchars($maxChartWidth) . ';margin:0 auto;display:block;">';
+
+        // Embed Noto Sans Devanagari font in SVG defs for standalone image rendering across all environments
+        if ($locale === 'hi') {
+            if (self::$devanagariFontBase64 === null) {
+                $fontPath = resource_path('fonts/NotoSansDevanagari-Regular.ttf');
+                if (file_exists($fontPath)) {
+                    $fontData = @file_get_contents($fontPath);
+                    if ($fontData !== false) {
+                        self::$devanagariFontBase64 = base64_encode($fontData);
+                    }
+                }
+            }
+
+            if (self::$devanagariFontBase64 !== null) {
+                $svg .= '<defs><style>' .
+                    '@font-face {' .
+                    'font-family: "NotoDevanagari";' .
+                    'src: url("data:font/truetype;charset=utf-8;base64,' . self::$devanagariFontBase64 . '") format("truetype");' .
+                    'font-weight: normal; font-style: normal;' .
+                    '}' .
+                    'text { font-family: "NotoDevanagari", "Noto Sans Devanagari", sans-serif; }' .
+                    '</style></defs>';
+            }
+        }
 
         // Background styling
         $svg .= '<rect x="0" y="0" width="400" height="400" fill="#FFFDF8" stroke="#D4AF37" stroke-width="2.5" rx="3"/>';
