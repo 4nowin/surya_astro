@@ -1,14 +1,14 @@
 {
     "notodevanagari": {
-        "normal": "\/home\/u736464956\/domains\/cubebitz.com\/public_html\/astrosetu_web\/storage\/fonts\/notodevanagari_normal_bbb3d2fbc754e6c51f089aebcc2e9f4c",
-        "bold": "\/home\/u736464956\/domains\/cubebitz.com\/public_html\/astrosetu_web\/storage\/fonts\/notodevanagari_bold_6fc062d1dd77b8f8103c20493f57e0a1",
-        "italic": "\/home\/u736464956\/domains\/cubebitz.com\/public_html\/astrosetu_web\/storage\/fonts\/notodevanagari_italic_bbb3d2fbc754e6c51f089aebcc2e9f4c",
-        "bold_italic": "notodevanagari_bold_italic_6fc062d1dd77b8f8103c20493f57e0a1"
+        "normal": "C:\\wamp64\\www\\astro_setu\\storage\\fonts\/notodevanagari_normal_57e32c4abe473de8bb76691af3daae84",
+        "bold": "C:\\wamp64\\www\\astro_setu\\storage\\fonts\/notodevanagari_bold_c5540cd39888bec9ebda0512976476c7",
+        "italic": "C:\\wamp64\\www\\astro_setu\\storage\\fonts\/notodevanagari_italic_57e32c4abe473de8bb76691af3daae84",
+        "bold_italic": "notodevanagari_bold_italic_c5540cd39888bec9ebda0512976476c7"
     },
     "noto sans devanagari": {
-        "normal": "\/home\/u736464956\/domains\/cubebitz.com\/public_html\/astrosetu_web\/storage\/fonts\/noto_sans_devanagari_normal_bbb3d2fbc754e6c51f089aebcc2e9f4c",
-        "bold": "\/home\/u736464956\/domains\/cubebitz.com\/public_html\/astrosetu_web\/storage\/fonts\/noto_sans_devanagari_bold_6fc062d1dd77b8f8103c20493f57e0a1",
-        "italic": "\/home\/u736464956\/domains\/cubebitz.com\/public_html\/astrosetu_web\/storage\/fonts\/noto_sans_devanagari_italic_bbb3d2fbc754e6c51f089aebcc2e9f4c",
-        "bold_italic": "noto_sans_devanagari_bold_italic_6fc062d1dd77b8f8103c20493f57e0a1"
+        "normal": "C:\\wamp64\\www\\astro_setu\\storage\\fonts\/noto_sans_devanagari_normal_57e32c4abe473de8bb76691af3daae84",
+        "bold": "C:\\wamp64\\www\\astro_setu\\storage\\fonts\/noto_sans_devanagari_bold_c5540cd39888bec9ebda0512976476c7",
+        "italic": "C:\\wamp64\\www\\astro_setu\\storage\\fonts\/noto_sans_devanagari_italic_57e32c4abe473de8bb76691af3daae84",
+        "bold_italic": "noto_sans_devanagari_bold_italic_c5540cd39888bec9ebda0512976476c7"
     }
 }

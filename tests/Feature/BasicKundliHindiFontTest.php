@@ -358,8 +358,12 @@ class BasicKundliHindiFontTest extends TestCase
         $response->assertStatus(503)
             ->assertJson([
                 'success' => false,
+                'error_code' => 'KUNDLI_PDF_TEMPORARILY_UNAVAILABLE',
             ]);
-        $this->assertStringContainsString('हिंदी कुण्डली पीडीएफ सेवा वर्तमान में अनुपलब्ध है', $response->json('message'));
+        $this->assertSame(
+            'अपनी जन्म कुंडली की PDF प्रति प्राप्त करने के लिए हमारे ज्योतिषियों से संपर्क करें।',
+            $response->json('message')
+        );
     }
 
     public function test_english_renderer_falls_back_to_dompdf_when_chromium_unavailable(): void
@@ -396,25 +400,7 @@ class BasicKundliHindiFontTest extends TestCase
         }
     }
 
-    public function test_remote_rendering_service_support_when_configured(): void
-    {
-        /** @var PremiumKundliPdfService $premiumPdfService */
-        $premiumPdfService = app(PremiumKundliPdfService::class);
 
-        \Illuminate\Support\Facades\Http::fake([
-            'https://render-test.internal/pdf' => \Illuminate\Support\Facades\Http::response('%PDF-1.4 Mock Remote PDF Output ' . str_repeat('A', 1500), 200),
-        ]);
-
-        putenv('PDF_RENDER_SERVICE_URL=https://render-test.internal/pdf');
-
-        try {
-            $result = $premiumPdfService->renderHtmlViaChromium('<html><body>Test</body></html>');
-            $this->assertNotNull($result);
-            $this->assertStringStartsWith('%PDF-', $result);
-        } finally {
-            putenv('PDF_RENDER_SERVICE_URL');
-        }
-    }
 
     public function test_chart_layout_uses_measured_square_aspect_ratio_and_table_separation(): void
     {

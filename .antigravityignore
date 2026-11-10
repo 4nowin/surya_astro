@@ -1,0 +1,43 @@
+# Dependencies & Package Managers
+/vendor/
+/node_modules/
+
+# Environment, Keys & Secrets
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+
+# Storage, Logs & Framework Cache
+/storage/app/
+/storage/framework/cache/
+/storage/framework/sessions/
+/storage/framework/views/
+/storage/framework/testing/
+/storage/logs/
+*.log
+
+# Built Assets & Bundler Output
+/public/build/
+/public/hot
+/public/storage
+mix-manifest.json
+
+# Database & File Dumps
+*.sqlite
+*.sql
+*.dump
+
+# IDE, OS & Git Metadata
+.git/
+.github/
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+
+# Testing Coverage & Profiling
+.phpunit.cache/
+.phpunit.result.cache
+/tests/coverage/

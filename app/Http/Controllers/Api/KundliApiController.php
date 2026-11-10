@@ -580,14 +580,16 @@ class KundliApiController extends Controller
             ]);
 
             $statusCode = $isRendererUnavailable ? 503 : 500;
+            $errorCode = $isRendererUnavailable ? 'KUNDLI_PDF_TEMPORARILY_UNAVAILABLE' : 'PDF_GENERATION_FAILED';
             $userMessage = $isRendererUnavailable
                 ? ($locale === 'hi'
-                    ? 'हिंदी कुण्डली पीडीएफ सेवा वर्तमान में अनुपलब्ध है। कृपया कुछ समय बाद पुनः प्रयास करें या अंग्रेजी संस्करण डाउनलोड करें।'
-                    : 'Hindi Kundli PDF rendering service is currently unavailable. Please try downloading the English version or retry shortly.')
+                    ? 'अपनी जन्म कुंडली की PDF प्रति प्राप्त करने के लिए हमारे ज्योतिषियों से संपर्क करें।'
+                    : 'Want a PDF copy of your Kundli? Contact our astrologers to request a professionally prepared report.')
                 : 'Failed to generate Kundli PDF report. Please try again.';
 
             return response()->json([
                 'success' => false,
+                'error_code' => $errorCode,
                 'message' => $userMessage,
                 'error' => config('app.debug') || $isRendererUnavailable ? $e->getMessage() : null,
             ], $statusCode);
