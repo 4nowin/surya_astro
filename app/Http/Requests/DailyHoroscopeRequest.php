@@ -24,16 +24,22 @@ class DailyHoroscopeRequest extends FormRequest
         if ($this->has('lang') && is_string($this->lang)) {
             $this->merge(['lang' => strtolower(trim($this->lang))]);
         }
+
+        if ($this->has('period') && is_string($this->period)) {
+            $this->merge(['period' => strtolower(trim($this->period))]);
+        }
     }
 
     public function rules(): array
     {
         $validSigns = array_keys(DailyHoroscopeService::SIGNS);
+        $validPeriods = ['daily', 'weekly', 'monthly', 'yearly'];
 
         return [
             'date' => ['nullable', 'date_format:Y-m-d'],
             'sign' => ['nullable', 'string', Rule::in($validSigns)],
             'lang' => ['nullable', 'string', Rule::in(['en', 'hi'])],
+            'period' => ['nullable', 'string', Rule::in($validPeriods)],
         ];
     }
 
@@ -43,6 +49,7 @@ class DailyHoroscopeRequest extends FormRequest
             'date.date_format' => 'The date must match the format YYYY-MM-DD.',
             'sign.in' => 'The specified zodiac sign is invalid. Valid signs: ' . implode(', ', array_keys(DailyHoroscopeService::SIGNS)),
             'lang.in' => 'Language must be either "en" or "hi".',
+            'period.in' => 'Period must be one of: daily, weekly, monthly, yearly.',
         ];
     }
 }

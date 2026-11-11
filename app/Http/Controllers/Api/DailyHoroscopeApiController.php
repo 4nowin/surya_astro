@@ -18,8 +18,9 @@ class DailyHoroscopeApiController extends Controller
     ) {}
 
     /**
-     * Retrieve daily horoscope for all signs or a specific sign.
+     * Retrieve horoscope for all signs or a specific sign across Daily, Weekly, Monthly, Yearly.
      *
+     * GET /api/v1/horoscope?period={daily|weekly|monthly|yearly}&date=YYYY-MM-DD&sign={sign}&lang={en|hi}
      * GET /api/v1/horoscope/daily?date=YYYY-MM-DD&sign={sign}&lang={en|hi}
      */
     public function daily(DailyHoroscopeRequest $request): JsonResponse
@@ -29,16 +30,22 @@ class DailyHoroscopeApiController extends Controller
         $date = $validated['date'] ?? Carbon::today()->toDateString();
         $sign = $validated['sign'] ?? null;
         $lang = $validated['lang'] ?? ($request->header('X-App-Locale') === 'hi' ? 'hi' : 'en');
+        $period = $validated['period'] ?? $request->route('period') ?? 'daily';
 
-        $data = $this->horoscopeService->getDailyHoroscope(
+        $data = $this->horoscopeService->getHoroscope(
             date: $date,
             signKey: $sign,
-            lang: $lang
+            lang: $lang,
+            period: $period
         );
+
+        $message = ($period === 'daily')
+            ? 'Daily horoscope retrieved successfully'
+            : ucfirst($period) . ' horoscope retrieved successfully';
 
         return response()->json([
             'success' => true,
-            'message' => 'Daily horoscope retrieved successfully',
+            'message' => $message,
             'data' => $data,
         ], 200, [
             'Cache-Control' => 'public, max-age=3600',
@@ -46,29 +53,37 @@ class DailyHoroscopeApiController extends Controller
     }
 
     /**
-     * Retrieve daily horoscope for a specific zodiac sign path parameter.
+     * Retrieve horoscope for a specific zodiac sign path parameter.
      *
      * GET /api/v1/horoscope/daily/{sign}?date=YYYY-MM-DD&lang={en|hi}
+     * GET /api/v1/horoscope/{period}/{sign}?date=YYYY-MM-DD&lang={en|hi}
      */
-    public function show(Request $request, string $sign): JsonResponse
+    public function show(Request $request, string $param1, ?string $param2 = null): JsonResponse
     {
-        $cleanSign = strtolower(trim($sign));
+        if ($param2 !== null) {
+            $period = strtolower(trim($param1));
+            $cleanSign = strtolower(trim($param2));
+        } else {
+            $period = (string) $request->input('period', $request->route('period', 'daily'));
+            $cleanSign = strtolower(trim($param1));
+        }
 
         if (!DailyHoroscopeService::isValidSign($cleanSign)) {
             return response()->json([
                 'success' => false,
-                'message' => "Invalid zodiac sign [{$sign}]. Valid signs: " . implode(', ', array_keys(DailyHoroscopeService::SIGNS)),
+                'message' => "Invalid zodiac sign [{$cleanSign}]. Valid signs: " . implode(', ', array_keys(DailyHoroscopeService::SIGNS)),
                 'errors' => [
-                    'sign' => ["The sign '{$sign}' is not a valid zodiac sign."],
+                    'sign' => ["The sign '{$cleanSign}' is not a valid zodiac sign."],
                 ],
             ], 422);
         }
 
-        // Validate date and lang if present
-        $request->merge(['sign' => $cleanSign]);
+        // Validate date, lang, and period if present
+        $request->merge(['sign' => $cleanSign, 'period' => $period]);
         $validator = validator($request->all(), [
             'date' => ['nullable', 'date_format:Y-m-d'],
             'lang' => ['nullable', 'string', 'in:en,hi'],
+            'period' => ['nullable', 'string', 'in:daily,weekly,monthly,yearly'],
         ]);
 
         if ($validator->fails()) {
@@ -81,16 +96,22 @@ class DailyHoroscopeApiController extends Controller
 
         $date = $request->input('date', Carbon::today()->toDateString());
         $lang = $request->input('lang', $request->header('X-App-Locale') === 'hi' ? 'hi' : 'en');
+        $validPeriod = in_array($period, ['daily', 'weekly', 'monthly', 'yearly'], true) ? $period : 'daily';
 
-        $data = $this->horoscopeService->getDailyHoroscope(
+        $data = $this->horoscopeService->getHoroscope(
             date: $date,
             signKey: $cleanSign,
-            lang: $lang
+            lang: $lang,
+            period: $validPeriod
         );
+
+        $message = ($validPeriod === 'daily')
+            ? "Daily horoscope for {$cleanSign} retrieved successfully"
+            : ucfirst($validPeriod) . " horoscope for {$cleanSign} retrieved successfully";
 
         return response()->json([
             'success' => true,
-            'message' => "Daily horoscope for {$cleanSign} retrieved successfully",
+            'message' => $message,
             'data' => $data,
         ], 200, [
             'Cache-Control' => 'public, max-age=3600',

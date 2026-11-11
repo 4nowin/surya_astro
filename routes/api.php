@@ -137,6 +137,9 @@ Route::prefix('v1')->group(function () {
     Route::get('/calculations/{jobId}', [CalculationStatusController::class, 'show']);
     Route::get('/horoscope/daily', [DailyHoroscopeApiController::class, 'daily']);
     Route::get('/horoscope/daily/{sign}', [DailyHoroscopeApiController::class, 'show']);
+    Route::get('/horoscope', [DailyHoroscopeApiController::class, 'daily']);
+    Route::get('/horoscope/{period}', [DailyHoroscopeApiController::class, 'daily'])->where('period', 'daily|weekly|monthly|yearly');
+    Route::get('/horoscope/{period}/{sign}', [DailyHoroscopeApiController::class, 'show'])->where('period', 'daily|weekly|monthly|yearly');
 
     Route::middleware('auth:sanctum')->group(function () {
         Route::match(['post', 'put'], '/astrology/profiles/primary', [AstrologyProfileController::class, 'savePrimary']);

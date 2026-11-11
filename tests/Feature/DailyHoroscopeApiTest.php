@@ -299,4 +299,68 @@ class DailyHoroscopeApiTest extends TestCase
         $this->assertTrue($res2->json('data.selected_sign.available'));
         $this->assertEquals('Intuition is very sharp today.', $res2->json('data.selected_sign.prediction'));
     }
+
+    /**
+     * Test retrieving weekly, monthly, and yearly horoscopes with period parameter.
+     */
+    public function test_retrieving_periodic_horoscopes(): void
+    {
+        $startDate = '2026-11-09';
+        $endDate = '2026-11-15';
+
+        Horoscope::create([
+            'zodiac_sign' => 'Aries',
+            'horoscope_type' => 'weekly',
+            'zodiac' => 'aries',
+            'tag' => 'weekly',
+            'language' => 'en',
+            'context' => 'Dynamic weekly growth for Aries under Mars.',
+            'career' => 'Promising negotiations this week.',
+            'love' => 'Harmonious mutual understanding.',
+            'money' => 'Sound financial planning yields gains.',
+            'health' => 'High stamina throughout the week.',
+            'travel' => 'Productive mid-week journeys.',
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            'lucky_number' => '9',
+            'lucky_color' => 'Crimson Red',
+            'mood' => 'Focused',
+        ]);
+
+        DailyHoroscopeService::invalidateCache();
+
+        // 1. Query via query parameter ?period=weekly
+        $response1 = $this->getJson('/api/v1/horoscope/daily?period=weekly&date=2026-11-11');
+        $response1->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'message' => 'Weekly horoscope retrieved successfully',
+                'data' => [
+                    'period' => 'weekly',
+                ],
+            ]);
+
+        $this->assertEquals('weekly', $response1->json('data.period'));
+        $this->assertNotEmpty($response1->json('data.formatted_period'));
+
+        $aries = collect($response1->json('data.signs'))->firstWhere('sign', 'aries');
+        $this->assertNotNull($aries);
+        $this->assertTrue($aries['available']);
+        $this->assertEquals('Dynamic weekly growth for Aries under Mars.', $aries['prediction']);
+        $this->assertEquals('Promising negotiations this week.', $aries['categories']['career']);
+
+        // 2. Query via direct /horoscope/weekly path
+        $response2 = $this->getJson('/api/v1/horoscope/weekly?date=2026-11-11');
+        $response2->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'message' => 'Weekly horoscope retrieved successfully',
+            ]);
+
+        // 3. Query specific sign /horoscope/weekly/aries
+        $response3 = $this->getJson('/api/v1/horoscope/weekly/aries?date=2026-11-11');
+        $response3->assertStatus(200);
+        $this->assertEquals('Aries', $response3->json('data.selected_sign.name_en'));
+        $this->assertTrue($response3->json('data.selected_sign.available'));
+    }
 }
