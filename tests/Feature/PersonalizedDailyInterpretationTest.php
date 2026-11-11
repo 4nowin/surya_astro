@@ -99,6 +99,85 @@ class PersonalizedDailyInterpretationTest extends TestCase
         $this->assertNotEmpty($insights['summary']['primary_influences']);
     }
 
+    public function test_dynamic_vedic_fallback_when_db_rules_are_empty(): void
+    {
+        // Truncate all DB rules to test zero-DB fallback
+        DailyInsightRule::query()->delete();
+
+        /** @var PersonalizedDailyInterpretationService $interpretationService */
+        $interpretationService = app(PersonalizedDailyInterpretationService::class);
+
+        $user = User::factory()->create();
+        $profile = UserAstrologyProfile::create([
+            'user_id' => $user->id,
+            'name' => 'Zero Rule Test',
+            'relationship' => 'self',
+            'is_default' => true,
+            'date_of_birth' => '1990-05-15',
+            'birth_time_precision' => UserAstrologyProfile::PRECISION_VERIFIED,
+            'birth_time' => '14:30:00',
+            'birth_city' => 'New Delhi',
+            'birth_country' => 'India',
+            'latitude' => 28.6139,
+            'longitude' => 77.2090,
+            'timezone' => 'Asia/Kolkata',
+        ]);
+
+        $calcResult = [
+            'metadata' => [
+                'ruleset_version' => 'M4B_V1',
+                'birth_time_precision' => 'verified',
+                'target_date' => '2026-11-03',
+            ],
+            'birth_chart_reference' => [
+                'moon_sign' => [
+                    'index' => 5,
+                    'name' => 'Virgo',
+                    'vedic_name' => 'Kanya',
+                    'status' => 'confirmed',
+                ],
+            ],
+            'current_transits' => [
+                'planets' => [
+                    'moon' => [
+                        'planet' => 'Moon',
+                        'gochara_house' => 7,
+                        'is_retrograde' => false,
+                        'rashi' => ['name' => 'Pisces', 'vedic_name' => 'Meena'],
+                    ],
+                    'sun' => [
+                        'planet' => 'Sun',
+                        'gochara_house' => 2,
+                        'is_retrograde' => false,
+                        'rashi' => ['name' => 'Libra', 'vedic_name' => 'Tula'],
+                    ],
+                    'jupiter' => [
+                        'planet' => 'Jupiter',
+                        'gochara_house' => 9,
+                        'is_retrograde' => true,
+                        'rashi' => ['name' => 'Taurus', 'vedic_name' => 'Vrishabha'],
+                    ],
+                ],
+            ],
+        ];
+
+        $insights = $interpretationService->interpret($calcResult, $profile, 'en');
+
+        $this->assertCount(7, $insights['categories']);
+        foreach ($insights['categories'] as $catKey => $cat) {
+            // Headline must NOT be equal to category name
+            $this->assertNotEquals($cat['category_name'], $cat['headline'], "Headline in {$catKey} must not duplicate category name");
+            $this->assertNotEmpty($cat['headline'], "Headline in {$catKey} must not be empty");
+            // Interpretation must be rich and not empty
+            $this->assertNotEmpty($cat['interpretation'], "Interpretation in {$catKey} must not be empty");
+            $this->assertGreaterThan(20, strlen($cat['interpretation']), "Interpretation in {$catKey} must be substantive");
+            // Tone must be valid
+            $this->assertContains($cat['tone'], ['favourable', 'mixed', 'cautious']);
+            // Factors must not be empty
+            $this->assertNotEmpty($cat['factors'], "Factors in {$catKey} must not be empty");
+        }
+    }
+
     public function test_ashtama_chandra_8th_moon_generates_cautious_overall_tone(): void
     {
         /** @var PersonalizedDailyInterpretationService $interpretationService */

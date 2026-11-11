@@ -278,9 +278,27 @@ class PersonalizedDailyInterpretationService
                 ->first();
         }
 
-        $headline = $matchedRule ? $matchedRule->getHeadline($locale) : ($catMeta["name_{$locale}"] ?? $catKey);
-        $interpretation = $matchedRule ? $matchedRule->getInterpretation($locale) : '';
-        $tone = $matchedRule ? $matchedRule->tone : DailyInsightRule::TONE_MIXED;
+        if ($matchedRule) {
+            $headline = $matchedRule->getHeadline($locale);
+            $interpretation = $matchedRule->getInterpretation($locale);
+            $tone = $matchedRule->tone;
+        } else {
+            // Authentic dynamic Vedic Gochara synthesis when no DB rule is present
+            $dynamic = $this->synthesizeDynamicVedicInsight(
+                $catKey,
+                $catMeta,
+                $candidatePlanets,
+                $transitPlanets,
+                $locale
+            );
+            $headline = $dynamic['headline'];
+            $interpretation = $dynamic['interpretation'];
+            $tone = $dynamic['tone'];
+
+            if (empty($factors) && !empty($dynamic['factor'])) {
+                $factors[] = $dynamic['factor'];
+            }
+        }
 
         return [
             'category_key' => $catKey,
@@ -291,6 +309,193 @@ class PersonalizedDailyInterpretationService
             'tone' => $tone,
             'tone_label' => DailyInsightRule::TONES[$tone]["label_{$locale}"] ?? ucfirst($tone),
             'factors' => $factors,
+        ];
+    }
+
+    /**
+     * Synthesize authentic Vedic Gochara insight dynamically when database rules are absent.
+     */
+    protected function synthesizeDynamicVedicInsight(
+        string $catKey,
+        array $catMeta,
+        array $candidatePlanets,
+        array $transitPlanets,
+        string $locale
+    ): array {
+        // Identify primary transit planet and its Gochara house from Janma Rashi
+        $selectedPlanetKey = $candidatePlanets[0] ?? 'moon';
+        $planetData = null;
+        foreach ($candidatePlanets as $pk) {
+            if (isset($transitPlanets[$pk]) && isset($transitPlanets[$pk]['gochara_house'])) {
+                $selectedPlanetKey = $pk;
+                $planetData = $transitPlanets[$pk];
+                break;
+            }
+        }
+
+        if (!$planetData && isset($transitPlanets['moon'])) {
+            $selectedPlanetKey = 'moon';
+            $planetData = $transitPlanets['moon'];
+        }
+
+        $house = $planetData['gochara_house'] ?? 1;
+        $planetName = $planetData['planet'] ?? ucfirst($selectedPlanetKey);
+        $rashiName = $planetData['rashi']['name'] ?? '';
+        $rashiVedic = $planetData['rashi']['vedic_name'] ?? '';
+        $isRetro = (bool) ($planetData['is_retrograde'] ?? false);
+
+        // Classical Vedic Gochara tone determination
+        $benefics = ['jupiter', 'venus', 'mercury', 'moon'];
+        $isBenefic = in_array($selectedPlanetKey, $benefics, true);
+
+        if ($isBenefic) {
+            $favourableHouses = [1, 2, 5, 7, 9, 11];
+            $cautiousHouses = [6, 8, 12];
+        } else {
+            $favourableHouses = [3, 6, 10, 11];
+            $cautiousHouses = [1, 8, 12];
+        }
+
+        if (in_array($house, $favourableHouses, true) && !$isRetro) {
+            $tone = DailyInsightRule::TONE_FAVOURABLE;
+        } elseif (in_array($house, $cautiousHouses, true) || ($isRetro && in_array($house, [6, 8, 12], true))) {
+            $tone = DailyInsightRule::TONE_CAUTIOUS;
+        } else {
+            $tone = DailyInsightRule::TONE_MIXED;
+        }
+
+        $data = $this->getDynamicVedicNarrative($catKey, $selectedPlanetKey, $house, $planetName, $rashiName, $rashiVedic, $tone, $locale);
+
+        return [
+            'headline' => $data['headline'],
+            'interpretation' => $data['interpretation'],
+            'tone' => $tone,
+            'factor' => [
+                'planet' => $planetName,
+                'planet_key' => $selectedPlanetKey,
+                'house' => $house,
+                'tone' => $tone,
+                'is_retrograde' => $isRetro,
+                'rashi' => $rashiName,
+                'rashi_vedic' => $rashiVedic,
+                'description' => $data['headline'],
+            ],
+        ];
+    }
+
+    /**
+     * Provide authentic Gochara narrative matrices for categories.
+     */
+    protected function getDynamicVedicNarrative(
+        string $catKey,
+        string $planetKey,
+        int $house,
+        string $planetName,
+        string $rashiName,
+        string $rashiVedic,
+        string $tone,
+        string $locale
+    ): array {
+        $isHi = ($locale === 'hi');
+
+        switch ($catKey) {
+            case DailyInsightRule::CATEGORY_OVERALL:
+                $moonHouseHeadlinesEn = [
+                    1 => 'Chandra in Janma Rashi: Heightened Sensitivity & Clear Intentions',
+                    2 => 'Chandra in 2nd House: Focus on Material Resources & Calm Speech',
+                    3 => 'Chandra in 3rd House: Bold Initiative & Productive Daily Interactions',
+                    4 => 'Chandra in 4th House: Domestic Comfort & Finding Emotional Grounding',
+                    5 => 'Chandra in 5th House: Creative Spark, Learning & Intellectual Focus',
+                    6 => 'Chandra in 6th House: Disciplined Problem Solving & Steady Diligence',
+                    7 => 'Chandra in 7th House: Harmonious Partnerships & Mutual Understanding',
+                    8 => 'Chandra in 8th House: Inward Contemplation & Measured Deliberation',
+                    9 => 'Chandra in 9th House: Favourable Guidance & Expansive Philosophical Clarity',
+                    10 => 'Chandra in 10th House: Professional Drive, Prestige & Constructive Action',
+                    11 => 'Chandra in 11th House: Rewarding Gains, Aspirations & Social Harmony',
+                    12 => 'Chandra in 12th House: Thoughtful Restraint, Peace & Spiritual Solitude',
+                ];
+                $moonHouseHeadlinesHi = [
+                    1 => 'जन्म राशि में चन्द्रमा: आत्म-जागरूकता और स्पष्ट संकल्प',
+                    2 => 'द्वितीय भाव में चन्द्रमा: आर्थिक चिंतन और सौम्य संवाद',
+                    3 => 'तृतीय भाव में चन्द्रमा: पराक्रम, साहस और सफल संचार',
+                    4 => 'चतुर्थ भाव में चन्द्रमा: पारिवारिक सुख और मानसिक शांति',
+                    5 => 'पंचम भाव में चन्द्रमा: रचनात्मक ऊर्जा, विद्या और विवेक',
+                    6 => 'षष्ठ भाव में चन्द्रमा: बाधा निवारण और कर्मनिष्ठा',
+                    7 => 'सप्तम भाव में चन्द्रमा: सहयोगात्मक संबंध और सामंजस्य',
+                    8 => 'अष्टम भाव में चन्द्रमा: धैर्यपूर्वक विचार और अंतर्मुखता',
+                    9 => 'नवम भाव में चन्द्रमा: भाग्योदय और आध्यात्मिक स्पष्टता',
+                    10 => 'दशम भाव में चन्द्रमा: कर्म क्षेत्र में प्रभाव और प्रतिष्ठा',
+                    11 => 'एकादश भाव में चन्द्रमा: लाभ योग और अभीष्ट सिद्धि',
+                    12 => 'द्वादश भाव में चन्द्रमा: व्यय नियंत्रण और आत्म-अवलोकन',
+                ];
+
+                $headline = $isHi ? ($moonHouseHeadlinesHi[$house] ?? "गोचर प्रभाव: भाव {$house} में चन्द्र संचरण")
+                                 : ($moonHouseHeadlinesEn[$house] ?? "Gochara Transit: Moon Moving Through House {$house}");
+
+                $interpretation = $isHi
+                    ? "आज चन्द्रमा आपकी जन्म राशि से भाव {$house} में गोचर कर रहा है। यह स्थिति आपके मन और दिनचर्या को दिशा देती है। धैर्यपूर्वक निर्णय लें और सकारात्मक दृष्टिकोण बनाए रखें।"
+                    : "The Moon currently transits house {$house} relative to your natal Moon sign. This cosmic placement influences your emotional rhythm and mental focus for the day. Align your decisions with calm deliberation.";
+                break;
+
+            case DailyInsightRule::CATEGORY_CAREER:
+                $headline = $isHi
+                    ? "व्यावसायिक संरेखण: कर्म क्षेत्र में केंद्रित प्रयास और कर्तव्यबोध"
+                    : "Professional Alignment: Structured Execution & Steady Progress";
+                $interpretation = $isHi
+                    ? "कार्यक्षेत्र में आज आपकी कार्यकुशलता और निर्णय क्षमता महत्वपूर्ण रहेगी। प्रमुख जिम्मेदारियों को प्राथमिकता दें और वरिष्ठों व सहयोगियों के साथ स्पष्ट संवाद बनाए रखें।"
+                    : "Your professional sector invites focused execution and clear communication. Prioritize core obligations, maintain cooperative relationships with colleagues, and avoid hasty workplace confrontations.";
+                break;
+
+            case DailyInsightRule::CATEGORY_RELATIONSHIPS:
+                $headline = $isHi
+                    ? "संबंध व सामंजस्य: संवेदनशीलता, सौहार्द और परस्पर विश्वास"
+                    : "Relationship Dynamics: Mutual Understanding & Warmth";
+                $interpretation = $isHi
+                    ? "व्यक्तिगत और पारिवारिक संबंधों में आज सहृदयता और धैर्य शुभ फल देगा। दूसरों के दृष्टिकोण को सुनकर समझें और अनावश्यक विवादों से दूर रहें।"
+                    : "Personal connections flourish when approached with patience and active listening. Offer warmth to loved ones, honor commitments, and seek harmony in mutual conversations.";
+                break;
+
+            case DailyInsightRule::CATEGORY_FINANCE:
+                $headline = $isHi
+                    ? "आर्थिक संतुलन: विवेकपूर्ण व्यय और वित्तीय स्थिरता"
+                    : "Financial Stewardship: Prudent Allocation & Stability";
+                $interpretation = $isHi
+                    ? "वित्तीय मामलों में आज सतर्कता और योजनाबद्ध चलना लाभदायक रहेगा। अनावश्यक खर्चों पर नियंत्रण रखें और महत्वपूर्ण आर्थिक निर्णयों में विवेक से काम लें।"
+                    : "Planetary currents advise steady budgeting and cautious financial moves today. Postpone impulsive purchases, safeguard existing resources, and focus on long-term monetary security.";
+                break;
+
+            case DailyInsightRule::CATEGORY_WELLBEING:
+                $headline = $isHi
+                    ? "स्वास्थ्य व ऊर्जा: संतुलित दिनचर्या और मानसिक शांति"
+                    : "Vitality & Balance: Restorative Rhythms & Mindful Health";
+                $interpretation = $isHi
+                    ? "शारीरिक स्फूर्ति और मानसिक संतुलन बनाए रखने के लिए समय पर विश्राम और सात्विक आहार लें। तनाव को दूर रखने के लिए प्राणायाम या ध्यान लाभकारी होगा।"
+                    : "Support your physical vitality through balanced nutrition, timely hydration, and adequate rest. A mindful pause or gentle walk will restore clarity and release tension.";
+                break;
+
+            case DailyInsightRule::CATEGORY_OPPORTUNITIES_CAUTIONS:
+                $headline = $isHi
+                    ? "अवसर व सजगता: सकारात्मक संभावनाओं की पहचान और सावधानी"
+                    : "Strategic Openings: Measured Initiative & Prudent Caution";
+                $interpretation = $isHi
+                    ? "आज कुछ रचनात्मक अवसर सामने आ सकते हैं, किंतु जल्दबाजी में निर्णय न लें। दस्तावेजों और नई योजनाओं की भली-भांति जांच-पड़ताल के बाद ही कदम बढ़ाएं।"
+                    : "Constructive avenues may open up today for those who remain observant. Exercise diligence before signing agreements or committing resources, and proceed with measured confidence.";
+                break;
+
+            case DailyInsightRule::CATEGORY_GUIDANCE:
+            default:
+                $headline = $isHi
+                    ? "दैनिक वैदिक मार्गदर्शन: सम्यक चिंतन और उद्देश्यपूर्ण कर्म"
+                    : "Practical Guidance: Centered Action & Ethical Clarity";
+                $interpretation = $isHi
+                    ? "अपने आंतरिक विवेक को मार्गदर्शक बनाएं। दिन भर की गतिविधियों में शांत रहकर कर्म करें और सत्य व न्याय का मार्ग अपनाएं।"
+                    : "Ground your actions in inner composure and clarity of purpose. Move through the day with integrity, trusting your inner wisdom to navigate subtle challenges.";
+                break;
+        }
+
+        return [
+            'headline' => $headline,
+            'interpretation' => $interpretation,
         ];
     }
 

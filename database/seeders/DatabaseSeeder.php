@@ -14,6 +14,7 @@ class DatabaseSeeder extends Seeder
             AdminSeeder::class,
             AstrologerSeeder::class,
             HoroscopeSeeder::class,
+            DailyInsightRulesSeeder::class,
             PoojaSeeder::class,
             ReviewSeeder::class
         ]);
