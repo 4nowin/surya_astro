@@ -25,6 +25,11 @@ class ChatSession extends Model
         return $this->hasMany(Chat::class);
     }
 
+    public function messages(): HasMany
+    {
+        return $this->hasMany(Chat::class);
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);

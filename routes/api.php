@@ -6,12 +6,15 @@ use App\Http\Controllers\Api\ApiController;
 use App\Http\Controllers\Api\AstrologerController;
 use App\Http\Controllers\Api\AdminAuthController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\ConsultationApiController;
+use App\Http\Controllers\Api\JajmanApiController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\PoojaController;
 use App\Http\Controllers\Api\HoroscopeController;
 use App\Http\Controllers\Api\ReviewController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ChatController;
+use App\Http\Controllers\Api\ChatApiController;
 use App\Http\Controllers\Api\AstrologerChatController;
 use App\Http\Controllers\Api\FirebaseChatController;
 use App\Http\Controllers\Api\NotificationController;
@@ -78,8 +81,33 @@ Route::prefix('astrologer')->group(function () {
         Route::post('/set-online', [AstrologerChatController::class, 'setOnline']);
         Route::post('/toggle-online', [AstrologerChatController::class, 'toggleOnline']);
         Route::get('/chat/astrologer/history', [AstrologerChatController::class, 'getAstrologerChats']);
+        Route::post('/chat/ably-token', [ChatApiController::class, 'createAblyToken']);
+        Route::post('/chat/message/send', [ChatApiController::class, 'sendMessage']);
+        Route::get('/chat/sessions/{sessionId}/messages', [ChatApiController::class, 'getMessages']);
+        Route::post('/chat/session/end', [ChatApiController::class, 'endSession']);
         Route::get('/booked-poojas', [AstrologerController::class, 'getBookedPoojas']);
         Route::get('/donations', [AstrologerController::class, 'getDonations']);
+
+        // 📇 Pandit Setu - Jajman CRM Routes
+        Route::apiResource('/jajmans', JajmanApiController::class);
+        Route::get('/jajmans/{id}/birth-details', [JajmanApiController::class, 'getBirthDetails']);
+        Route::post('/jajmans/{id}/birth-details', [JajmanApiController::class, 'storeBirthDetail']);
+        Route::put('/jajmans/{id}/birth-details/{birthDetailId}', [JajmanApiController::class, 'updateBirthDetail']);
+        Route::delete('/jajmans/{id}/birth-details/{birthDetailId}', [JajmanApiController::class, 'destroyBirthDetail']);
+
+        Route::get('/jajmans/{id}/family', [JajmanApiController::class, 'getFamily']);
+        Route::post('/jajmans/{id}/family', [JajmanApiController::class, 'storeFamily']);
+        Route::delete('/jajmans/{id}/family/{relationshipId}', [JajmanApiController::class, 'destroyFamily']);
+
+        Route::get('/jajmans/{id}/notes', [JajmanApiController::class, 'getNotes']);
+        Route::post('/jajmans/{id}/notes', [JajmanApiController::class, 'storeNote']);
+        Route::put('/jajmans/{id}/notes/{noteId}', [JajmanApiController::class, 'updateNote']);
+        Route::delete('/jajmans/{id}/notes/{noteId}', [JajmanApiController::class, 'destroyNote']);
+
+        // 💬 Pandit Setu - Consultations & Conversations
+        Route::get('/conversations', [ConsultationApiController::class, 'getConversations']);
+        Route::get('/consultations', [ConsultationApiController::class, 'index']);
+        Route::post('/consultations', [ConsultationApiController::class, 'store']);
     });
 });
 
@@ -104,6 +132,10 @@ Route::group(['middleware' => ['auth:sanctum'], 'prefix' => "/{lang?}"], functio
 
     Route::post('/chat/start-session', [ChatController::class, 'startSession']);
     Route::post('/chat/end-session', [ChatController::class, 'endChatSession']);
+    Route::post('/chat/ably-token', [ChatApiController::class, 'createAblyToken']);
+    Route::post('/chat/message/send', [ChatApiController::class, 'sendMessage']);
+    Route::get('/chat/sessions/{sessionId}/messages', [ChatApiController::class, 'getMessages']);
+    Route::post('/chat/session/end', [ChatApiController::class, 'endSession']);
 
     Route::post('/update-user-fcm-token', [UserController::class, 'updateFcmToken']);
 
