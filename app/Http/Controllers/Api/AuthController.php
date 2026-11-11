@@ -39,6 +39,72 @@ class AuthController extends Controller
     ], 200);
   }
 
+  public function register($lang = 'en', Request $request)
+  {
+    $validator = \Illuminate\Support\Facades\Validator::make($request->all(), [
+      'name' => 'required|string|max:255',
+      'email' => 'required|string|email|max:255|unique:users,email',
+      'password' => 'required|string|min:6|confirmed',
+    ]);
+
+    if ($validator->fails()) {
+      return response()->json([
+        'success' => false,
+        'message' => $validator->errors()->first(),
+        'errors' => $validator->errors(),
+      ], 422);
+    }
+
+    $email = trim(strtolower($request->email));
+
+    $user = User::create([
+      'name' => trim($request->name),
+      'email' => $email,
+      'password' => Hash::make($request->password),
+      'language' => $lang,
+      'wallet_balance' => 0.00,
+      'status' => 'active',
+      'role' => 'free',
+      'referral_code' => User::generateReferralCode(),
+    ]);
+
+    if ($request->has('referred_by') && !empty($request->referred_by)) {
+      $referrer = User::where('referral_code', trim($request->input('referred_by')))->first();
+      if ($referrer) {
+        $user->referred_by = $referrer->referral_code;
+        $referrer->wallet_balance += 10; // referral reward
+        $referrer->save();
+        $user->save();
+      }
+    }
+
+    $token = $user->createToken('authToken')->plainTextToken;
+
+    return response()->json([
+      'success' => true,
+      'message' => 'Registration successful',
+      'token' => $token,
+      'user' => [
+        'id' => $user->id,
+        'name' => $user->name,
+        'language' => $user->language,
+        'wallet_balance' => $user->wallet_balance,
+        'email' => $user->email,
+        'mobile' => $user->mobile,
+        'gender' => $user->gender,
+        'birth_time' => $user->birth_time,
+        'date_of_birth' => $user->date_of_birth,
+        'place_of_birth' => $user->place_of_birth,
+        'country' => $user->country,
+        'role' => $user->role,
+        'status' => $user->status,
+        'fcm_token' => $user->fcm_token,
+        'referral_code' => $user->referral_code,
+        'profile_image' => $user->profile_image,
+      ]
+    ], 201);
+  }
+
   public function login($lang = 'en', Request $request)
   {
     // Validate the request

@@ -84,6 +84,7 @@ Route::prefix('astrologer')->group(function () {
 });
 
 Route::post('{lang?}/login', [AuthController::class, "login"]);
+Route::post('{lang?}/register', [AuthController::class, "register"]);
 Route::post('{lang?}/auth/google', [AuthController::class, 'loginWithGoogle']);
 Route::get('/auth/google/redirect', [AuthController::class, 'redirectToGoogle']);
 Route::get('/auth/google/callback', [AuthController::class, 'handleGoogleCallback']);
