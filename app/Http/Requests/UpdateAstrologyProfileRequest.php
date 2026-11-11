@@ -15,6 +15,11 @@ class UpdateAstrologyProfileRequest extends FormRequest
             return $profile;
         }
 
+        // Support 'primary' or 'default' keyword
+        if ($profile === 'primary' || $profile === 'default') {
+            return $this->user()?->astrologyProfiles()->where('is_default', true)->first();
+        }
+
         if (is_numeric($profile) || is_string($profile)) {
             return UserAstrologyProfile::find($profile);
         }
@@ -27,9 +32,27 @@ class UpdateAstrologyProfileRequest extends FormRequest
      */
     public function authorize(): bool
     {
+        $user = $this->user();
+        if (!$user) {
+            return false;
+        }
+
+        $routeParam = $this->route('profile');
+
+        // Authenticated user is always authorized to manage/upsert their own primary profile
+        if ($routeParam === 'primary' || $routeParam === 'default') {
+            return true;
+        }
+
         $profile = $this->resolveProfile();
 
-        return $profile && $this->user() && $profile->user_id === $this->user()->id;
+        // If the profile does not exist at all, allow through so findOrFail throws 404 instead of 403
+        if (!$profile) {
+            return true;
+        }
+
+        // Strict ownership isolation: A user cannot modify another user's profile
+        return (int) $profile->user_id === (int) $user->id;
     }
 
     /**

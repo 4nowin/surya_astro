@@ -261,4 +261,84 @@ class AstrologyProfileApiTest extends TestCase
             'id' => $profile->id,
         ]);
     }
+
+    public function test_save_primary_endpoint_creates_or_updates_idempotently(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $payload = [
+            'name'                  => 'Primary Initial',
+            'relationship'          => 'self',
+            'date_of_birth'         => '1991-04-12',
+            'birth_time_precision'  => UserAstrologyProfile::PRECISION_VERIFIED,
+            'birth_time'            => '08:30:00',
+            'birth_city'            => 'Chandigarh',
+            'birth_country'         => 'India',
+            'latitude'              => 30.7333,
+            'longitude'             => 76.7794,
+            'timezone'              => 'Asia/Kolkata',
+        ];
+
+        // 1. Initial creation via POST /profiles/primary
+        $response = $this->postJson('/api/v1/astrology/profiles/primary', $payload);
+        $response->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.name', 'Primary Initial')
+            ->assertJsonPath('data.is_default', true);
+
+        $this->assertEquals(1, $user->astrologyProfiles()->count());
+
+        // 2. Subsequent update via PUT /profiles/primary updates without duplicate
+        $payload['name'] = 'Primary Updated';
+        $updateResponse = $this->putJson('/api/v1/astrology/profiles/primary', $payload);
+        $updateResponse->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.name', 'Primary Updated');
+
+        $this->assertEquals(1, $user->astrologyProfiles()->count());
+    }
+
+    public function test_updating_non_existent_profile_id_returns_404_not_403(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $response = $this->putJson('/api/v1/astrology/profiles/99999', [
+            'name' => 'Ghost Profile',
+        ]);
+
+        $response->assertNotFound();
+    }
+
+    public function test_creating_primary_profile_when_one_exists_updates_instead_of_duplicating(): void
+    {
+        $user = User::factory()->create();
+        Sanctum::actingAs($user);
+
+        $payload = [
+            'name'                  => 'Initial First',
+            'relationship'          => 'self',
+            'date_of_birth'         => '1993-02-15',
+            'birth_time_precision'  => UserAstrologyProfile::PRECISION_UNKNOWN,
+            'birth_city'            => 'Bhopal',
+            'birth_country'         => 'India',
+            'latitude'              => 23.2599,
+            'longitude'             => 77.4126,
+            'timezone'              => 'Asia/Kolkata',
+        ];
+
+        $res1 = $this->postJson('/api/v1/astrology/profiles', $payload);
+        $res1->assertCreated();
+        $this->assertEquals(1, $user->astrologyProfiles()->count());
+
+        // Post again with is_default = true & relationship = self
+        $payload['name'] = 'Initial Updated Without Duplicate';
+        $res2 = $this->postJson('/api/v1/astrology/profiles', $payload);
+        $res2->assertCreated();
+
+        // Must still be only 1 profile for this user
+        $this->assertEquals(1, $user->astrologyProfiles()->count());
+        $this->assertEquals('Initial Updated Without Duplicate', $user->astrologyProfiles()->first()->name);
+    }
 }

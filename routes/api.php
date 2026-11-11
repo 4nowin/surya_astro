@@ -139,6 +139,7 @@ Route::prefix('v1')->group(function () {
     Route::get('/horoscope/daily/{sign}', [DailyHoroscopeApiController::class, 'show']);
 
     Route::middleware('auth:sanctum')->group(function () {
+        Route::match(['post', 'put'], '/astrology/profiles/primary', [AstrologyProfileController::class, 'savePrimary']);
         Route::apiResource('/astrology/profiles', AstrologyProfileController::class);
         Route::get('/astrology/personalized-insights/today', [PersonalizedInsightsApiController::class, 'today']);
         Route::post('/astrology/personalized-insights/calculate', [PersonalizedInsightsApiController::class, 'calculate']);
