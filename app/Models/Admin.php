@@ -47,4 +47,19 @@ class Admin extends Authenticatable
     {
         return $this->hasMany(Astrologer::class);
     }
+
+    public function appointments()
+    {
+        return $this->hasMany(Appointment::class, 'admin_id');
+    }
+
+    public function availabilities()
+    {
+        return $this->hasMany(ProfessionalAvailability::class, 'admin_id');
+    }
+
+    public function availabilityExceptions()
+    {
+        return $this->hasMany(ProfessionalAvailabilityException::class, 'admin_id');
+    }
 }

@@ -44,4 +44,9 @@ class Consultation extends Model
     {
         return $this->belongsTo(ChatSession::class, 'chat_session_id');
     }
+
+    public function appointment()
+    {
+        return $this->hasOne(Appointment::class, 'consultation_id');
+    }
 }

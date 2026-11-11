@@ -5,7 +5,9 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\ApiController;
 use App\Http\Controllers\Api\AstrologerController;
 use App\Http\Controllers\Api\AdminAuthController;
+use App\Http\Controllers\Api\AppointmentApiController;
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\AvailabilityApiController;
 use App\Http\Controllers\Api\ConsultationApiController;
 use App\Http\Controllers\Api\JajmanApiController;
 use App\Http\Controllers\Api\UserController;
@@ -108,6 +110,25 @@ Route::prefix('astrologer')->group(function () {
         Route::get('/conversations', [ConsultationApiController::class, 'getConversations']);
         Route::get('/consultations', [ConsultationApiController::class, 'index']);
         Route::post('/consultations', [ConsultationApiController::class, 'store']);
+
+        // 📅 Pandit Setu - Appointments & Calendar Management
+        Route::get('/appointments', [AppointmentApiController::class, 'index']);
+        Route::post('/appointments', [AppointmentApiController::class, 'store']);
+        Route::get('/appointments/{id}', [AppointmentApiController::class, 'show']);
+        Route::put('/appointments/{id}', [AppointmentApiController::class, 'update']);
+        Route::post('/appointments/{id}/reschedule', [AppointmentApiController::class, 'reschedule']);
+        Route::post('/appointments/{id}/cancel', [AppointmentApiController::class, 'cancel']);
+        Route::post('/appointments/{id}/complete', [AppointmentApiController::class, 'complete']);
+        Route::post('/appointments/{id}/no-show', [AppointmentApiController::class, 'noShow']);
+        Route::get('/calendar', [AppointmentApiController::class, 'calendar']);
+
+        // ⏰ Pandit Setu - Practitioner Availability
+        Route::get('/availability', [AvailabilityApiController::class, 'getWeekly']);
+        Route::put('/availability', [AvailabilityApiController::class, 'updateWeekly']);
+        Route::get('/availability/exceptions', [AvailabilityApiController::class, 'listExceptions']);
+        Route::post('/availability/exceptions', [AvailabilityApiController::class, 'storeException']);
+        Route::put('/availability/exceptions/{id}', [AvailabilityApiController::class, 'updateException']);
+        Route::delete('/availability/exceptions/{id}', [AvailabilityApiController::class, 'destroyException']);
     });
 });
 
