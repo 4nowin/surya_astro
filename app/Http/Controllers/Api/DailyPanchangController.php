@@ -74,8 +74,11 @@ class DailyPanchangController extends Controller
                 ], 500);
             }
 
-            // Case B & C: Job is pending or processing. Trigger background worker launch if not already running.
-            $launchResult = $this->workerLauncher->launchWorkerIfNeeded();
+            // Case B & C: Job is pending or processing. Trigger automatic short-lived CLI process for this specific job if needed.
+            $launchResult = ['launched' => false, 'reason' => 'job_already_processing', 'error' => null];
+            if (!empty($lookup['is_new']) || !$this->workerLauncher->isWorkerRunning()) {
+                $launchResult = $this->workerLauncher->launchWorkerForJob($job);
+            }
             if (!empty($launchResult['error'])) {
                 Log::warning("Background calculation worker launch notice for job [{$job->job_id}]: {$launchResult['error']}", [
                     'reason' => $launchResult['reason'],

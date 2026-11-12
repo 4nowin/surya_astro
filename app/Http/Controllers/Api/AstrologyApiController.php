@@ -569,7 +569,10 @@ class AstrologyApiController extends Controller
 
             /** @var AstrologyCalculationJob $job */
             $job = $lookup['job'];
-            $launchResult = $this->workerLauncher->launchWorkerIfNeeded();
+            $launchResult = ['launched' => false, 'reason' => 'job_already_processing', 'error' => null];
+            if (!empty($lookup['is_new']) || !$this->workerLauncher->isWorkerRunning()) {
+                $launchResult = $this->workerLauncher->launchWorkerForJob($job);
+            }
             $statusUrl = url("/api/v1/calculations/{$job->job_id}");
 
             return response()->json([
@@ -581,7 +584,7 @@ class AstrologyApiController extends Controller
                     'calculation_type' => $job->calculation_type,
                     'status' => $job->status,
                     'status_url' => $statusUrl,
-                    'poll_interval_ms' => 2000,
+                    'poll_interval_ms' => 1500,
                     'worker_launched' => $launchResult['launched'],
                 ],
             ], 202);

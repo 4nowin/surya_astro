@@ -19,6 +19,7 @@ class AstrologyCalculateWorkerCommand extends Command
      * @var string
      */
     protected $signature = 'astro:calculate-worker
+                            {--job= : Specific calculation job ID to execute and exit}
                             {--max-jobs=10 : Maximum number of jobs to process before exiting}
                             {--max-time=45 : Maximum execution time in seconds}
                             {--retry-failed : Reset failed calculation jobs back to pending and retry them}';
@@ -40,6 +41,7 @@ class AstrologyCalculateWorkerCommand extends Command
     ): int {
         $maxJobs = (int) $this->option('max-jobs');
         $maxTime = (int) $this->option('max-time');
+        $specificJobId = $this->option('job') ? trim((string) $this->option('job')) : null;
 
         if ($this->option('retry-failed')) {
             $resetCount = \App\Models\AstrologyCalculationJob::where('status', \App\Models\AstrologyCalculationJob::STATUS_FAILED)
@@ -57,6 +59,68 @@ class AstrologyCalculateWorkerCommand extends Command
         $workerId = 'worker_' . bin2hex(random_bytes(6)) . '_' . getmypid();
         $startTime = microtime(true);
         $processedCount = 0;
+
+        // Specific job mode: execute targeted job and exit immediately (no queue scanning)
+        if (!empty($specificJobId)) {
+            $this->info("Astrology calculation worker [{$workerId}] executing targeted job: {$specificJobId}");
+            $job = $jobManager->claimJobById($specificJobId, $workerId, 60);
+
+            if (!$job) {
+                $existing = \App\Models\AstrologyCalculationJob::where('job_id', $specificJobId)->first();
+                if ($existing && $existing->isCompleted()) {
+                    $this->info("Job [{$specificJobId}] is already completed.");
+                    return self::SUCCESS;
+                }
+                $this->warn("Job [{$specificJobId}] not found or cannot be claimed by worker.");
+                return self::FAILURE;
+            }
+
+            if ($job->isCompleted()) {
+                $this->info("Job [{$specificJobId}] already completed.");
+                return self::SUCCESS;
+            }
+
+            $jobStartTime = microtime(true);
+            try {
+                $handler = $registry->get($job->calculation_type);
+                $jobPayload = array_merge($job->payload, [
+                    'worker_id' => $workerId,
+                    'job_id' => $job->job_id,
+                    'attempt' => $job->attempts,
+                ]);
+
+                $result = $handler->calculate($jobPayload);
+                $cacheKey = $handler->storeResult($job->canonical_key, $result, $job->payload);
+                $jobManager->markCompleted($job, $cacheKey, $workerId, $result);
+
+                $durationMs = round((microtime(true) - $jobStartTime) * 1000, 2);
+                $this->info("Job [{$job->job_id}] completed successfully in {$durationMs}ms.");
+                return self::SUCCESS;
+            } catch (Throwable $e) {
+                $durationMs = round((microtime(true) - $jobStartTime) * 1000, 2);
+                $this->error("Job [{$job->job_id}] failed after {$durationMs}ms: " . $e->getMessage());
+
+                Log::error("Astrology calculation job [{$job->job_id}] failed: " . $e->getMessage(), [
+                    'job_id' => $job->job_id,
+                    'type' => $job->calculation_type,
+                    'exception' => get_class($e),
+                    'attempts' => $job->attempts,
+                ]);
+
+                $jobManager->markFailed(
+                    $job,
+                    $e->getMessage(),
+                    [
+                        'exception' => get_class($e),
+                        'file' => $e->getFile(),
+                        'line' => $e->getLine(),
+                    ],
+                    $workerId
+                );
+
+                return self::FAILURE;
+            }
+        }
 
         $this->info("Astrology calculation worker [{$workerId}] started. Max jobs: {$maxJobs}, Max time: {$maxTime}s");
 
@@ -99,8 +163,8 @@ class AstrologyCalculateWorkerCommand extends Command
                     // Store result in durable cache / storage
                     $cacheKey = $handler->storeResult($job->canonical_key, $result, $job->payload);
 
-                    // Mark completed with ownership fencing
-                    $jobManager->markCompleted($job, $cacheKey, $workerId);
+                    // Mark completed with ownership fencing and persistent MySQL storage
+                    $jobManager->markCompleted($job, $cacheKey, $workerId, $result);
 
                     $durationMs = round((microtime(true) - $jobStartTime) * 1000, 2);
                     $this->info("Job [{$job->job_id}] completed successfully in {$durationMs}ms.");

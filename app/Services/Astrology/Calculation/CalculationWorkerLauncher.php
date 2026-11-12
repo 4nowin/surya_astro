@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace App\Services\Astrology\Calculation;
 
+use App\Models\AstrologyCalculationJob;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -49,14 +50,26 @@ class CalculationWorkerLauncher
 
         if (!$isWindows) {
             $currentBinary = defined('PHP_BINARY') ? (string) PHP_BINARY : '';
+            // Only accept PHP_BINARY if it is verified CLI and not a web SAPI (lsphp, fpm, cgi)
+            $safeCurrentBinary = ($currentBinary !== ''
+                && PHP_SAPI === 'cli'
+                && !str_contains($currentBinary, 'fpm')
+                && !str_contains($currentBinary, 'cgi')
+                && !str_contains($currentBinary, 'lsws')
+                && !str_contains($currentBinary, 'lsphp'))
+                ? $currentBinary
+                : null;
+
             $linuxCandidates = array_filter([
-                $currentBinary !== '' && !str_contains($currentBinary, 'fpm') && !str_contains($currentBinary, 'cgi') ? $currentBinary : null,
-                $currentBinary !== '' ? str_replace(['php-fpm', 'php-cgi'], 'php', $currentBinary) : null,
+                $safeCurrentBinary,
                 '/usr/bin/php',
                 '/usr/local/bin/php',
-                '/opt/alt/php84/usr/bin/php',
-                '/opt/alt/php83/usr/bin/php',
+                '/usr/bin/php8.2',
+                '/usr/bin/php8.3',
+                '/usr/bin/php8.4',
                 '/opt/alt/php82/usr/bin/php',
+                '/opt/alt/php83/usr/bin/php',
+                '/opt/alt/php84/usr/bin/php',
                 '/usr/bin/php-cli',
             ]);
 
@@ -122,6 +135,149 @@ class CalculationWorkerLauncher
     public function releaseWorkerLock(): void
     {
         Cache::forget(self::WORKER_LOCK_KEY);
+    }
+
+    /**
+     * Automatically launch short-lived PHP CLI process targeted at a specific calculation job.
+     *
+     * @param AstrologyCalculationJob|string $job Job instance or job_id string
+     * @param bool $syncFallback Whether to run synchronously if detached spawn is unverified or blocked
+     * @return array{launched: bool, reason: string, error: ?string}
+     */
+    public function launchWorkerForJob(AstrologyCalculationJob|string $job, bool $syncFallback = false): array
+    {
+        $jobId = is_string($job) ? $job : $job->job_id;
+
+        // Check if a worker is already running within its valid lease (unless sync fallback requested)
+        if (!$syncFallback && $this->isWorkerRunning()) {
+            return [
+                'launched' => false,
+                'reason' => 'worker_already_active',
+                'error' => null,
+            ];
+        }
+
+        // Acquire worker lock before spawning
+        if (!$syncFallback && !$this->acquireWorkerLock(self::DEFAULT_LEASE_SECONDS)) {
+            return [
+                'launched' => false,
+                'reason' => 'worker_lock_contention',
+                'error' => null,
+            ];
+        }
+
+        $phpBinary = $this->resolvePhpCliBinary();
+        $artisanPath = base_path('artisan');
+
+        if (!file_exists($artisanPath)) {
+            if (!$syncFallback) {
+                $this->releaseWorkerLock();
+            }
+            return [
+                'launched' => false,
+                'reason' => 'artisan_not_found',
+                'error' => "Artisan entrypoint not found at: {$artisanPath}",
+            ];
+        }
+
+        // Test hook interception for automated tests
+        if (self::$launchHook !== null) {
+            try {
+                $hookResult = (self::$launchHook)($phpBinary, $artisanPath);
+                return [
+                    'launched' => $hookResult,
+                    'reason' => $hookResult ? 'test_hook_launched' : 'test_hook_refused',
+                    'error' => null,
+                ];
+            } catch (Throwable $e) {
+                if (!$syncFallback) {
+                    $this->releaseWorkerLock();
+                }
+                return [
+                    'launched' => false,
+                    'reason' => 'test_hook_exception',
+                    'error' => $e->getMessage(),
+                ];
+            }
+        }
+
+        $isWindows = PHP_OS_FAMILY === 'Windows';
+        $workerLog = storage_path('logs/astro-worker.log');
+        $basePath = base_path();
+
+        try {
+            if ($isWindows) {
+                if ($syncFallback) {
+                    $cmd = escapeshellarg($phpBinary) . ' ' . escapeshellarg($artisanPath) . ' astro:calculate-worker --job=' . escapeshellarg($jobId) . ' >> ' . escapeshellarg($workerLog) . ' 2>&1';
+                    @exec($cmd);
+                } else {
+                    $cmd = 'start /B "" ' . escapeshellarg($phpBinary) . ' ' . escapeshellarg($artisanPath) . ' astro:calculate-worker --job=' . escapeshellarg($jobId) . ' >> ' . escapeshellarg($workerLog) . ' 2>&1';
+                    $handle = @popen($cmd, 'r');
+                    if (is_resource($handle)) {
+                        @pclose($handle);
+                    }
+                }
+            } else {
+                $disabledRaw = (string) ini_get('disable_functions');
+                $disabledFunctions = array_filter(array_map('trim', array_map('strtolower', explode(',', $disabledRaw))));
+
+                if ($syncFallback) {
+                    $cmd = 'cd ' . escapeshellarg($basePath) . ' && ' . escapeshellcmd($phpBinary) . ' ' . escapeshellarg($artisanPath) . ' astro:calculate-worker --job=' . escapeshellarg($jobId) . ' >> ' . escapeshellarg($workerLog) . ' 2>&1';
+                    if (function_exists('exec') && !in_array('exec', $disabledFunctions, true)) {
+                        @exec($cmd);
+                    } elseif (function_exists('shell_exec') && !in_array('shell_exec', $disabledFunctions, true)) {
+                        @shell_exec($cmd);
+                    }
+                } else {
+                    $cmd = 'cd ' . escapeshellarg($basePath) . ' && nohup ' . escapeshellcmd($phpBinary) . ' ' . escapeshellarg($artisanPath) . ' astro:calculate-worker --job=' . escapeshellarg($jobId) . ' >> ' . escapeshellarg($workerLog) . ' 2>&1 &';
+
+                    if (function_exists('exec') && !in_array('exec', $disabledFunctions, true)) {
+                        @exec($cmd);
+                    } elseif (function_exists('proc_open') && !in_array('proc_open', $disabledFunctions, true)) {
+                        $descriptors = [
+                            0 => ['pipe', 'r'],
+                            1 => ['file', $workerLog, 'a'],
+                            2 => ['file', $workerLog, 'a'],
+                        ];
+                        $pipes = [];
+                        $process = @proc_open($cmd, $descriptors, $pipes, $basePath);
+                        if (is_resource($process)) {
+                            @proc_close($process);
+                        }
+                    } elseif (function_exists('shell_exec') && !in_array('shell_exec', $disabledFunctions, true)) {
+                        @shell_exec($cmd);
+                    } elseif (function_exists('popen') && !in_array('popen', $disabledFunctions, true)) {
+                        $handle = @popen($cmd, 'r');
+                        if (is_resource($handle)) {
+                            @pclose($handle);
+                        }
+                    } else {
+                        return [
+                            'launched' => false,
+                            'reason' => 'process_spawning_disabled_by_host',
+                            'error' => 'Process execution functions disabled in php.ini.',
+                        ];
+                    }
+                }
+            }
+
+            return [
+                'launched' => true,
+                'reason' => $syncFallback ? 'worker_executed_sync_cli' : 'worker_spawned_job_cli',
+                'error' => null,
+            ];
+        } catch (Throwable $e) {
+            Log::error("Failed to launch CLI calculation worker for job [{$jobId}]: {$e->getMessage()}", [
+                'exception' => get_class($e),
+                'php_binary' => $phpBinary,
+            ]);
+
+            return [
+                'launched' => false,
+                'reason' => 'spawn_failed',
+                'error' => $e->getMessage(),
+            ];
+        }
     }
 
     /**

@@ -175,6 +175,42 @@ class CalculationJobManager
     }
 
     /**
+     * Atomically claim a specific calculation job by ID.
+     */
+    public function claimJobById(string $jobId, string $workerId, int $leaseSeconds = 60): ?AstrologyCalculationJob
+    {
+        return DB::transaction(function () use ($jobId, $workerId, $leaseSeconds) {
+            $job = AstrologyCalculationJob::where('job_id', $jobId)
+                ->lockForUpdate()
+                ->first();
+
+            if (!$job) {
+                return null;
+            }
+
+            // If already completed, return immediately
+            if ($job->isCompleted()) {
+                return $job;
+            }
+
+            // If processing by another active worker within lease, do not steal
+            if ($job->isProcessing() && !$job->isStale() && $job->worker_id !== $workerId) {
+                return null;
+            }
+
+            $job->update([
+                'status' => AstrologyCalculationJob::STATUS_PROCESSING,
+                'worker_id' => $workerId,
+                'attempts' => $job->attempts + 1,
+                'started_at' => now(),
+                'lease_expires_at' => now()->addSeconds($leaseSeconds),
+            ]);
+
+            return $job->fresh();
+        });
+    }
+
+    /**
      * Atomically claim the next eligible calculation job.
      */
     public function claimNextJob(string $workerId, int $leaseSeconds = 60): ?AstrologyCalculationJob
@@ -236,19 +272,20 @@ class CalculationJobManager
     }
 
     /**
-     * Mark a job completed and record the result cache key, with optional ownership fencing.
+     * Mark a job completed and record the result cache key and MySQL result payload, with optional ownership fencing.
      */
-    public function markCompleted(AstrologyCalculationJob $job, string $resultCacheKey, ?string $workerId = null): bool
+    public function markCompleted(AstrologyCalculationJob $job, string $resultCacheKey, ?string $workerId = null, ?array $result = null): bool
     {
         $query = AstrologyCalculationJob::where('id', $job->id);
 
         if ($workerId !== null) {
-            $query->where('status', AstrologyCalculationJob::STATUS_PROCESSING)
-                ->where('worker_id', $workerId)
-                ->where('lease_expires_at', '>', now());
+            $query->where(function ($q) use ($workerId) {
+                $q->where('worker_id', $workerId)
+                    ->orWhere('status', AstrologyCalculationJob::STATUS_PROCESSING);
+            });
         }
 
-        $affected = $query->update([
+        $updateData = [
             'status' => AstrologyCalculationJob::STATUS_COMPLETED,
             'active_key' => null,
             'completed_at' => now(),
@@ -256,7 +293,13 @@ class CalculationJobManager
             'lease_expires_at' => null,
             'error_message' => null,
             'error_context' => null,
-        ]);
+        ];
+
+        if ($result !== null) {
+            $updateData['result'] = $result;
+        }
+
+        $affected = $query->update($updateData);
 
         return $affected > 0;
     }

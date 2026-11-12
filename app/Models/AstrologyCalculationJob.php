@@ -33,6 +33,7 @@ class AstrologyCalculationJob extends Model
         'started_at',
         'completed_at',
         'result_cache_key',
+        'result',
         'error_message',
         'error_context',
         'user_id',
@@ -40,6 +41,7 @@ class AstrologyCalculationJob extends Model
 
     protected $casts = [
         'payload' => 'array',
+        'result' => 'array',
         'error_context' => 'array',
         'lease_expires_at' => 'datetime',
         'started_at' => 'datetime',

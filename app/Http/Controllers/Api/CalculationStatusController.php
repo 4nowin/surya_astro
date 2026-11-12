@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AstrologyCalculationJob;
 use App\Services\Astrology\Calculation\CalculationHandlerRegistry;
 use App\Services\Astrology\Calculation\CalculationJobManager;
+use App\Services\Astrology\Calculation\CalculationWorkerLauncher;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -15,7 +16,8 @@ class CalculationStatusController extends Controller
 {
     public function __construct(
         protected CalculationJobManager $jobManager,
-        protected CalculationHandlerRegistry $registry
+        protected CalculationHandlerRegistry $registry,
+        protected CalculationWorkerLauncher $workerLauncher
     ) {}
 
     /**
@@ -44,9 +46,9 @@ class CalculationStatusController extends Controller
         }
 
         $isReady = $job->isCompleted();
-        $result = null;
+        $result = $job->result;
 
-        if ($isReady && $this->registry->has($job->calculation_type)) {
+        if ($result === null && $isReady && $this->registry->has($job->calculation_type)) {
             $handler = $this->registry->get($job->calculation_type);
             $result = $handler->getCachedResult($job->canonical_key, $job->payload);
 
