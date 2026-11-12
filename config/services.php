@@ -53,4 +53,8 @@ return [
         'credentials_path' => env('FIREBASE_CREDENTIALS_PATH'),
     ],
 
+    'ably' => [
+        'key' => env('ABLY_KEY'),
+    ],
+
 ];

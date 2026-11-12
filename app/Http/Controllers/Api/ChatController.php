@@ -9,7 +9,6 @@ use App\Models\ChatSession;
 use App\Models\User;
 use App\Models\Astrologer;
 use App\Models\ChatPayment;
-use Kreait\Firebase\Factory;
 use Illuminate\Support\Facades\Log;
 
 class ChatController extends Controller
@@ -97,54 +96,7 @@ class ChatController extends Controller
         ]);
       }
 
-      // Now handle Firebase document
-      try {
-        $credentialsPath = storage_path('app/' . config('services.firebase.credentials_path'));
-        if (!$credentialsPath) {
-          Log::error("FIREBASE_CREDENTIALS_PATH is not set in config");
-          return response()->json(['error' => 'Server misconfiguration.'], 500);
-        }
-        $factory = (new Factory)->withServiceAccount($credentialsPath);
-        $firestore = $factory->createFirestore()->database();
-
-        // Check if the document exists in Firebase
-        $docRef = $firestore->collection('chats')->document((string) $chatSession->id);
-        $snapshot = $docRef->snapshot();
-
-        if (!$snapshot->exists()) {
-          // Document doesn't exist in Firebase, create it with the original structure
-          $docRef->set([
-            'text' => '',
-            'user_id' => $user->id,
-            'admin_id' => $adminId,
-            'astrologer_id' => $astrologerId,
-            'user_type' => 'user',
-            'user_name' => $user->name,
-            'timestamp' => now()->toDateTimeString(),
-            // Add the fields required by security rules
-            'last_message' => '',
-            'last_updated' => now()->toDateTimeString(),
-          ]);
-
-          Log::info('Created Firebase document for session', [
-            'session_id' => $chatSession->id,
-          ]);
-        }
-      } catch (\Throwable $e) {
-        Log::error('Failed to check/create Firebase document', [
-          'session_id' => $chatSession->id,
-          'error' => $e->getMessage(),
-          'trace' => $e->getTraceAsString(),
-        ]);
-
-        // For existing sessions, we continue even if Firebase fails
-        if ($isNew) {
-          return response()->json([
-            'status' => 'error',
-            'message' => 'Failed to create Firestore chat metadata.',
-          ], 500);
-        }
-      }
+      // Firestore document creation is deprecated - sessions and messages are managed via MySQL and Ably.
 
       return response()->json([
         'status' => $isNew ? 'new' : 'existing',
@@ -213,9 +165,9 @@ class ChatController extends Controller
       ->where('user_id', $user->id)
       ->first();
 
-    // if ($session) {
-    //   $session->update(['ended_at' => now()]);
-    // }
+    if ($session && $session->ended_at === null) {
+      $session->update(['ended_at' => now()]);
+    }
 
     return response()->json(['status' => 'ended']);
   }
