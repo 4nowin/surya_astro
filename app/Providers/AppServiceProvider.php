@@ -9,6 +9,8 @@ use App\Services\Astrology\Calculation\Handlers\DailyPanchangCalculationHandler;
 use App\Services\Astrology\Calculation\Handlers\DetailedKundliReportCalculationHandler;
 use App\Services\Astrology\Calculation\Handlers\KundliCalculationHandler;
 use App\Services\Astrology\Calculation\Handlers\PersonalizedInsightsCalculationHandler;
+use App\Services\Astrology\DailyPanchangService;
+use App\Services\Astrology\KundliService;
 use App\Services\Geo\GeocodingServiceInterface;
 use App\Services\Geo\LocalGazetteerGeocodingProvider;
 use Illuminate\Support\Facades\App;
@@ -37,6 +39,14 @@ class AppServiceProvider extends ServiceProvider
 
         // Reusable Astrology Background Calculation System
         // Explicitly instantiate without resolving native calculation services to keep web SAPI free from native FFI initialization
+        $this->app->singleton(KundliService::class, function () {
+            return new KundliService();
+        });
+
+        $this->app->singleton(DailyPanchangService::class, function () {
+            return new DailyPanchangService();
+        });
+
         $this->app->singleton(DailyPanchangCalculationHandler::class, function () {
             return new DailyPanchangCalculationHandler();
         });

@@ -59,7 +59,42 @@ class KundliCalculationHandler implements CalculationHandlerInterface
 
     public function calculate(array $payload): array
     {
-        return $this->getService()->calculateFromPayload($payload);
+        $kundli = $this->getService()->calculateFromPayload($payload);
+
+        try {
+            if (isset($kundli['planets']) && isset($kundli['ascendant'])) {
+                if (class_exists(\App\Services\Astrology\Yogas\ManglikDoshaService::class)) {
+                    $manglikService = app(\App\Services\Astrology\Yogas\ManglikDoshaService::class);
+                    $kundli['manglik_dosha'] = $manglikService->evaluate(
+                        planets: $kundli['planets'],
+                        lagnaRashiId: $kundli['ascendant']['id'] ?? $kundli['ascendant']
+                    );
+                }
+
+                if (class_exists(\App\Services\Astrology\Yogas\YogaDoshaOrchestrator::class)) {
+                    $yogaOrchestrator = app(\App\Services\Astrology\Yogas\YogaDoshaOrchestrator::class);
+                    $yogas = $yogaOrchestrator->evaluate(
+                        planets: $kundli['planets'],
+                        ascendantData: $kundli['ascendant'],
+                        stabilityData: ['is_lagna_invariant' => true],
+                        userAgeYears: 30
+                    );
+                    $kundli['yogas'] = $yogas['yogas'] ?? [];
+                    $kundli['aspects'] = $yogas['aspects'] ?? [];
+                }
+
+                if (class_exists(\App\Services\Astrology\Transits\SaturnTransitService::class)) {
+                    $moonSignId = $kundli['planets']['moon']['rashi']['id'] ?? 1;
+                    $tz = (string) ($payload['timezone'] ?? 'Asia/Kolkata');
+                    $saturnService = app(\App\Services\Astrology\Transits\SaturnTransitService::class);
+                    $kundli['saturn_transit'] = $saturnService->evaluateCurrentPhaseAt($moonSignId, now($tz)->toDateString());
+                }
+            }
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning("Kundli calculation enrichment warning: {$e->getMessage()}");
+        }
+
+        return $kundli;
     }
 
     public function storeResult(string $canonicalKey, array $result, array $payload): string

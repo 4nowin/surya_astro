@@ -27,18 +27,32 @@ use Throwable;
 class AstrologyApiController extends Controller
 {
     public function __construct(
-        protected KundliService $kundliService,
         protected ManglikDoshaService $manglikService,
         protected YogaDoshaOrchestrator $yogaOrchestrator,
         protected AstrologyIntervalStabilityService $stabilityService,
         protected SaturnTransitService $saturnTransitService,
-        protected DailyPanchangService $panchangService,
         protected GeocodingServiceInterface $geocodingService,
         protected CalculationJobManager $jobManager,
         protected CalculationWorkerLauncher $workerLauncher,
         protected KundliCalculationHandler $kundliHandler,
         protected DailyPanchangCalculationHandler $panchangHandler
     ) {}
+
+    /**
+     * Resolve Kundli service lazily to prevent eager FFI initialization in web runtime.
+     */
+    protected function getKundliService(): KundliService
+    {
+        return app(KundliService::class);
+    }
+
+    /**
+     * Resolve Daily Panchang service lazily to prevent eager FFI initialization in web runtime.
+     */
+    protected function getDailyPanchangService(): DailyPanchangService
+    {
+        return app(DailyPanchangService::class);
+    }
 
     /**
      * Authorize that the authenticated professional has ownership of the Jajman.
@@ -56,15 +70,16 @@ class AstrologyApiController extends Controller
 
     /**
      * Check whether direct FFI execution is viable in the current PHP environment.
+     * Web SAPIs (fpm-fcgi, cgi-fcgi, apache2handler, etc.) must NEVER execute direct FFI.
      */
     protected function canExecuteDirectFfi(): bool
     {
-        if (!extension_loaded('ffi')) {
+        if (PHP_SAPI !== 'cli') {
             return false;
         }
 
-        if (PHP_SAPI === 'cli') {
-            return true;
+        if (!extension_loaded('ffi')) {
+            return false;
         }
 
         $rawFfiEnable = strtolower(trim((string) ini_get('ffi.enable')));
@@ -320,7 +335,7 @@ class AstrologyApiController extends Controller
         $birthCity = (string) ($payload['birth_city'] ?? 'Unknown');
 
         // 1. Core Kundli
-        $kundli = $this->kundliService->computeKundli(
+        $kundli = $this->getKundliService()->computeKundli(
             birthDate: $birthDate,
             birthTime: $birthTime,
             precision: $precision,
@@ -492,7 +507,7 @@ class AstrologyApiController extends Controller
         // 2. Direct calculation if FFI is available
         if ($this->canExecuteDirectFfi()) {
             try {
-                $result = $this->panchangService->getDailyPanchang($date, $lat, $lon, $tz);
+                $result = $this->getDailyPanchangService()->getDailyPanchang($date, $lat, $lon, $tz);
                 $this->panchangHandler->storeResult($canonicalKey, $result, $payload);
 
                 return response()->json([

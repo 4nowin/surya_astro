@@ -142,6 +142,7 @@ Route::prefix('astrologer')->group(function () {
         Route::post('/astrology/kundli/calculate', [AstrologyApiController::class, 'calculateKundli']);
         Route::get('/astrology/panchang/daily', [AstrologyApiController::class, 'dailyPanchang']);
         Route::get('/astrology/cities', [AstrologyApiController::class, 'cities']);
+        Route::get('/calculations/{jobId}', [CalculationStatusController::class, 'show']);
 
         // 💼 Pandit Setu - Professional Services & Pricing Catalogue
         Route::get('/services', [ProfessionalServiceApiController::class, 'index']);
