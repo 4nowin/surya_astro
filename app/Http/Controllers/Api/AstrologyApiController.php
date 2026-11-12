@@ -27,10 +27,6 @@ use Throwable;
 class AstrologyApiController extends Controller
 {
     public function __construct(
-        protected ManglikDoshaService $manglikService,
-        protected YogaDoshaOrchestrator $yogaOrchestrator,
-        protected AstrologyIntervalStabilityService $stabilityService,
-        protected SaturnTransitService $saturnTransitService,
         protected GeocodingServiceInterface $geocodingService,
         protected CalculationJobManager $jobManager,
         protected CalculationWorkerLauncher $workerLauncher,
@@ -52,6 +48,38 @@ class AstrologyApiController extends Controller
     protected function getDailyPanchangService(): DailyPanchangService
     {
         return app(DailyPanchangService::class);
+    }
+
+    /**
+     * Resolve Manglik service lazily to prevent eager FFI initialization in web runtime.
+     */
+    protected function getManglikService(): ManglikDoshaService
+    {
+        return app(ManglikDoshaService::class);
+    }
+
+    /**
+     * Resolve Yoga orchestrator lazily to prevent eager FFI initialization in web runtime.
+     */
+    protected function getYogaOrchestrator(): YogaDoshaOrchestrator
+    {
+        return app(YogaDoshaOrchestrator::class);
+    }
+
+    /**
+     * Resolve Stability service lazily to prevent eager FFI initialization in web runtime.
+     */
+    protected function getStabilityService(): AstrologyIntervalStabilityService
+    {
+        return app(AstrologyIntervalStabilityService::class);
+    }
+
+    /**
+     * Resolve Saturn Transit service lazily to prevent eager FFI initialization in web runtime.
+     */
+    protected function getSaturnTransitService(): SaturnTransitService
+    {
+        return app(SaturnTransitService::class);
     }
 
     /**
@@ -350,13 +378,13 @@ class AstrologyApiController extends Controller
         );
 
         // 2. Manglik Dosha
-        $manglik = $this->manglikService->evaluate(
+        $manglik = $this->getManglikService()->evaluate(
             planets: $kundli['planets'],
             lagnaRashiId: $kundli['ascendant']['id'] ?? $kundli['ascendant']
         );
 
         // 3. Classical Yogas & Aspects
-        $yogas = $this->yogaOrchestrator->evaluate(
+        $yogas = $this->getYogaOrchestrator()->evaluate(
             planets: $kundli['planets'],
             ascendantData: $kundli['ascendant'],
             stabilityData: ['is_lagna_invariant' => true],
@@ -364,7 +392,7 @@ class AstrologyApiController extends Controller
         );
 
         // 4. D-9 Navamsha Stability & Houses
-        $stability = $this->stabilityService->analyze(
+        $stability = $this->getStabilityService()->analyze(
             birthDate: $birthDate,
             birthTime: $birthTime,
             precision: $precision,
@@ -383,7 +411,7 @@ class AstrologyApiController extends Controller
 
         // 5. Saturn Transit Status
         $moonSignId = $kundli['planets']['moon']['rashi']['id'] ?? 1;
-        $saturnTransit = $this->saturnTransitService->evaluateCurrentPhaseAt($moonSignId, now($timezone)->toDateString());
+        $saturnTransit = $this->getSaturnTransitService()->evaluateCurrentPhaseAt($moonSignId, now($timezone)->toDateString());
 
         // Attach enriched astrology modules
         $kundli['manglik_dosha'] = $manglik;

@@ -48,14 +48,17 @@ class CalculationWorkerLauncher
         $isWindows = PHP_OS_FAMILY === 'Windows';
 
         if (!$isWindows) {
-            $linuxCandidates = [
+            $currentBinary = defined('PHP_BINARY') ? (string) PHP_BINARY : '';
+            $linuxCandidates = array_filter([
+                $currentBinary !== '' && !str_contains($currentBinary, 'fpm') && !str_contains($currentBinary, 'cgi') ? $currentBinary : null,
+                $currentBinary !== '' ? str_replace(['php-fpm', 'php-cgi'], 'php', $currentBinary) : null,
                 '/usr/bin/php',
                 '/usr/local/bin/php',
+                '/opt/alt/php84/usr/bin/php',
                 '/opt/alt/php83/usr/bin/php',
                 '/opt/alt/php82/usr/bin/php',
-                '/opt/alt/php84/usr/bin/php',
                 '/usr/bin/php-cli',
-            ];
+            ]);
 
             foreach ($linuxCandidates as $candidate) {
                 if (file_exists($candidate) && is_executable($candidate)) {
@@ -190,10 +193,42 @@ class CalculationWorkerLauncher
                     pclose($handle);
                 }
             } else {
-                // Linux detached background spawn via nohup
-                // Redirection to /dev/null ensures stdout/stderr pipes close immediately
-                $cmd = 'nohup ' . escapeshellcmd($phpBinary) . ' ' . escapeshellarg($artisanPath) . ' astro:calculate-worker > /dev/null 2>&1 &';
-                @exec($cmd);
+                // Linux detached background spawn
+                $basePath = base_path();
+                $cmd = 'cd ' . escapeshellarg($basePath) . ' && nohup ' . escapeshellcmd($phpBinary) . ' ' . escapeshellarg($artisanPath) . ' astro:calculate-worker > /dev/null 2>&1 &';
+
+                $disabledRaw = (string) ini_get('disable_functions');
+                $disabledFunctions = array_filter(array_map('trim', array_map('strtolower', explode(',', $disabledRaw))));
+
+                if (function_exists('exec') && !in_array('exec', $disabledFunctions, true)) {
+                    @exec($cmd);
+                } elseif (function_exists('proc_open') && !in_array('proc_open', $disabledFunctions, true)) {
+                    $descriptors = [
+                        0 => ['pipe', 'r'],
+                        1 => ['file', '/dev/null', 'w'],
+                        2 => ['file', '/dev/null', 'w'],
+                    ];
+                    $pipes = [];
+                    $process = @proc_open($cmd, $descriptors, $pipes, $basePath);
+                    if (is_resource($process)) {
+                        @proc_close($process);
+                    }
+                } elseif (function_exists('shell_exec') && !in_array('shell_exec', $disabledFunctions, true)) {
+                    @shell_exec($cmd);
+                } elseif (function_exists('popen') && !in_array('popen', $disabledFunctions, true)) {
+                    $handle = @popen($cmd, 'r');
+                    if (is_resource($handle)) {
+                        @pclose($handle);
+                    }
+                } else {
+                    Log::info('Background process execution disabled in php.ini. Calculation queued for scheduled cron worker.');
+                    $this->releaseWorkerLock();
+                    return [
+                        'launched' => false,
+                        'reason' => 'process_spawning_disabled_by_host',
+                        'error' => 'Process execution functions disabled in php.ini. Calculation queued for cron worker.',
+                    ];
+                }
             }
 
             return [

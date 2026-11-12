@@ -12,8 +12,10 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // No recurring scheduler polling.
-        // Daily notifications are invoked directly once per day via Hostinger cron.
+        // Continuous background processing of astrology calculation jobs (Panchang & Kundli)
+        $schedule->command('astro:calculate-worker --max-jobs=20 --max-time=50')
+            ->everyMinute()
+            ->withoutOverlapping();
     }
 
     /**

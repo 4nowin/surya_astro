@@ -192,4 +192,27 @@ class ProfessionalAstrologyEngineTest extends TestCase
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.city', 'New Delhi');
     }
+
+    public function test_astrology_api_controller_resolution_never_resolves_native_ffi(): void
+    {
+        $ffiResolved = false;
+        $this->app->resolving(\JmeEph\FFI\JmeEphFFI::class, function () use (&$ffiResolved) {
+            $ffiResolved = true;
+        });
+
+        $controller = $this->app->make(\App\Http\Controllers\Api\AstrologyApiController::class);
+
+        $this->assertInstanceOf(\App\Http\Controllers\Api\AstrologyApiController::class, $controller);
+        $this->assertFalse($ffiResolved, 'AstrologyApiController must never resolve JmeEphFFI during dependency injection.');
+    }
+
+    public function test_services_summary_returns_200(): void
+    {
+        $this->actingAs($this->practitionerA, 'sanctum');
+
+        $res = $this->getJson('/api/astrologer/services/summary');
+        $res->assertOk()
+            ->assertJsonPath('success', true)
+            ->assertJsonPath('data.total_services', 0);
+    }
 }

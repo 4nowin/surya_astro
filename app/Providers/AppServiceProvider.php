@@ -11,6 +11,8 @@ use App\Services\Astrology\Calculation\Handlers\KundliCalculationHandler;
 use App\Services\Astrology\Calculation\Handlers\PersonalizedInsightsCalculationHandler;
 use App\Services\Astrology\DailyPanchangService;
 use App\Services\Astrology\KundliService;
+use App\Services\Astrology\Stability\AstrologyIntervalStabilityService;
+use App\Services\Astrology\Transits\SaturnTransitService;
 use App\Services\Geo\GeocodingServiceInterface;
 use App\Services\Geo\LocalGazetteerGeocodingProvider;
 use Illuminate\Support\Facades\App;
@@ -45,6 +47,14 @@ class AppServiceProvider extends ServiceProvider
 
         $this->app->singleton(DailyPanchangService::class, function () {
             return new DailyPanchangService();
+        });
+
+        $this->app->singleton(SaturnTransitService::class, function () {
+            return new SaturnTransitService();
+        });
+
+        $this->app->singleton(AstrologyIntervalStabilityService::class, function () {
+            return new AstrologyIntervalStabilityService();
         });
 
         $this->app->singleton(DailyPanchangCalculationHandler::class, function () {
