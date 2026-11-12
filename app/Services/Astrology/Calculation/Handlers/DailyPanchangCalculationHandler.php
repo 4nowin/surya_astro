@@ -54,12 +54,18 @@ class DailyPanchangCalculationHandler implements CalculationHandlerInterface
 
     public function calculate(array $payload): array
     {
+        $date = (string) ($payload['date'] ?? now('Asia/Kolkata')->toDateString());
+        $lat = (float) ($payload['lat'] ?? 28.6139);
+        $lon = (float) ($payload['lon'] ?? 77.2090);
+        $tz = (string) ($payload['tz'] ?? 'Asia/Kolkata');
+        $elevation = isset($payload['elevation']) ? (float) $payload['elevation'] : 0.0;
+
         return $this->getService()->getDailyPanchang(
-            date: (string) $payload['date'],
-            latitude: (float) $payload['lat'],
-            longitude: (float) $payload['lon'],
-            timezone: (string) $payload['tz'],
-            elevation: isset($payload['elevation']) ? (float) $payload['elevation'] : 0.0
+            date: $date,
+            latitude: $lat,
+            longitude: $lon,
+            timezone: $tz,
+            elevation: $elevation
         );
     }
 

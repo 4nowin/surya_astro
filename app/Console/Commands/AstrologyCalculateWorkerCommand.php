@@ -20,7 +20,8 @@ class AstrologyCalculateWorkerCommand extends Command
      */
     protected $signature = 'astro:calculate-worker
                             {--max-jobs=10 : Maximum number of jobs to process before exiting}
-                            {--max-time=45 : Maximum execution time in seconds}';
+                            {--max-time=45 : Maximum execution time in seconds}
+                            {--retry-failed : Reset failed calculation jobs back to pending and retry them}';
 
     /**
      * The console command description.
@@ -39,6 +40,19 @@ class AstrologyCalculateWorkerCommand extends Command
     ): int {
         $maxJobs = (int) $this->option('max-jobs');
         $maxTime = (int) $this->option('max-time');
+
+        if ($this->option('retry-failed')) {
+            $resetCount = \App\Models\AstrologyCalculationJob::where('status', \App\Models\AstrologyCalculationJob::STATUS_FAILED)
+                ->update([
+                    'status' => \App\Models\AstrologyCalculationJob::STATUS_PENDING,
+                    'attempts' => 0,
+                    'lease_expires_at' => null,
+                    'worker_id' => null,
+                    'error_message' => null,
+                    'error_context' => null,
+                ]);
+            $this->info("Reset {$resetCount} failed calculation job(s) back to pending.");
+        }
 
         $workerId = 'worker_' . bin2hex(random_bytes(6)) . '_' . getmypid();
         $startTime = microtime(true);

@@ -39,7 +39,7 @@ class CalculationStatusController extends Controller
         if (!$job) {
             return response()->json([
                 'success' => false,
-                'message' => 'Calculation job not found or access denied.',
+                'message' => 'Calculation job not found.',
             ], 404);
         }
 
@@ -49,13 +49,19 @@ class CalculationStatusController extends Controller
         if ($isReady && $this->registry->has($job->calculation_type)) {
             $handler = $this->registry->get($job->calculation_type);
             $result = $handler->getCachedResult($job->canonical_key, $job->payload);
+
+            // Fallback: check direct cache key recorded on the job record
+            if ($result === null && !empty($job->result_cache_key)) {
+                $cached = \Illuminate\Support\Facades\Cache::get($job->result_cache_key);
+                if (is_array($cached)) {
+                    $result = $cached;
+                }
+            }
         }
 
-        $statusCode = match ($job->status) {
-            AstrologyCalculationJob::STATUS_COMPLETED => 200,
-            AstrologyCalculationJob::STATUS_FAILED => 500,
-            default => 200, // In progress returns 200 with status pending/processing
-        };
+        // Return 200 for all valid job lookups so clients cleanly parse status
+        // (Previously STATUS_FAILED returned HTTP 500, which crashed polling clients)
+        $statusCode = 200;
 
         return response()->json([
             'success' => !$job->isFailed(),
@@ -70,7 +76,7 @@ class CalculationStatusController extends Controller
                 'job_id' => $job->job_id,
                 'calculation_type' => $job->calculation_type,
                 'status' => $job->status,
-                'ready' => $isReady,
+                'ready' => $isReady && $result !== null,
                 'created_at' => $job->created_at?->toIso8601String(),
                 'started_at' => $job->started_at?->toIso8601String(),
                 'completed_at' => $job->completed_at?->toIso8601String(),

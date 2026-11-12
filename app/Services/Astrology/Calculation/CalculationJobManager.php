@@ -110,28 +110,23 @@ class CalculationJobManager
                         ];
                     }
 
-                    // If failed: check if retryable
+                    // If failed: reset to pending on new request so transient worker failures don't permanently brick calculations
                     if ($existingJob->isFailed()) {
-                        if ($existingJob->canRetry()) {
-                            $existingJob->update([
-                                'status' => AstrologyCalculationJob::STATUS_PENDING,
-                                'active_key' => $activeKey,
-                                'lease_expires_at' => null,
-                                'worker_id' => null,
-                            ]);
+                        $existingJob->update([
+                            'status' => AstrologyCalculationJob::STATUS_PENDING,
+                            'active_key' => $activeKey,
+                            'attempts' => 0,
+                            'lease_expires_at' => null,
+                            'worker_id' => null,
+                            'started_at' => null,
+                            'completed_at' => null,
+                            'error_message' => null,
+                            'error_context' => null,
+                        ]);
 
-                            return [
-                                'ready' => false,
-                                'job' => $existingJob->fresh(),
-                                'canonical_key' => $canonicalKey,
-                                'is_new' => false,
-                            ];
-                        }
-
-                        // Max retries exceeded; return failed job
                         return [
                             'ready' => false,
-                            'job' => $existingJob,
+                            'job' => $existingJob->fresh(),
                             'canonical_key' => $canonicalKey,
                             'is_new' => false,
                         ];

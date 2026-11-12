@@ -61,7 +61,7 @@ class CalculationWorkerLauncher
             ]);
 
             foreach ($linuxCandidates as $candidate) {
-                if (file_exists($candidate) && is_executable($candidate)) {
+                if (@file_exists($candidate) && @is_executable($candidate)) {
                     return $candidate;
                 }
             }
@@ -193,9 +193,10 @@ class CalculationWorkerLauncher
                     pclose($handle);
                 }
             } else {
-                // Linux detached background spawn
+                // Linux detached background spawn with diagnostic logging to storage/logs/astro-worker.log
                 $basePath = base_path();
-                $cmd = 'cd ' . escapeshellarg($basePath) . ' && nohup ' . escapeshellcmd($phpBinary) . ' ' . escapeshellarg($artisanPath) . ' astro:calculate-worker > /dev/null 2>&1 &';
+                $workerLog = storage_path('logs/astro-worker.log');
+                $cmd = 'cd ' . escapeshellarg($basePath) . ' && nohup ' . escapeshellcmd($phpBinary) . ' ' . escapeshellarg($artisanPath) . ' astro:calculate-worker >> ' . escapeshellarg($workerLog) . ' 2>&1 &';
 
                 $disabledRaw = (string) ini_get('disable_functions');
                 $disabledFunctions = array_filter(array_map('trim', array_map('strtolower', explode(',', $disabledRaw))));
@@ -205,8 +206,8 @@ class CalculationWorkerLauncher
                 } elseif (function_exists('proc_open') && !in_array('proc_open', $disabledFunctions, true)) {
                     $descriptors = [
                         0 => ['pipe', 'r'],
-                        1 => ['file', '/dev/null', 'w'],
-                        2 => ['file', '/dev/null', 'w'],
+                        1 => ['file', $workerLog, 'a'],
+                        2 => ['file', $workerLog, 'a'],
                     ];
                     $pipes = [];
                     $process = @proc_open($cmd, $descriptors, $pipes, $basePath);
