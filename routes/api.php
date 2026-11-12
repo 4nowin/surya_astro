@@ -13,7 +13,9 @@ use App\Http\Controllers\Api\ConsultationApiController;
 use App\Http\Controllers\Api\JajmanApiController;
 use App\Http\Controllers\Api\ProfessionalInvoiceApiController;
 use App\Http\Controllers\Api\ProfessionalPaymentApiController;
+use App\Http\Controllers\Api\ProfessionalPublicProfileApiController;
 use App\Http\Controllers\Api\ProfessionalServiceApiController;
+use App\Http\Controllers\Api\PublicBookingApiController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\PoojaController;
 use App\Http\Controllers\Api\HoroscopeController;
@@ -177,7 +179,32 @@ Route::prefix('astrologer')->group(function () {
         Route::get('/receipts', [ProfessionalInvoiceApiController::class, 'receipts']);
         Route::get('/receipts/{id}', [ProfessionalInvoiceApiController::class, 'receiptShow']);
         Route::get('/receipts/{id}/pdf', [ProfessionalInvoiceApiController::class, 'downloadReceiptPdf']);
+
+        // 🌐 Pandit Setu - Professional Public Profile & Booking Requests
+        Route::get('/public-profile', [ProfessionalPublicProfileApiController::class, 'getProfile']);
+        Route::post('/public-profile', [ProfessionalPublicProfileApiController::class, 'updateProfile']);
+        Route::post('/public-profile/publish', [ProfessionalPublicProfileApiController::class, 'togglePublish']);
+        Route::get('/booking-requests', [ProfessionalPublicProfileApiController::class, 'listBookingRequests']);
+        Route::get('/booking-requests/{id}', [ProfessionalPublicProfileApiController::class, 'getBookingRequest']);
+        Route::post('/booking-requests/{id}/accept', [ProfessionalPublicProfileApiController::class, 'acceptBookingRequest']);
+        Route::post('/booking-requests/{id}/reject', [ProfessionalPublicProfileApiController::class, 'rejectBookingRequest']);
+        Route::post('/booking-requests/{id}/propose-alternative', [ProfessionalPublicProfileApiController::class, 'proposeAlternative']);
+        Route::post('/services/{id}/public-visibility', [ProfessionalPublicProfileApiController::class, 'updateServiceVisibility']);
     });
+});
+
+/*
+|--------------------------------------------------------------------------
+| Pandit Setu - Public Profiles, Public Services & Client Booking APIs
+|--------------------------------------------------------------------------
+*/
+Route::prefix('public')->middleware('throttle:60,1')->group(function () {
+    Route::get('/practitioners/{slug}', [PublicBookingApiController::class, 'getProfile']);
+    Route::get('/practitioners/{slug}/services', [PublicBookingApiController::class, 'getServices']);
+    Route::get('/practitioners/{slug}/availability', [PublicBookingApiController::class, 'getAvailability']);
+    Route::post('/practitioners/{slug}/booking-requests', [PublicBookingApiController::class, 'submitBookingRequest']);
+    Route::get('/booking-requests/{reference}', [PublicBookingApiController::class, 'getBookingStatus']);
+    Route::post('/booking-requests/{reference}/cancel', [PublicBookingApiController::class, 'clientCancel']);
 });
 
 Route::post('{lang?}/login', [AuthController::class, "login"]);

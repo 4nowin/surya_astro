@@ -24,6 +24,8 @@ class ProfessionalService extends Model
         'duration_minutes',
         'delivery_methods',
         'is_active',
+        'is_public',
+        'public_description',
         'preparation_instructions',
         'additional_info',
     ];
@@ -33,6 +35,7 @@ class ProfessionalService extends Model
         'duration_minutes' => 'integer',
         'delivery_methods' => 'array',
         'is_active' => 'boolean',
+        'is_public' => 'boolean',
     ];
 
     /**
@@ -73,6 +76,33 @@ class ProfessionalService extends Model
     public function scopeByCategory($query, string $category)
     {
         return $query->where('category', $category);
+    }
+
+    /**
+     * Scope query to only active and publicly visible services.
+     */
+    public function scopePubliclyVisible($query)
+    {
+        return $query->where('is_active', true)->where('is_public', true);
+    }
+
+    /**
+     * Public-safe service representation without internal preparation instructions.
+     */
+    public function toPublicArray(): array
+    {
+        return [
+            'id' => $this->id,
+            'name' => $this->name,
+            'public_description' => $this->public_description ?: $this->description,
+            'category' => $this->category,
+            'specialization' => $this->specialization,
+            'pricing_model' => $this->pricing_model,
+            'price' => $this->price,
+            'currency' => $this->currency,
+            'duration_minutes' => $this->duration_minutes,
+            'delivery_methods' => $this->delivery_methods ?? ['online'],
+        ];
     }
 
     /**

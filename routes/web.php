@@ -215,3 +215,14 @@ Route::get('/delete-account-request', function () {
 });
 
 Route::post('/submit-delete-request', [InquiryController::class, 'submitDeleteRequest'])->name('submit-delete-request');
+
+/*
+|--------------------------------------------------------------------------
+| Phase 10: Pandit Setu - Public Practitioner Profiles & Client Booking
+|--------------------------------------------------------------------------
+*/
+use App\Http\Controllers\Web\PublicBookingWebController;
+
+Route::get('/p/{slug}', [PublicBookingWebController::class, 'showProfile'])->name('public.practitioner.profile');
+Route::post('/p/{slug}/book', [PublicBookingWebController::class, 'submitBooking'])->name('public.booking.submit');
+Route::get('/p/{slug}/booking/{reference}', [PublicBookingWebController::class, 'bookingConfirmation'])->name('public.booking.confirmation');
