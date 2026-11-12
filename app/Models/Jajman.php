@@ -94,4 +94,12 @@ class Jajman extends Model
     {
         return $this->hasMany(ProfessionalTransaction::class, 'jajman_id');
     }
+
+    /**
+     * Invoices associated with this Jajman.
+     */
+    public function invoices()
+    {
+        return $this->hasMany(ProfessionalInvoice::class, 'jajman_id');
+    }
 }

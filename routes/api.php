@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AvailabilityApiController;
 use App\Http\Controllers\Api\ConsultationApiController;
 use App\Http\Controllers\Api\JajmanApiController;
+use App\Http\Controllers\Api\ProfessionalInvoiceApiController;
 use App\Http\Controllers\Api\ProfessionalPaymentApiController;
 use App\Http\Controllers\Api\ProfessionalServiceApiController;
 use App\Http\Controllers\Api\UserController;
@@ -159,6 +160,23 @@ Route::prefix('astrologer')->group(function () {
         Route::get('/jajmans/{id}/financial-summary', [ProfessionalPaymentApiController::class, 'jajmanFinancialSummary']);
         Route::get('/appointments/{id}/financial-summary', [ProfessionalPaymentApiController::class, 'appointmentFinancialSummary']);
         Route::get('/consultations/{id}/financial-summary', [ProfessionalPaymentApiController::class, 'consultationFinancialSummary']);
+
+        // 🧾 Pandit Setu - Professional Invoices, Receipts & Financial Documents
+        Route::get('/document-settings', [ProfessionalInvoiceApiController::class, 'getDocumentSettings']);
+        Route::post('/document-settings', [ProfessionalInvoiceApiController::class, 'updateDocumentSettings']);
+        Route::get('/invoices', [ProfessionalInvoiceApiController::class, 'index']);
+        Route::post('/invoices', [ProfessionalInvoiceApiController::class, 'store']);
+        Route::get('/invoices/summary', [ProfessionalInvoiceApiController::class, 'summary']);
+        Route::get('/invoices/{id}', [ProfessionalInvoiceApiController::class, 'show']);
+        Route::put('/invoices/{id}', [ProfessionalInvoiceApiController::class, 'update']);
+        Route::post('/invoices/{id}/issue', [ProfessionalInvoiceApiController::class, 'issue']);
+        Route::post('/invoices/{id}/cancel', [ProfessionalInvoiceApiController::class, 'cancel']);
+        Route::post('/invoices/{id}/payments', [ProfessionalInvoiceApiController::class, 'recordPayment']);
+        Route::get('/invoices/{id}/pdf', [ProfessionalInvoiceApiController::class, 'downloadInvoicePdf']);
+        Route::get('/jajmans/{id}/invoices', [ProfessionalInvoiceApiController::class, 'jajmanInvoices']);
+        Route::get('/receipts', [ProfessionalInvoiceApiController::class, 'receipts']);
+        Route::get('/receipts/{id}', [ProfessionalInvoiceApiController::class, 'receiptShow']);
+        Route::get('/receipts/{id}/pdf', [ProfessionalInvoiceApiController::class, 'downloadReceiptPdf']);
     });
 });
 

@@ -17,6 +17,7 @@ class ProfessionalTransaction extends Model
         'jajman_id',
         'appointment_id',
         'consultation_id',
+        'invoice_id',
         'parent_transaction_id',
         'transaction_type',
         'payment_method',
@@ -25,6 +26,7 @@ class ProfessionalTransaction extends Model
         'currency',
         'transaction_at',
         'reference_id',
+        'receipt_number',
         'notes',
     ];
 
@@ -63,6 +65,33 @@ class ProfessionalTransaction extends Model
     public function consultation()
     {
         return $this->belongsTo(Consultation::class, 'consultation_id');
+    }
+
+    /**
+     * Linked invoice.
+     */
+    public function invoice()
+    {
+        return $this->belongsTo(ProfessionalInvoice::class, 'invoice_id');
+    }
+
+    /**
+     * Ensure a unique sequential receipt number is generated for completed payments.
+     */
+    public function ensureReceiptNumber(): string
+    {
+        if (!empty($this->receipt_number)) {
+            return $this->receipt_number;
+        }
+
+        $receiptNo = ProfessionalDocumentSetting::generateNextReceiptNumber(
+            $this->professional,
+            $this->transaction_at ? \Carbon\Carbon::parse($this->transaction_at) : now()
+        );
+
+        $this->receipt_number = $receiptNo;
+        $this->save();
+        return $receiptNo;
     }
 
     /**
