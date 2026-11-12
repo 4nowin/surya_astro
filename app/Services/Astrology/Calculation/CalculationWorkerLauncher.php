@@ -79,7 +79,7 @@ class CalculationWorkerLauncher
                 }
             }
 
-            return 'php';
+            return '/usr/bin/php';
         }
 
         // Windows local development

@@ -24,6 +24,11 @@ class KundliCalculationHandler implements CalculationHandlerInterface
         $this->kundliService = $kundliService;
     }
 
+    public function setKundliService(KundliService $kundliService): void
+    {
+        $this->kundliService = $kundliService;
+    }
+
     public function getCalculationType(): string
     {
         return self::TYPE;

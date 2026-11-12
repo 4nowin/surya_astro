@@ -29,6 +29,11 @@ class DailyPanchangCalculationHandler implements CalculationHandlerInterface
         $this->panchangService = $panchangService;
     }
 
+    public function setPanchangService(DailyPanchangService $panchangService): void
+    {
+        $this->panchangService = $panchangService;
+    }
+
     public function getCalculationType(): string
     {
         return self::TYPE;

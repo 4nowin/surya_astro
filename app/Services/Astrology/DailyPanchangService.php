@@ -37,6 +37,11 @@ class DailyPanchangService
         $this->panchangService = $panchangService;
     }
 
+    public function setPanchangService(PanchangService $panchangService): void
+    {
+        $this->panchangService = $panchangService;
+    }
+
     protected function getPanchangService(): PanchangService
     {
         return $this->panchangService ??= app(PanchangService::class);
