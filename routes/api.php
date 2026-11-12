@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AvailabilityApiController;
 use App\Http\Controllers\Api\ConsultationApiController;
 use App\Http\Controllers\Api\JajmanApiController;
+use App\Http\Controllers\Api\ProfessionalPaymentApiController;
 use App\Http\Controllers\Api\ProfessionalServiceApiController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\PoojaController;
@@ -148,6 +149,16 @@ Route::prefix('astrologer')->group(function () {
         Route::put('/services/{id}', [ProfessionalServiceApiController::class, 'update']);
         Route::post('/services/{id}/toggle-active', [ProfessionalServiceApiController::class, 'toggleActive']);
         Route::delete('/services/{id}', [ProfessionalServiceApiController::class, 'destroy']);
+
+        // 💰 Pandit Setu - Professional Payments, Transactions & Earnings
+        Route::get('/payments', [ProfessionalPaymentApiController::class, 'index']);
+        Route::post('/payments', [ProfessionalPaymentApiController::class, 'store']);
+        Route::get('/payments/summary', [ProfessionalPaymentApiController::class, 'summary']);
+        Route::get('/payments/{id}', [ProfessionalPaymentApiController::class, 'show']);
+        Route::post('/payments/{id}/refund', [ProfessionalPaymentApiController::class, 'refund']);
+        Route::get('/jajmans/{id}/financial-summary', [ProfessionalPaymentApiController::class, 'jajmanFinancialSummary']);
+        Route::get('/appointments/{id}/financial-summary', [ProfessionalPaymentApiController::class, 'appointmentFinancialSummary']);
+        Route::get('/consultations/{id}/financial-summary', [ProfessionalPaymentApiController::class, 'consultationFinancialSummary']);
     });
 });
 

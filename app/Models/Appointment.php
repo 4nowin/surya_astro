@@ -31,6 +31,7 @@ class Appointment extends Model
         'currency_snapshot',
         'duration_minutes_snapshot',
         'delivery_method_snapshot',
+        'payment_status',
         'consultation_id',
         'cancellation_reason',
     ];
@@ -64,6 +65,55 @@ class Appointment extends Model
     public function service()
     {
         return $this->belongsTo(ProfessionalService::class, 'service_id');
+    }
+
+    /**
+     * Financial transactions linked to this appointment.
+     */
+    public function transactions()
+    {
+        return $this->hasMany(ProfessionalTransaction::class, 'appointment_id');
+    }
+
+    /**
+     * Authoritative financial calculation for this appointment.
+     */
+    public function calculateFinancialStatus(): array
+    {
+        $obligation = (float) ($this->agreed_price_snapshot ?? ($this->service?->price ?? 0.0));
+
+        $completedPayments = (float) $this->transactions()
+            ->where('transaction_type', '!=', 'refund')
+            ->where('payment_status', 'completed')
+            ->sum('amount');
+
+        $completedRefunds = (float) $this->transactions()
+            ->where('transaction_type', 'refund')
+            ->where('payment_status', 'completed')
+            ->sum('amount');
+
+        $netReceived = round($completedPayments - $completedRefunds, 2);
+        $outstanding = max(0.0, round($obligation - $netReceived, 2));
+
+        $status = 'unpaid';
+        if ($obligation <= 0) {
+            $status = $netReceived > 0 ? 'paid' : 'unpaid';
+        } elseif ($netReceived >= $obligation) {
+            $status = 'paid';
+        } elseif ($netReceived > 0) {
+            $status = 'partially_paid';
+        } elseif ($completedRefunds > 0) {
+            $status = 'refunded';
+        }
+
+        return [
+            'total_agreed' => $obligation,
+            'total_received' => $completedPayments,
+            'total_refunded' => $completedRefunds,
+            'net_received' => $netReceived,
+            'outstanding_balance' => $outstanding,
+            'payment_status' => $status,
+        ];
     }
 
     /**

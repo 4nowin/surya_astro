@@ -23,6 +23,7 @@ class Consultation extends Model
         'consultation_date',
         'duration_minutes',
         'fee_charged',
+        'payment_status',
         'summary',
     ];
 
@@ -45,6 +46,49 @@ class Consultation extends Model
     public function service()
     {
         return $this->belongsTo(ProfessionalService::class, 'service_id');
+    }
+
+    public function transactions()
+    {
+        return $this->hasMany(ProfessionalTransaction::class, 'consultation_id');
+    }
+
+    public function calculateFinancialStatus(): array
+    {
+        $obligation = (float) ($this->fee_charged ?? 0.0);
+
+        $completedPayments = (float) $this->transactions()
+            ->where('transaction_type', '!=', 'refund')
+            ->where('payment_status', 'completed')
+            ->sum('amount');
+
+        $completedRefunds = (float) $this->transactions()
+            ->where('transaction_type', 'refund')
+            ->where('payment_status', 'completed')
+            ->sum('amount');
+
+        $netReceived = round($completedPayments - $completedRefunds, 2);
+        $outstanding = max(0.0, round($obligation - $netReceived, 2));
+
+        $status = 'unpaid';
+        if ($obligation <= 0) {
+            $status = $netReceived > 0 ? 'paid' : 'unpaid';
+        } elseif ($netReceived >= $obligation) {
+            $status = 'paid';
+        } elseif ($netReceived > 0) {
+            $status = 'partially_paid';
+        } elseif ($completedRefunds > 0) {
+            $status = 'refunded';
+        }
+
+        return [
+            'fee_charged' => $obligation,
+            'total_received' => $completedPayments,
+            'total_refunded' => $completedRefunds,
+            'net_received' => $netReceived,
+            'outstanding_balance' => $outstanding,
+            'payment_status' => $status,
+        ];
     }
 
     public function chatSession()

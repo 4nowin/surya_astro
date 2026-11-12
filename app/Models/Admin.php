@@ -63,6 +63,11 @@ class Admin extends Authenticatable
         return $this->hasMany(ProfessionalService::class, 'admin_id');
     }
 
+    public function transactions()
+    {
+        return $this->hasMany(ProfessionalTransaction::class, 'admin_id');
+    }
+
     public function availabilityExceptions()
     {
         return $this->hasMany(ProfessionalAvailabilityException::class, 'admin_id');
