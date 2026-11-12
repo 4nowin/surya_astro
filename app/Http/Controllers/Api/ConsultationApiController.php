@@ -7,6 +7,7 @@ use App\Models\Astrologer;
 use App\Models\ChatSession;
 use App\Models\Consultation;
 use App\Models\Jajman;
+use App\Models\ProfessionalService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
@@ -83,7 +84,7 @@ class ConsultationApiController extends Controller
         $admin = $request->user();
 
         $query = Consultation::where('admin_id', $admin->id)
-            ->with(['jajman:id,name,phone,city', 'chatSession:id,ended_at']);
+            ->with(['jajman:id,name,phone,city', 'chatSession:id,ended_at', 'service:id,name,category,price,currency']);
 
         if ($jajmanId = $request->query('jajman_id')) {
             $query->where('jajman_id', $jajmanId);
@@ -117,6 +118,7 @@ class ConsultationApiController extends Controller
         $validated = $request->validate([
             'client_name' => 'required|string|max:191',
             'jajman_id' => 'nullable|exists:jajmans,id',
+            'service_id' => 'nullable|integer',
             'chat_session_id' => 'nullable|exists:chat_sessions,id',
             'type' => ['required', Rule::in(['online_chat', 'in_person', 'phone_call', 'ritual_puja', 'vastu_visit'])],
             'status' => ['required', Rule::in(['completed', 'in_progress', 'scheduled', 'cancelled'])],
@@ -137,23 +139,35 @@ class ConsultationApiController extends Controller
             }
         }
 
+        $service = null;
+        if (!empty($validated['service_id'])) {
+            $service = ProfessionalService::where('admin_id', $admin->id)->find($validated['service_id']);
+            if (!$service) {
+                abort(404, 'Service not found in your catalogue.');
+            }
+        }
+
+        $feeCharged = $validated['fee_charged'] ?? $service?->price;
+
         $consultation = Consultation::create([
             'admin_id' => $admin->id,
             'jajman_id' => $validated['jajman_id'] ?? null,
+            'service_id' => $service?->id,
+            'service_name_snapshot' => $service?->name,
             'chat_session_id' => $validated['chat_session_id'] ?? null,
             'client_name' => $validated['client_name'],
             'type' => $validated['type'],
             'status' => $validated['status'],
             'consultation_date' => $validated['consultation_date'] ?? now(),
-            'duration_minutes' => $validated['duration_minutes'] ?? null,
-            'fee_charged' => $validated['fee_charged'] ?? null,
+            'duration_minutes' => $validated['duration_minutes'] ?? $service?->duration_minutes,
+            'fee_charged' => $feeCharged,
             'summary' => $validated['summary'] ?? null,
         ]);
 
         return response()->json([
             'status' => 'success',
             'message' => 'Consultation recorded successfully.',
-            'data' => $consultation->load(['jajman', 'chatSession']),
+            'data' => $consultation->load(['jajman', 'service', 'chatSession']),
         ], 201);
     }
 }

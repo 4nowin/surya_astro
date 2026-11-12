@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AvailabilityApiController;
 use App\Http\Controllers\Api\ConsultationApiController;
 use App\Http\Controllers\Api\JajmanApiController;
+use App\Http\Controllers\Api\ProfessionalServiceApiController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\PoojaController;
 use App\Http\Controllers\Api\HoroscopeController;
@@ -137,6 +138,16 @@ Route::prefix('astrologer')->group(function () {
         Route::post('/astrology/kundli/calculate', [AstrologyApiController::class, 'calculateKundli']);
         Route::get('/astrology/panchang/daily', [AstrologyApiController::class, 'dailyPanchang']);
         Route::get('/astrology/cities', [AstrologyApiController::class, 'cities']);
+
+        // 💼 Pandit Setu - Professional Services & Pricing Catalogue
+        Route::get('/services', [ProfessionalServiceApiController::class, 'index']);
+        Route::post('/services', [ProfessionalServiceApiController::class, 'store']);
+        Route::get('/services/templates', [ProfessionalServiceApiController::class, 'templates']);
+        Route::get('/services/summary', [ProfessionalServiceApiController::class, 'summary']);
+        Route::get('/services/{id}', [ProfessionalServiceApiController::class, 'show']);
+        Route::put('/services/{id}', [ProfessionalServiceApiController::class, 'update']);
+        Route::post('/services/{id}/toggle-active', [ProfessionalServiceApiController::class, 'toggleActive']);
+        Route::delete('/services/{id}', [ProfessionalServiceApiController::class, 'destroy']);
     });
 });
 

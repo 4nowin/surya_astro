@@ -25,6 +25,12 @@ class Appointment extends Model
         'timezone',
         'location',
         'meeting_link',
+        'service_id',
+        'service_name_snapshot',
+        'agreed_price_snapshot',
+        'currency_snapshot',
+        'duration_minutes_snapshot',
+        'delivery_method_snapshot',
         'consultation_id',
         'cancellation_reason',
     ];
@@ -32,6 +38,8 @@ class Appointment extends Model
     protected $casts = [
         'start_at' => 'datetime',
         'end_at' => 'datetime',
+        'agreed_price_snapshot' => 'float',
+        'duration_minutes_snapshot' => 'integer',
     ];
 
     /**
@@ -48,6 +56,14 @@ class Appointment extends Model
     public function jajman()
     {
         return $this->belongsTo(Jajman::class, 'jajman_id');
+    }
+
+    /**
+     * Linked professional service catalogue item.
+     */
+    public function service()
+    {
+        return $this->belongsTo(ProfessionalService::class, 'service_id');
     }
 
     /**

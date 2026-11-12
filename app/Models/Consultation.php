@@ -14,6 +14,8 @@ class Consultation extends Model
     protected $fillable = [
         'admin_id',
         'jajman_id',
+        'service_id',
+        'service_name_snapshot',
         'chat_session_id',
         'client_name',
         'type',
@@ -38,6 +40,11 @@ class Consultation extends Model
     public function jajman()
     {
         return $this->belongsTo(Jajman::class, 'jajman_id');
+    }
+
+    public function service()
+    {
+        return $this->belongsTo(ProfessionalService::class, 'service_id');
     }
 
     public function chatSession()

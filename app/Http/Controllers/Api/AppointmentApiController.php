@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use App\Models\Consultation;
 use App\Models\Jajman;
+use App\Models\ProfessionalService;
 use App\Services\Appointment\AppointmentConflictService;
 use App\Services\FirebaseNotificationService;
 use Carbon\Carbon;
@@ -35,6 +36,7 @@ class AppointmentApiController extends Controller
         $query = Appointment::where('admin_id', $admin->id)
             ->with([
                 'jajman:id,name,phone,email,gender',
+                'service:id,name,category,price,currency,pricing_model',
                 'consultation:id,type,fee_charged,duration_minutes',
             ]);
 
@@ -111,6 +113,8 @@ class AppointmentApiController extends Controller
             'end_at' => 'required|date|after:start_at',
             'timezone' => 'nullable|string|max:64',
             'jajman_id' => 'nullable|integer',
+            'service_id' => 'nullable|integer',
+            'agreed_price' => 'nullable|numeric|min:0',
             'location' => 'nullable|string|max:255',
             'meeting_link' => 'nullable|string|max:255',
             'override_availability' => 'nullable|boolean',
@@ -142,9 +146,21 @@ class AppointmentApiController extends Controller
             }
         }
 
+        // Validate Service ownership if provided
+        $service = null;
+        if (!empty($validated['service_id'])) {
+            $service = ProfessionalService::where('admin_id', $admin->id)->find($validated['service_id']);
+            if (!$service) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'The selected service does not belong to your catalogue.',
+                ], 404);
+            }
+        }
+
         $overrideAvailability = (bool) ($validated['override_availability'] ?? false);
 
-        return DB::transaction(function () use ($admin, $validated, $startUtc, $endUtc, $tzName, $overrideAvailability) {
+        return DB::transaction(function () use ($admin, $validated, $service, $startUtc, $endUtc, $tzName, $overrideAvailability) {
             // Check overlapping appointment conflict
             $conflict = $this->conflictService->findConflictingAppointment($admin->id, $startUtc, $endUtc);
             if ($conflict) {
@@ -181,6 +197,14 @@ class AppointmentApiController extends Controller
             $appointment = Appointment::create([
                 'admin_id' => $admin->id,
                 'jajman_id' => $validated['jajman_id'] ?? null,
+                'service_id' => $service?->id,
+                'service_name_snapshot' => $service?->name,
+                'agreed_price_snapshot' => array_key_exists('agreed_price', $validated)
+                    ? $validated['agreed_price']
+                    : ($service?->price),
+                'currency_snapshot' => $service?->currency ?? 'INR',
+                'duration_minutes_snapshot' => (int) $startUtc->diffInMinutes($endUtc),
+                'delivery_method_snapshot' => $validated['appointment_type'],
                 'title' => $validated['title'],
                 'description' => $validated['description'] ?? null,
                 'appointment_type' => $validated['appointment_type'],
@@ -203,7 +227,10 @@ class AppointmentApiController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Appointment scheduled successfully.',
-                'data' => $appointment->load('jajman:id,name,phone,email'),
+                'data' => $appointment->load([
+                    'jajman:id,name,phone,email',
+                    'service:id,name,category,price,currency,pricing_model',
+                ]),
             ], 201);
         });
     }
@@ -219,6 +246,7 @@ class AppointmentApiController extends Controller
         $appointment = Appointment::where('admin_id', $admin->id)
             ->with([
                 'jajman',
+                'service',
                 'consultation',
             ])
             ->find($id);
@@ -264,6 +292,8 @@ class AppointmentApiController extends Controller
             'end_at' => 'sometimes|required|date|after:start_at',
             'timezone' => 'nullable|string|max:64',
             'jajman_id' => 'nullable|integer',
+            'service_id' => 'nullable|integer',
+            'agreed_price' => 'nullable|numeric|min:0',
             'location' => 'nullable|string|max:255',
             'meeting_link' => 'nullable|string|max:255',
             'override_availability' => 'nullable|boolean',
