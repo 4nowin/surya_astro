@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\ApiController;
 use App\Http\Controllers\Api\AstrologerController;
 use App\Http\Controllers\Api\AdminAuthController;
 use App\Http\Controllers\Api\AppointmentApiController;
+use App\Http\Controllers\Api\AstrologyApiController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AvailabilityApiController;
 use App\Http\Controllers\Api\ConsultationApiController;
@@ -129,6 +130,13 @@ Route::prefix('astrologer')->group(function () {
         Route::post('/availability/exceptions', [AvailabilityApiController::class, 'storeException']);
         Route::put('/availability/exceptions/{id}', [AvailabilityApiController::class, 'updateException']);
         Route::delete('/availability/exceptions/{id}', [AvailabilityApiController::class, 'destroyException']);
+
+        // 🔮 Pandit Setu - Professional Astrology Engine & Jajman Kundli
+        Route::get('/jajmans/{id}/kundli', [AstrologyApiController::class, 'jajmanKundli']);
+        Route::post('/jajmans/{id}/kundli/calculate', [AstrologyApiController::class, 'recalculateJajmanKundli']);
+        Route::post('/astrology/kundli/calculate', [AstrologyApiController::class, 'calculateKundli']);
+        Route::get('/astrology/panchang/daily', [AstrologyApiController::class, 'dailyPanchang']);
+        Route::get('/astrology/cities', [AstrologyApiController::class, 'cities']);
     });
 });
 
