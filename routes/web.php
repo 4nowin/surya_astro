@@ -179,7 +179,7 @@ Route::get('/fetch-token', function () {
 
 require __DIR__ . '/auth.php';
 
-Auth::routes();
+Auth::routes(['confirm' => false]);
 
 Route::get('/home', [App\Http\Controllers\HomeController::class, 'index'])->name('home');
 
