@@ -113,6 +113,7 @@ class DailyPanchangService
         );
 
         $calculationMs = round((hrtime(true) - $startTime) / 1e6, 2);
+        \Illuminate\Support\Facades\Log::info("Panchang ephemeris computed in {$calculationMs}ms for {$date} ({$latitude}, {$longitude})");
 
         $normalized = $this->formatPanchangResponse(
             raw: $raw,

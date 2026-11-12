@@ -17,7 +17,8 @@ class DailyPanchangController extends Controller
 {
     public function __construct(
         protected CalculationJobManager $jobManager,
-        protected CalculationWorkerLauncher $workerLauncher
+        protected CalculationWorkerLauncher $workerLauncher,
+        protected DailyPanchangCalculationHandler $panchangHandler
     ) {}
 
     /**
@@ -27,33 +28,50 @@ class DailyPanchangController extends Controller
      */
     public function daily(DailyPanchangRequest $request): JsonResponse
     {
+        $tReqStart = microtime(true);
         $validated = $request->validated();
-
-        $payload = [
-            'date' => (string) $validated['date'],
-            'lat' => (float) $validated['lat'],
-            'lon' => (float) $validated['lon'],
-            'tz' => (string) $validated['tz'],
-            'elevation' => isset($validated['elevation']) ? (float) $validated['elevation'] : 0.0,
-        ];
+        $payload = DailyPanchangCalculationHandler::normalizePayload($validated);
 
         try {
+            $canonicalKey = $this->panchangHandler->computeCanonicalKey($payload);
+
+            // Fast indexed cache lookup: check fast cache & persistent MySQL table directly
+            $tLookup0 = microtime(true);
+            $cached = $this->panchangHandler->getCachedResult($canonicalKey, $payload);
+            $lookupMs = round((microtime(true) - $tLookup0) * 1000, 2);
+
+            if ($cached !== null) {
+                $totalMs = round((microtime(true) - $tReqStart) * 1000, 2);
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Daily Panchang retrieved successfully',
+                    'data' => $cached,
+                ], 200, [
+                    'X-Panchang-Cached' => 'HIT',
+                    'X-Panchang-Cache-Key' => "panchang:daily:{$canonicalKey}",
+                    'X-Panchang-Lookup-Ms' => (string) $lookupMs,
+                    'X-Panchang-Total-Ms' => (string) $totalMs,
+                ]);
+            }
+
+            // Cache miss: find or atomically create targeted calculation job
             $lookup = $this->jobManager->findOrCreateJob(
                 type: DailyPanchangCalculationHandler::TYPE,
                 payload: $payload,
                 userId: null // Panchang is public data
             );
 
-            // Case A: Result is already available in cache
+            // Result might have been completed concurrently during job lookup
             if ($lookup['ready'] && !empty($lookup['result'])) {
-                $data = $lookup['result'];
+                $totalMs = round((microtime(true) - $tReqStart) * 1000, 2);
                 return response()->json([
                     'success' => true,
                     'message' => 'Daily Panchang retrieved successfully',
-                    'data' => $data,
+                    'data' => $lookup['result'],
                 ], 200, [
                     'X-Panchang-Cached' => 'HIT',
-                    'X-Panchang-Cache-Key' => "panchang:daily:{$lookup['canonical_key']}",
+                    'X-Panchang-Cache-Key' => "panchang:daily:{$canonicalKey}",
+                    'X-Panchang-Total-Ms' => (string) $totalMs,
                 ]);
             }
 
@@ -74,11 +92,11 @@ class DailyPanchangController extends Controller
                 ], 500);
             }
 
-            // Case B & C: Job is pending or processing. Trigger automatic short-lived CLI process for this specific job if needed.
-            $launchResult = ['launched' => false, 'reason' => 'job_already_processing', 'error' => null];
-            if (!empty($lookup['is_new']) || !$this->workerLauncher->isWorkerRunning()) {
-                $launchResult = $this->workerLauncher->launchWorkerForJob($job);
-            }
+            // Trigger targeted automatic short-lived CLI worker process for this calculation job
+            $tLaunch0 = microtime(true);
+            $launchResult = $this->workerLauncher->launchWorkerForJob($job);
+            $launchMs = round((microtime(true) - $tLaunch0) * 1000, 2);
+
             if (!empty($launchResult['error'])) {
                 Log::warning("Background calculation worker launch notice for job [{$job->job_id}]: {$launchResult['error']}", [
                     'reason' => $launchResult['reason'],
@@ -86,6 +104,7 @@ class DailyPanchangController extends Controller
             }
 
             $statusUrl = url("/api/v1/calculations/{$job->job_id}");
+            $totalMs = round((microtime(true) - $tReqStart) * 1000, 2);
 
             return response()->json([
                 'success' => true,
@@ -96,14 +115,16 @@ class DailyPanchangController extends Controller
                     'calculation_type' => $job->calculation_type,
                     'status' => $job->status,
                     'status_url' => $statusUrl,
-                    'poll_interval_ms' => 2000,
+                    'poll_interval_ms' => 1500,
                     'worker_launched' => $launchResult['launched'],
                 ],
             ], 202, [
+                'X-Panchang-Cached' => 'MISS',
                 'X-Panchang-Status' => $job->status,
                 'X-Panchang-Job-Id' => $job->job_id,
+                'X-Panchang-Total-Ms' => (string) $totalMs,
                 'Location' => $statusUrl,
-                'Retry-After' => '2',
+                'Retry-After' => '1',
             ]);
         } catch (\Throwable $e) {
             Log::error('DailyPanchang request handling failed: ' . $e->getMessage(), [

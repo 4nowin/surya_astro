@@ -138,6 +138,33 @@ class CalculationWorkerLauncher
     }
 
     /**
+     * Check whether an active worker lease exists for a specific calculation job.
+     */
+    public function isJobWorkerRunning(string $jobId): bool
+    {
+        return Cache::has("astro_calc_job_lease_{$jobId}");
+    }
+
+    /**
+     * Acquire a lock for a specific calculation job.
+     */
+    public function acquireJobWorkerLock(string $jobId, int $seconds = 30): bool
+    {
+        return Cache::add("astro_calc_job_lease_{$jobId}", [
+            'locked_at' => now()->toIso8601String(),
+            'expires_at' => now()->addSeconds($seconds)->toIso8601String(),
+        ], now()->addSeconds($seconds));
+    }
+
+    /**
+     * Release the lock for a specific calculation job.
+     */
+    public function releaseJobWorkerLock(string $jobId): void
+    {
+        Cache::forget("astro_calc_job_lease_{$jobId}");
+    }
+
+    /**
      * Automatically launch short-lived PHP CLI process targeted at a specific calculation job.
      *
      * @param AstrologyCalculationJob|string $job Job instance or job_id string
@@ -148,29 +175,37 @@ class CalculationWorkerLauncher
     {
         $jobId = is_string($job) ? $job : $job->job_id;
 
-        // Check if a worker is already running within its valid lease (unless sync fallback requested)
-        if (!$syncFallback && $this->isWorkerRunning()) {
+        // Check if a worker is already running specifically for this calculation job
+        if (!$syncFallback && $this->isJobWorkerRunning($jobId)) {
             return [
                 'launched' => false,
-                'reason' => 'worker_already_active',
+                'reason' => 'job_worker_already_active',
                 'error' => null,
             ];
         }
 
-        // Acquire worker lock before spawning
-        if (!$syncFallback && !$this->acquireWorkerLock(self::DEFAULT_LEASE_SECONDS)) {
+        // Acquire per-job concurrency lock before spawning
+        if (!$syncFallback && !$this->acquireJobWorkerLock($jobId, 30)) {
             return [
                 'launched' => false,
-                'reason' => 'worker_lock_contention',
+                'reason' => 'job_lock_contention',
                 'error' => null,
             ];
         }
 
+        // Also set global worker lock lease (bounded to 30s)
+        if (!$syncFallback) {
+            $this->acquireWorkerLock(30);
+        }
+
+        $tBinStart = microtime(true);
         $phpBinary = $this->resolvePhpCliBinary();
+        $binResolveMs = round((microtime(true) - $tBinStart) * 1000, 2);
         $artisanPath = base_path('artisan');
 
         if (!file_exists($artisanPath)) {
             if (!$syncFallback) {
+                $this->releaseJobWorkerLock($jobId);
                 $this->releaseWorkerLock();
             }
             return [
@@ -191,6 +226,7 @@ class CalculationWorkerLauncher
                 ];
             } catch (Throwable $e) {
                 if (!$syncFallback) {
+                    $this->releaseJobWorkerLock($jobId);
                     $this->releaseWorkerLock();
                 }
                 return [
@@ -204,6 +240,7 @@ class CalculationWorkerLauncher
         $isWindows = PHP_OS_FAMILY === 'Windows';
         $workerLog = storage_path('logs/astro-worker.log');
         $basePath = base_path();
+        $tSpawnStart = microtime(true);
 
         try {
             if ($isWindows) {
@@ -252,6 +289,10 @@ class CalculationWorkerLauncher
                             @pclose($handle);
                         }
                     } else {
+                        if (!$syncFallback) {
+                            $this->releaseJobWorkerLock($jobId);
+                            $this->releaseWorkerLock();
+                        }
                         return [
                             'launched' => false,
                             'reason' => 'process_spawning_disabled_by_host',
@@ -261,12 +302,30 @@ class CalculationWorkerLauncher
                 }
             }
 
+            $spawnMs = round((microtime(true) - $tSpawnStart) * 1000, 2);
+            $logEntry = json_encode([
+                'timestamp' => now()->toIso8601String(),
+                'event' => 'worker_spawned',
+                'job_id' => $jobId,
+                'php_binary' => $phpBinary,
+                'spawn_ms' => $spawnMs,
+                'bin_resolve_ms' => $binResolveMs,
+                'sync_fallback' => $syncFallback,
+            ], JSON_UNESCAPED_SLASHES);
+            @file_put_contents($workerLog, $logEntry . PHP_EOL, FILE_APPEND);
+            Log::info("Astrology calculation worker spawned for job [{$jobId}] in {$spawnMs}ms (binary: {$phpBinary})");
+
             return [
                 'launched' => true,
                 'reason' => $syncFallback ? 'worker_executed_sync_cli' : 'worker_spawned_job_cli',
                 'error' => null,
             ];
         } catch (Throwable $e) {
+            if (!$syncFallback) {
+                $this->releaseJobWorkerLock($jobId);
+                $this->releaseWorkerLock();
+            }
+
             Log::error("Failed to launch CLI calculation worker for job [{$jobId}]: {$e->getMessage()}", [
                 'exception' => get_class($e),
                 'php_binary' => $phpBinary,

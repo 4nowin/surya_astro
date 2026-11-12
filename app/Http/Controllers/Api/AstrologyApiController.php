@@ -497,31 +497,25 @@ class AstrologyApiController extends Controller
      */
     public function dailyPanchang(Request $request): JsonResponse
     {
+        $tReqStart = microtime(true);
         $validated = $request->validate([
             'date' => 'nullable|date_format:Y-m-d',
             'lat' => 'nullable|numeric|between:-90,90',
             'lon' => 'nullable|numeric|between:-180,180',
             'tz' => 'nullable|string|max:100',
+            'elevation' => 'nullable|numeric|between:-500,9000',
         ]);
 
-        $date = $validated['date'] ?? now('Asia/Kolkata')->toDateString();
-        $lat = isset($validated['lat']) ? (float) $validated['lat'] : 28.6139; // New Delhi
-        $lon = isset($validated['lon']) ? (float) $validated['lon'] : 77.2090;
-        $tz = $validated['tz'] ?? 'Asia/Kolkata';
-
-        $payload = [
-            'date' => $date,
-            'lat' => $lat,
-            'lon' => $lon,
-            'tz' => $tz,
-            'elevation' => 0.0,
-        ];
-
+        $payload = DailyPanchangCalculationHandler::normalizePayload($validated);
         $canonicalKey = $this->panchangHandler->computeCanonicalKey($payload);
 
-        // 1. Check cache
+        // 1. Fast indexed cache lookup: check fast cache & persistent MySQL table directly
+        $tLookup0 = microtime(true);
         $cached = $this->panchangHandler->getCachedResult($canonicalKey, $payload);
+        $lookupMs = round((microtime(true) - $tLookup0) * 1000, 2);
+
         if ($cached !== null) {
+            $totalMs = round((microtime(true) - $tReqStart) * 1000, 2);
             return response()->json([
                 'success' => true,
                 'message' => 'Daily Panchang retrieved successfully.',
@@ -529,29 +523,12 @@ class AstrologyApiController extends Controller
             ], 200, [
                 'X-Panchang-Cached' => 'HIT',
                 'X-Panchang-Cache-Key' => "panchang:daily:{$canonicalKey}",
+                'X-Panchang-Lookup-Ms' => (string) $lookupMs,
+                'X-Panchang-Total-Ms' => (string) $totalMs,
             ]);
         }
 
-        // 2. Direct calculation if FFI is available
-        if ($this->canExecuteDirectFfi()) {
-            try {
-                $result = $this->getDailyPanchangService()->getDailyPanchang($date, $lat, $lon, $tz);
-                $this->panchangHandler->storeResult($canonicalKey, $result, $payload);
-
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Daily Panchang calculated successfully.',
-                    'data' => $result,
-                ], 200, [
-                    'X-Panchang-Cached' => 'MISS',
-                    'X-Panchang-Cache-Key' => "panchang:daily:{$canonicalKey}",
-                ]);
-            } catch (Throwable $e) {
-                Log::warning("Direct Panchang calculation failed: {$e->getMessage()}. Falling back to background worker.");
-            }
-        }
-
-        // 3. Queue fallback
+        // 2. Queue fallback (Standard Web runtime: Hostinger LiteSpeed / FPM / Apache)
         try {
             $lookup = $this->jobManager->findOrCreateJob(
                 type: DailyPanchangCalculationHandler::TYPE,
@@ -560,20 +537,27 @@ class AstrologyApiController extends Controller
             );
 
             if ($lookup['ready'] && !empty($lookup['result'])) {
+                $totalMs = round((microtime(true) - $tReqStart) * 1000, 2);
                 return response()->json([
                     'success' => true,
                     'message' => 'Daily Panchang retrieved successfully.',
                     'data' => $lookup['result'],
-                ], 200);
+                ], 200, [
+                    'X-Panchang-Cached' => 'HIT',
+                    'X-Panchang-Cache-Key' => "panchang:daily:{$canonicalKey}",
+                    'X-Panchang-Total-Ms' => (string) $totalMs,
+                ]);
             }
 
             /** @var AstrologyCalculationJob $job */
             $job = $lookup['job'];
-            $launchResult = ['launched' => false, 'reason' => 'job_already_processing', 'error' => null];
-            if (!empty($lookup['is_new']) || !$this->workerLauncher->isWorkerRunning()) {
-                $launchResult = $this->workerLauncher->launchWorkerForJob($job);
-            }
+
+            $tLaunch0 = microtime(true);
+            $launchResult = $this->workerLauncher->launchWorkerForJob($job);
+            $launchMs = round((microtime(true) - $tLaunch0) * 1000, 2);
+
             $statusUrl = url("/api/v1/calculations/{$job->job_id}");
+            $totalMs = round((microtime(true) - $tReqStart) * 1000, 2);
 
             return response()->json([
                 'success' => true,
@@ -587,7 +571,14 @@ class AstrologyApiController extends Controller
                     'poll_interval_ms' => 1500,
                     'worker_launched' => $launchResult['launched'],
                 ],
-            ], 202);
+            ], 202, [
+                'X-Panchang-Cached' => 'MISS',
+                'X-Panchang-Status' => $job->status,
+                'X-Panchang-Job-Id' => $job->job_id,
+                'X-Panchang-Total-Ms' => (string) $totalMs,
+                'Location' => $statusUrl,
+                'Retry-After' => '1',
+            ]);
         } catch (Throwable $e) {
             return response()->json([
                 'success' => false,

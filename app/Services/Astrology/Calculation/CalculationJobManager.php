@@ -14,6 +14,11 @@ class CalculationJobManager
         protected CalculationHandlerRegistry $registry
     ) {}
 
+    public function getRegistry(): CalculationHandlerRegistry
+    {
+        return $this->registry;
+    }
+
     /**
      * Find an existing calculation result, active job, or create a new job.
      *

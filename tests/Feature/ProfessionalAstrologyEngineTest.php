@@ -169,6 +169,12 @@ class ProfessionalAstrologyEngineTest extends TestCase
         $this->actingAs($this->practitionerA, 'sanctum');
 
         $res = $this->getJson('/api/astrologer/astrology/panchang/daily?date=2026-11-12&lat=28.6139&lon=77.2090&tz=Asia/Kolkata');
+        if ($res->status() === 202) {
+            $jobId = $res->json('data.job_id');
+            $this->artisan('astro:calculate-worker', ['--job' => $jobId])->assertSuccessful();
+            $res = $this->getJson('/api/astrologer/astrology/panchang/daily?date=2026-11-12&lat=28.6139&lon=77.2090&tz=Asia/Kolkata');
+        }
+
         $res->assertOk()
             ->assertJsonPath('success', true);
 

@@ -39,14 +39,45 @@ class DailyPanchangCalculationHandler implements CalculationHandlerInterface
         return self::TYPE;
     }
 
+    /**
+     * Standardize and normalize Panchang input parameters across all consumer and professional endpoints.
+     * Guarantees 100% identical canonical cache keys and shared persistent MySQL records.
+     *
+     * @param array<string, mixed> $payload
+     * @return array{date: string, lat: float, lon: float, tz: string, elevation: float}
+     */
+    public static function normalizePayload(array $payload): array
+    {
+        $date = isset($payload['date']) && is_string($payload['date']) && trim($payload['date']) !== ''
+            ? trim($payload['date'])
+            : now('Asia/Kolkata')->toDateString();
+
+        $lat = isset($payload['lat']) ? round((float) $payload['lat'], 4) : 28.6139;
+        $lon = isset($payload['lon']) ? round((float) $payload['lon'], 4) : 77.2090;
+        $tz = isset($payload['tz']) && is_string($payload['tz']) && trim($payload['tz']) !== ''
+            ? trim($payload['tz'])
+            : 'Asia/Kolkata';
+        $elevation = isset($payload['elevation']) ? round((float) $payload['elevation'], 2) : 0.0;
+
+        return [
+            'date' => $date,
+            'lat' => $lat,
+            'lon' => $lon,
+            'tz' => $tz,
+            'elevation' => $elevation,
+        ];
+    }
+
     public function computeCanonicalKey(array $payload): string
     {
+        $normalized = self::normalizePayload($payload);
+
         $attributes = CanonicalPanchangCacheKey::canonicalAttributes(
-            localDate: (string) ($payload['date'] ?? ''),
-            latitude: (float) ($payload['lat'] ?? 0.0),
-            longitude: (float) ($payload['lon'] ?? 0.0),
-            timezone: (string) ($payload['tz'] ?? 'UTC'),
-            elevation: isset($payload['elevation']) ? (float) $payload['elevation'] : 0.0
+            localDate: $normalized['date'],
+            latitude: $normalized['lat'],
+            longitude: $normalized['lon'],
+            timezone: $normalized['tz'],
+            elevation: $normalized['elevation']
         );
 
         return CanonicalPanchangCacheKey::generateHash($attributes);
@@ -63,59 +94,60 @@ class DailyPanchangCalculationHandler implements CalculationHandlerInterface
 
     public function calculate(array $payload): array
     {
-        $date = (string) ($payload['date'] ?? now('Asia/Kolkata')->toDateString());
-        $lat = (float) ($payload['lat'] ?? 28.6139);
-        $lon = (float) ($payload['lon'] ?? 77.2090);
-        $tz = (string) ($payload['tz'] ?? 'Asia/Kolkata');
-        $elevation = isset($payload['elevation']) ? (float) $payload['elevation'] : 0.0;
+        $normalized = self::normalizePayload($payload);
 
         return $this->getService()->getDailyPanchang(
-            date: $date,
-            latitude: $lat,
-            longitude: $lon,
-            timezone: $tz,
-            elevation: $elevation
+            date: $normalized['date'],
+            latitude: $normalized['lat'],
+            longitude: $normalized['lon'],
+            timezone: $normalized['tz'],
+            elevation: $normalized['elevation']
         );
     }
 
     public function storeResult(string $canonicalKey, array $result, array $payload): string
     {
+        $tStart = microtime(true);
         $cacheKey = "panchang:daily:{$canonicalKey}";
 
         // 1. Fast cache layer
+        $tCache0 = microtime(true);
         Cache::put($cacheKey, $result, now()->addDays(self::CACHE_TTL_DAYS));
+        $cacheMs = round((microtime(true) - $tCache0) * 1000, 2);
 
         // 2. Persistent MySQL storage (survives cache:clear, optimize:clear, and server restarts)
+        $tDb0 = microtime(true);
         try {
-            $date = (string) ($payload['date'] ?? now('Asia/Kolkata')->toDateString());
-            $lat = round((float) ($payload['lat'] ?? 28.6139), 4);
-            $lon = round((float) ($payload['lon'] ?? 77.2090), 4);
-            $tz = (string) ($payload['tz'] ?? 'Asia/Kolkata');
-            $elevation = isset($payload['elevation']) ? (float) $payload['elevation'] : 0.0;
+            $normalized = self::normalizePayload($payload);
 
             DailyPanchangCache::updateOrCreate(
                 ['canonical_key' => $canonicalKey],
                 [
-                    'date' => $date,
-                    'latitude' => $lat,
-                    'longitude' => $lon,
-                    'timezone' => $tz,
-                    'elevation' => $elevation,
+                    'date' => $normalized['date'],
+                    'latitude' => $normalized['lat'],
+                    'longitude' => $normalized['lon'],
+                    'timezone' => $normalized['tz'],
+                    'elevation' => $normalized['elevation'],
                     'result' => $result,
                 ]
             );
         } catch (Throwable $e) {
             Log::warning("Failed to persist Daily Panchang to MySQL: {$e->getMessage()}");
         }
+        $dbMs = round((microtime(true) - $tDb0) * 1000, 2);
+        $totalMs = round((microtime(true) - $tStart) * 1000, 2);
+
+        Log::info("Panchang result stored in {$totalMs}ms (fast_cache: {$cacheMs}ms, mysql: {$dbMs}ms) for [{$canonicalKey}]");
 
         return $cacheKey;
     }
 
     public function getCachedResult(string $canonicalKey, array $payload): ?array
     {
+        $tStart = microtime(true);
         $cacheKey = "panchang:daily:{$canonicalKey}";
 
-        // 1. Check fast memory/file cache
+        // 1. Fast memory/file cache
         if (Cache::has($cacheKey)) {
             $cached = Cache::get($cacheKey);
             if (is_array($cached)) {
@@ -123,11 +155,13 @@ class DailyPanchangCalculationHandler implements CalculationHandlerInterface
                 $cached['metadata']['cache_key'] = $cacheKey;
                 $cached['metadata']['source'] = 'fast_cache';
                 $cached['metadata']['calculation_ms'] = 0.0;
+                $durationMs = round((microtime(true) - $tStart) * 1000, 2);
+                Log::debug("Panchang cache hit [fast_cache] in {$durationMs}ms for [{$canonicalKey}]");
                 return $cached;
             }
         }
 
-        // 2. Check persistent MySQL cache table
+        // 2. Persistent MySQL cache table
         try {
             $dbCache = DailyPanchangCache::where('canonical_key', $canonicalKey)->first();
             if ($dbCache && is_array($dbCache->result)) {
@@ -139,6 +173,8 @@ class DailyPanchangCalculationHandler implements CalculationHandlerInterface
 
                 // Re-seed fast cache
                 Cache::put($cacheKey, $result, now()->addDays(self::CACHE_TTL_DAYS));
+                $durationMs = round((microtime(true) - $tStart) * 1000, 2);
+                Log::info("Panchang cache hit [mysql_persistent] in {$durationMs}ms for [{$canonicalKey}]");
                 return $result;
             }
         } catch (Throwable $e) {
@@ -162,12 +198,16 @@ class DailyPanchangCalculationHandler implements CalculationHandlerInterface
                 $result['metadata']['calculation_ms'] = 0.0;
 
                 Cache::put($cacheKey, $result, now()->addDays(self::CACHE_TTL_DAYS));
+                $durationMs = round((microtime(true) - $tStart) * 1000, 2);
+                Log::info("Panchang cache hit [mysql_job_result] in {$durationMs}ms for [{$canonicalKey}]");
                 return $result;
             }
         } catch (Throwable $e) {
             Log::warning("Error querying completed job result from MySQL: {$e->getMessage()}");
         }
 
+        $durationMs = round((microtime(true) - $tStart) * 1000, 2);
+        Log::debug("Panchang cache miss in {$durationMs}ms for [{$canonicalKey}]");
         return null;
     }
 }
