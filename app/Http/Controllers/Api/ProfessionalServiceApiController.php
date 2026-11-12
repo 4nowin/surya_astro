@@ -15,60 +15,91 @@ class ProfessionalServiceApiController extends Controller
      */
     public function index(Request $request)
     {
-        $admin = $request->user();
+        try {
+            $admin = $request->user();
 
-        $query = ProfessionalService::where('admin_id', $admin->id)
-            ->withCount(['appointments', 'consultations']);
-
-        // Filter by category
-        if ($category = $request->query('category')) {
-            $query->where('category', $category);
-        }
-
-        // Filter by active status
-        if ($request->has('is_active')) {
-            $isActive = filter_var($request->query('is_active'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
-            if ($isActive !== null) {
-                $query->where('is_active', $isActive);
+            if (!$admin) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthenticated practitioner.',
+                ], 401);
             }
-        }
 
-        // Filter by pricing model
-        if ($model = $request->query('pricing_model')) {
-            $query->where('pricing_model', $model);
-        }
+            if (!\Illuminate\Support\Facades\Schema::hasTable('professional_services')) {
+                return response()->json([
+                    'success' => true,
+                    'data' => [],
+                    'meta' => [
+                        'current_page' => 1,
+                        'last_page' => 1,
+                        'total' => 0,
+                        'per_page' => (int) $request->query('per_page', 20),
+                    ],
+                ]);
+            }
 
-        // Search in name, description, specialization
-        if ($search = $request->query('search')) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%")
-                  ->orWhere('specialization', 'like', "%{$search}%");
-            });
-        }
+            $query = ProfessionalService::where('admin_id', $admin->id)
+                ->withCount(['appointments', 'consultations']);
 
-        // Check if all items requested (e.g., for appointment dropdown)
-        if ($request->boolean('all')) {
-            $services = $query->orderBy('name', 'asc')->get();
+            // Filter by category
+            if ($category = $request->query('category')) {
+                $query->where('category', $category);
+            }
+
+            // Filter by active status
+            if ($request->has('is_active')) {
+                $isActive = filter_var($request->query('is_active'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+                if ($isActive !== null) {
+                    $query->where('is_active', $isActive);
+                }
+            }
+
+            // Filter by pricing model
+            if ($model = $request->query('pricing_model')) {
+                $query->where('pricing_model', $model);
+            }
+
+            // Search in name, description, specialization
+            if ($search = $request->query('search')) {
+                $query->where(function ($q) use ($search) {
+                    $q->where('name', 'like', "%{$search}%")
+                      ->orWhere('description', 'like', "%{$search}%")
+                      ->orWhere('specialization', 'like', "%{$search}%");
+                });
+            }
+
+            // Check if all items requested (e.g., for appointment dropdown)
+            if ($request->boolean('all')) {
+                $services = $query->orderBy('name', 'asc')->get();
+                return response()->json([
+                    'success' => true,
+                    'data' => $services,
+                ]);
+            }
+
+            $perPage = (int) $request->query('per_page', 20);
+            $services = $query->orderBy('created_at', 'desc')->paginate($perPage);
+
             return response()->json([
                 'success' => true,
-                'data' => $services,
+                'data' => $services->items(),
+                'meta' => [
+                    'current_page' => $services->currentPage(),
+                    'last_page' => $services->lastPage(),
+                    'total' => $services->total(),
+                    'per_page' => $services->perPage(),
+                ],
             ]);
+        } catch (\Throwable $e) {
+            \Log::error('Professional services index error: ' . $e->getMessage(), [
+                'exception' => $e,
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load services catalogue: ' . $e->getMessage(),
+            ], 500);
         }
-
-        $perPage = (int) $request->query('per_page', 20);
-        $services = $query->orderBy('created_at', 'desc')->paginate($perPage);
-
-        return response()->json([
-            'success' => true,
-            'data' => $services->items(),
-            'meta' => [
-                'current_page' => $services->currentPage(),
-                'last_page' => $services->lastPage(),
-                'total' => $services->total(),
-                'per_page' => $services->perPage(),
-            ],
-        ]);
     }
 
     /**
@@ -596,26 +627,68 @@ class ProfessionalServiceApiController extends Controller
      */
     public function summary(Request $request)
     {
-        $admin = $request->user();
+        try {
+            $admin = $request->user();
 
-        $services = ProfessionalService::where('admin_id', $admin->id)->get();
+            if (!$admin) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Unauthenticated practitioner.',
+                ], 401);
+            }
 
-        $total = $services->count();
-        $active = $services->where('is_active', true)->count();
-        $inactive = $total - $active;
+            if (!\Illuminate\Support\Facades\Schema::hasTable('professional_services')) {
+                return response()->json([
+                    'success' => true,
+                    'data' => [
+                        'total_services' => 0,
+                        'active_services' => 0,
+                        'inactive_services' => 0,
+                        'category_counts' => (object)[],
+                        'pricing_model_counts' => (object)[],
+                    ],
+                ]);
+            }
 
-        $categoryCounts = $services->groupBy('category')->map->count();
-        $pricingModelCounts = $services->groupBy('pricing_model')->map->count();
+            $services = ProfessionalService::where('admin_id', $admin->id)->get();
 
-        return response()->json([
-            'success' => true,
-            'data' => [
-                'total_services' => $total,
-                'active_services' => $active,
-                'inactive_services' => $inactive,
-                'category_counts' => $categoryCounts,
-                'pricing_model_counts' => $pricingModelCounts,
-            ],
-        ]);
+            $total = $services->count();
+            $active = $services->where('is_active', true)->count();
+            $inactive = max(0, $total - $active);
+
+            $categoryCounts = [];
+            foreach ($services->groupBy('category') as $category => $items) {
+                if ($category !== null && $category !== '') {
+                    $categoryCounts[(string)$category] = $items->count();
+                }
+            }
+
+            $pricingModelCounts = [];
+            foreach ($services->groupBy('pricing_model') as $model => $items) {
+                if ($model !== null && $model !== '') {
+                    $pricingModelCounts[(string)$model] = $items->count();
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'total_services' => $total,
+                    'active_services' => $active,
+                    'inactive_services' => $inactive,
+                    'category_counts' => (object)$categoryCounts,
+                    'pricing_model_counts' => (object)$pricingModelCounts,
+                ],
+            ]);
+        } catch (\Throwable $e) {
+            \Log::error('Professional services summary error: ' . $e->getMessage(), [
+                'exception' => $e,
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to load services summary: ' . $e->getMessage(),
+            ], 500);
+        }
     }
 }
