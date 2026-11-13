@@ -94,39 +94,70 @@ class AstroSetuListingApiController extends Controller
 
         // 2. Fetch existing published astrologers rows for this admin
         $publishedListings = Astrologer::where('admin_id', $admin->id)->get();
-        $isPublished = $publishedListings->where('active', 1)->isNotEmpty();
+        $hasActiveListings = $publishedListings->where('active', 1)->isNotEmpty();
+        $hasAnyListings = $publishedListings->isNotEmpty();
+        $isSuspended = $hasAnyListings && !$hasActiveListings;
+
+        // Authoritative listing status calculation
+        $listingStatus = 'not_applied';
+        $hasPendingUpdate = false;
+
+        if ($hasActiveListings) {
+            $listingStatus = 'published';
+            if ($application && $application->status === 'pending') {
+                $hasPendingUpdate = true;
+            }
+        } elseif ($isSuspended) {
+            $listingStatus = 'suspended';
+        } elseif ($application) {
+            if ($application->status === 'approved') {
+                // Application approved, but no active published records exist
+                $listingStatus = 'approved_unpublished';
+            } else {
+                $listingStatus = $application->status; // 'pending' or 'rejected'
+            }
+        }
+
+        $publishedEn = $publishedListings->firstWhere('language', 'en');
+        $publishedHi = $publishedListings->firstWhere('language', 'hi');
 
         // 3. Build sensible prefill data if application doesn't exist
         $publicProfile = ProfessionalPublicProfile::where('admin_id', $admin->id)->first();
-        $firstPublished = $publishedListings->first();
+        $firstPublished = $publishedEn ?? $publishedListings->first();
 
         $prefill = [
-            'en_name' => $application->en_name ?? $publicProfile->display_name ?? $firstPublished->name ?? $admin->name,
-            'en_expertise' => $application->en_expertise ?? (is_array($publicProfile?->specializations) ? implode(', ', $publicProfile->specializations) : ($firstPublished->expertise ?? 'Vedic Astrology, Kundli')),
-            'en_languages' => $application->en_languages ?? (is_array($publicProfile?->languages) ? implode(', ', $publicProfile->languages) : ($firstPublished->astrologer_language ?? 'English, Hindi')),
-            'en_excerpt' => $application->en_excerpt ?? $publicProfile->headline ?? $firstPublished->excerpt ?? '',
-            'en_description' => $application->en_description ?? $publicProfile->about ?? $firstPublished->description ?? '',
-            'hi_name' => $application->hi_name ?? '',
-            'hi_expertise' => $application->hi_expertise ?? '',
-            'hi_languages' => $application->hi_languages ?? 'हिंदी, अंग्रेजी',
-            'hi_excerpt' => $application->hi_excerpt ?? '',
-            'hi_description' => $application->hi_description ?? '',
-            'image' => $application->image ?? $publicProfile->profile_photo_url ?? $firstPublished->image ?? '',
-            'experience' => $application->experience ?? ($publicProfile?->years_of_experience ? "{$publicProfile->years_of_experience} years" : ($firstPublished->experience ?? '5 years')),
-            'price' => $application->price ?? $firstPublished->price ?? 15,
-            'call_price' => $application->call_price ?? $firstPublished->call_price ?? 20,
-            'original_price' => $application->original_price ?? $firstPublished->original_price ?? 25,
-            'chat_minutes' => $application->chat_minutes ?? $firstPublished->chat_minutes ?? 0,
-            'call_minutes' => $application->call_minutes ?? $firstPublished->call_minutes ?? 0,
+            'en_name' => $application->en_name ?? $publicProfile->display_name ?? $firstPublished?->name ?? $admin->name,
+            'en_expertise' => $application->en_expertise ?? (is_array($publicProfile?->specializations) ? implode(', ', $publicProfile->specializations) : ($firstPublished?->expertise ?? 'Vedic Astrology, Kundli')),
+            'en_languages' => $application->en_languages ?? (is_array($publicProfile?->languages) ? implode(', ', $publicProfile->languages) : ($firstPublished?->astrologer_language ?? 'English, Hindi')),
+            'en_excerpt' => $application->en_excerpt ?? $publicProfile->headline ?? $firstPublished?->excerpt ?? '',
+            'en_description' => $application->en_description ?? $publicProfile->about ?? $firstPublished?->description ?? '',
+            'hi_name' => $application->hi_name ?? $publishedHi?->name ?? '',
+            'hi_expertise' => $application->hi_expertise ?? $publishedHi?->expertise ?? '',
+            'hi_languages' => $application->hi_languages ?? $publishedHi?->astrologer_language ?? 'हिंदी, अंग्रेजी',
+            'hi_excerpt' => $application->hi_excerpt ?? $publishedHi?->excerpt ?? '',
+            'hi_description' => $application->hi_description ?? $publishedHi?->description ?? '',
+            'image' => $application->image ?? $publicProfile->profile_photo_url ?? $firstPublished?->image ?? '',
+            'experience' => $application->experience ?? ($publicProfile?->years_of_experience ? "{$publicProfile->years_of_experience} years" : ($firstPublished?->experience ?? '5 years')),
+            'price' => $application->price ?? $firstPublished?->price ?? 15,
+            'call_price' => $application->call_price ?? $firstPublished?->call_price ?? 20,
+            'original_price' => $application->original_price ?? $firstPublished?->original_price ?? 25,
+            'chat_minutes' => $application->chat_minutes ?? $firstPublished?->chat_minutes ?? 0,
+            'call_minutes' => $application->call_minutes ?? $firstPublished?->call_minutes ?? 0,
         ];
 
         return response()->json([
             'success' => true,
-            'status' => $application ? $application->status : 'not_applied',
+            'status' => $listingStatus,
+            'listing_status' => $listingStatus,
             'has_application' => $application !== null,
             'application' => $application,
-            'is_published' => $isPublished,
+            'is_published' => $hasActiveListings,
+            'is_suspended' => $isSuspended,
+            'has_pending_update' => $hasPendingUpdate,
+            'pending_application' => $hasPendingUpdate ? $application : null,
             'published_listings' => $publishedListings,
+            'published_en' => $publishedEn,
+            'published_hi' => $publishedHi,
             'prefill' => $prefill,
         ]);
     }

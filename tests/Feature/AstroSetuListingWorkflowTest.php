@@ -700,4 +700,156 @@ class AstroSetuListingWorkflowTest extends TestCase
             'active' => 1,
         ]);
     }
+
+    public function test_status_endpoint_distinguishes_published_approved_unpublished_and_suspended_states(): void
+    {
+        $token = $this->astrologerAdmin->createToken('test-token')->plainTextToken;
+
+        // Case 1: Approved application but NO active astrologers records exist
+        $app = AstrologerApplication::create([
+            'admin_id' => $this->astrologerAdmin->id,
+            'status' => 'approved',
+            'experience' => '5 years',
+            'price' => 15,
+            'call_price' => 20,
+            'en_name' => 'Dev Test',
+            'en_expertise' => 'Vedic',
+            'en_languages' => 'English',
+            'hi_name' => 'देव टेस्ट',
+            'hi_expertise' => 'वैदिक',
+            'hi_languages' => 'हिंदी',
+            'submitted_at' => now(),
+        ]);
+
+        $res1 = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->getJson('/api/astrologer/app-listing');
+
+        $res1->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'status' => 'approved_unpublished',
+                'is_published' => false,
+            ]);
+
+        // Case 2: Published astrologers rows created and active
+        Astrologer::create([
+            'admin_id' => $this->astrologerAdmin->id,
+            'language' => 'en',
+            'name' => 'Dev Test',
+            'astrologer_language' => 'English',
+            'expertise' => 'Vedic',
+            'experience' => '5 years',
+            'price' => 15,
+            'call_price' => 20,
+            'active' => 1,
+            'status' => 'online',
+        ]);
+
+        $res2 = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->getJson('/api/astrologer/app-listing');
+
+        $res2->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'status' => 'published',
+                'is_published' => true,
+                'is_suspended' => false,
+                'has_pending_update' => false,
+            ]);
+
+        // Case 3: Published listing suspended (active = 0)
+        Astrologer::where('admin_id', $this->astrologerAdmin->id)->update(['active' => 0]);
+
+        $res3 = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->getJson('/api/astrologer/app-listing');
+
+        $res3->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'status' => 'suspended',
+                'is_published' => false,
+                'is_suspended' => true,
+            ]);
+    }
+
+    public function test_editing_approved_listing_creates_pending_update_without_overwriting_live_listing(): void
+    {
+        $token = $this->astrologerAdmin->createToken('test-token')->plainTextToken;
+
+        // Establish an approved and published active listing
+        AstrologerApplication::create([
+            'admin_id' => $this->astrologerAdmin->id,
+            'status' => 'approved',
+            'experience' => '8 years',
+            'price' => 20,
+            'call_price' => 25,
+            'en_name' => 'Published Dev',
+            'en_expertise' => 'Vedic Astrology',
+            'en_languages' => 'English',
+            'hi_name' => 'प्रकाशित देव',
+            'hi_expertise' => 'वैदिक',
+            'hi_languages' => 'हिंदी',
+            'submitted_at' => now()->subDays(5),
+        ]);
+
+        $liveEn = Astrologer::create([
+            'admin_id' => $this->astrologerAdmin->id,
+            'language' => 'en',
+            'name' => 'Published Dev',
+            'astrologer_language' => 'English',
+            'expertise' => 'Vedic Astrology',
+            'experience' => '8 years',
+            'price' => 20,
+            'call_price' => 25,
+            'active' => 1,
+            'status' => 'online',
+        ]);
+
+        // Practitioner submits update proposals
+        $updatePayload = [
+            'en_name' => 'Proposed New Name Dev',
+            'en_expertise' => 'Proposed New Expertise',
+            'en_languages' => 'English, Sanskrit',
+            'hi_name' => 'प्रस्तावित नया नाम',
+            'hi_expertise' => 'प्रस्तावित विशेषज्ञता',
+            'hi_languages' => 'हिंदी, संस्कृत',
+            'experience' => '9 years',
+            'price' => 35,
+            'call_price' => 45,
+        ];
+
+        $postRes = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->postJson('/api/astrologer/app-listing', $updatePayload);
+
+        $postRes->assertStatus(201);
+
+        // The application row is now pending review
+        $this->assertDatabaseHas('astrologer_applications', [
+            'admin_id' => $this->astrologerAdmin->id,
+            'status' => 'pending',
+            'en_name' => 'Proposed New Name Dev',
+            'price' => 35,
+        ]);
+
+        // THE LIVE PUBLISHED LISTING MUST REMAIN UNTOUCHED!
+        $this->assertDatabaseHas('astrologers', [
+            'id' => $liveEn->id,
+            'admin_id' => $this->astrologerAdmin->id,
+            'name' => 'Published Dev',
+            'price' => 20,
+            'active' => 1,
+        ]);
+
+        // Status endpoint confirms: published = true, but has_pending_update = true
+        $statusRes = $this->withHeader('Authorization', 'Bearer ' . $token)
+            ->getJson('/api/astrologer/app-listing');
+
+        $statusRes->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'status' => 'published',
+                'is_published' => true,
+                'has_pending_update' => true,
+            ]);
+    }
 }
