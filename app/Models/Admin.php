@@ -92,4 +92,14 @@ class Admin extends Authenticatable
     {
         return $this->hasMany(ProfessionalBookingRequest::class, 'admin_id');
     }
+
+    public function astrologerApplication()
+    {
+        return $this->hasOne(AstrologerApplication::class, 'admin_id')->latestOfMany();
+    }
+
+    public function astrologerApplications()
+    {
+        return $this->hasMany(AstrologerApplication::class, 'admin_id')->orderBy('id', 'desc');
+    }
 }

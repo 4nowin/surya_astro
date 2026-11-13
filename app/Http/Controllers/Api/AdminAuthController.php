@@ -24,13 +24,20 @@ class AdminAuthController extends Controller
     $admin = $request->user(); // Authenticated astrologer (admin)
 
     $uid = 'astrologer_' . $admin->id; // Unique UID for Firebase
-    $auth = app(FirebaseAuth::class);
+    try {
+      $auth = app(FirebaseAuth::class);
+      $customToken = $auth->createCustomToken($uid);
 
-    $customToken = $auth->createCustomToken($uid);
-
-    return response()->json([
-      'firebase_token' => $customToken->toString(),
-    ]);
+      return response()->json([
+        'firebase_token' => $customToken->toString(),
+      ]);
+    } catch (\Throwable $e) {
+      \Illuminate\Support\Facades\Log::warning('Firebase token generation failed: ' . $e->getMessage());
+      return response()->json([
+        'firebase_token' => null,
+        'message' => 'Firebase token currently unavailable.',
+      ], 200);
+    }
   }
 
   public function me(Request $request)
@@ -59,9 +66,9 @@ class AdminAuthController extends Controller
     $admin = Admin::where('email', $validated['email'])->first();
 
     if (! $admin || ! Hash::check($validated['password'], $admin->password)) {
-      throw ValidationException::withMessages([
-        'email' => ['The provided credentials are incorrect.'],
-      ]);
+      return response()->json([
+        'message' => 'The provided credentials are incorrect.',
+      ], 401);
     }
 
     if (! $admin->hasRole('Astrologer')) {
@@ -70,10 +77,17 @@ class AdminAuthController extends Controller
 
     $token = $admin->createToken('admin-token')->plainTextToken;
 
-    // 🔥 Firebase custom token generation
-    $uid = 'astrologer_' . $admin->id;
-    $auth = app(\Kreait\Firebase\Auth::class);
-    $firebaseToken = $auth->createCustomToken($uid)->toString();
+    // 🔥 Firebase custom token generation (safe fallback)
+    $firebaseToken = null;
+    try {
+      if (class_exists(\Kreait\Firebase\Auth::class)) {
+        $uid = 'astrologer_' . $admin->id;
+        $auth = app(\Kreait\Firebase\Auth::class);
+        $firebaseToken = $auth->createCustomToken($uid)->toString();
+      }
+    } catch (\Throwable $e) {
+      \Illuminate\Support\Facades\Log::warning('Firebase custom token generation skipped during login: ' . $e->getMessage());
+    }
 
     $data = Astrologer::where('admin_id', $admin->id)->get();
 

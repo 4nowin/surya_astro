@@ -216,6 +216,11 @@
                                         </a>
                                     </li>
                                     <li class="menu-item">
+                                        <a href="{{ route('admin.astrologer-applications.index') }}">
+                                            <span class="menu-title">Listing Applications</span>
+                                        </a>
+                                    </li>
+                                    <li class="menu-item">
                                         <a href="{{ route('fcm.create') }}">
                                             <span class="menu-title">{{ trans('navbar.notification')}}</span>
                                         </a>

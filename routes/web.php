@@ -125,6 +125,12 @@ Route::group([
     Route::resource('astrologer', AstrologerController::class);
     Route::post('product_active/{product}', [ProductController::class, 'active'])->name("product.active");
     Route::post('astrologer_active/{astrologer}', [AstrologerController::class, 'active'])->name("astrologer.active");
+
+    // Astro Setu Listing Applications & Approval
+    Route::get('/astrologer-applications', [\App\Http\Controllers\Admin\AstrologerApplicationController::class, 'index'])->name('admin.astrologer-applications.index');
+    Route::get('/astrologer-applications/{astrologerApplication}', [\App\Http\Controllers\Admin\AstrologerApplicationController::class, 'show'])->name('admin.astrologer-applications.show');
+    Route::post('/astrologer-applications/{astrologerApplication}/approve', [\App\Http\Controllers\Admin\AstrologerApplicationController::class, 'approve'])->name('admin.astrologer-applications.approve');
+    Route::post('/astrologer-applications/{astrologerApplication}/reject', [\App\Http\Controllers\Admin\AstrologerApplicationController::class, 'reject'])->name('admin.astrologer-applications.reject');
     Route::resource('promoters', PromotersController::class);
     Route::resource('locations', LocationsController::class);
     Route::resource('coupon', CouponController::class);

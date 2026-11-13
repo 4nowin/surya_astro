@@ -29,9 +29,32 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->singleton(\Kreait\Firebase\Auth::class, function ($app) {
-            $credentialsPath = storage_path('app/' . config('services.firebase.credentials_path'));
+            $configured = config('services.firebase.credentials_path');
+            $candidates = [
+                $configured,
+                $configured ? base_path($configured) : null,
+                $configured ? storage_path($configured) : null,
+                $configured ? storage_path('app/' . $configured) : null,
+                $configured && str_starts_with($configured, 'storage/app/') ? storage_path(substr($configured, strlen('storage/app/'))) : null,
+                $configured && str_starts_with($configured, 'storage/') ? storage_path(substr($configured, strlen('storage/'))) : null,
+                storage_path('app/firebase/navgarah-bba2c-firebase-adminsdk-fbsvc-a2292dc6bc.json'),
+            ];
+
+            $resolved = null;
+            foreach ($candidates as $candidate) {
+                if ($candidate && file_exists($candidate) && !is_dir($candidate)) {
+                    $resolved = $candidate;
+                    break;
+                }
+            }
+
+            if (!$resolved) {
+                \Illuminate\Support\Facades\Log::warning('Firebase credentials file could not be resolved from configured path.');
+                throw new \RuntimeException('Firebase credentials file not found.');
+            }
+
             return (new Factory)
-                ->withServiceAccount($credentialsPath)
+                ->withServiceAccount($resolved)
                 ->createAuth();
         });
 

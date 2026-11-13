@@ -191,6 +191,10 @@ Route::prefix('astrologer')->group(function () {
         Route::post('/booking-requests/{id}/reject', [ProfessionalPublicProfileApiController::class, 'rejectBookingRequest']);
         Route::post('/booking-requests/{id}/propose-alternative', [ProfessionalPublicProfileApiController::class, 'proposeAlternative']);
         Route::post('/services/{id}/public-visibility', [ProfessionalPublicProfileApiController::class, 'updateServiceVisibility']);
+
+        // 🌟 Pandit Setu - Astro Setu Listing Application
+        Route::get('/app-listing', [\App\Http\Controllers\Api\AstroSetuListingApiController::class, 'getStatus']);
+        Route::post('/app-listing', [\App\Http\Controllers\Api\AstroSetuListingApiController::class, 'submitApplication']);
     });
 });
 
