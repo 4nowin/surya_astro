@@ -95,9 +95,12 @@ return new class extends Migration
             }
 
             // Add unique constraint if not present
-            Schema::table('astrologers', function (Blueprint $table) {
-                $table->unique(['admin_id', 'language'], 'astrologers_admin_id_language_unique');
-            });
+            $existingIndexes = collect(Schema::getIndexes('astrologers'))->pluck('name')->all();
+            if (!in_array('astrologers_admin_id_language_unique', $existingIndexes)) {
+                Schema::table('astrologers', function (Blueprint $table) {
+                    $table->unique(['admin_id', 'language'], 'astrologers_admin_id_language_unique');
+                });
+            }
         }
     }
 
@@ -107,9 +110,40 @@ return new class extends Migration
     public function down(): void
     {
         if (Schema::hasTable('astrologers')) {
-            Schema::table('astrologers', function (Blueprint $table) {
-                $table->dropUnique('astrologers_admin_id_language_unique');
-            });
+            $existingIndexes = collect(Schema::getIndexes('astrologers'))->pluck('name')->all();
+
+            if (in_array('astrologers_admin_id_language_unique', $existingIndexes)) {
+                // In MySQL (InnoDB), dropping a compound unique index that covers a foreign key column (admin_id)
+                // throws Error 1553 ("Cannot drop index: needed in a foreign key constraint") if no other index
+                // exists to satisfy the foreign key constraint.
+                // We first ensure a standalone index on admin_id exists before dropping the unique constraint.
+                if (!in_array('astrologers_admin_id_index', $existingIndexes) && !in_array('astrologers_admin_id_foreign', $existingIndexes)) {
+                    try {
+                        Schema::table('astrologers', function (Blueprint $table) {
+                            $table->index('admin_id', 'astrologers_admin_id_index');
+                        });
+                    } catch (\Throwable $e) {
+                        // Suppress if already exists
+                    }
+                }
+
+                try {
+                    Schema::table('astrologers', function (Blueprint $table) {
+                        $table->dropUnique('astrologers_admin_id_language_unique');
+                    });
+                } catch (\Throwable $e) {
+                    // Fallback for strict database configurations:
+                    try {
+                        Schema::table('astrologers', function (Blueprint $table) {
+                            $table->dropForeign(['admin_id']);
+                            $table->dropUnique('astrologers_admin_id_language_unique');
+                            $table->foreign('admin_id')->references('id')->on('admins')->onDelete('cascade');
+                        });
+                    } catch (\Throwable $ex) {
+                        // Suppress if already dropped
+                    }
+                }
+            }
         }
 
         Schema::dropIfExists('astrologer_applications');
