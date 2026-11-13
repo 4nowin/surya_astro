@@ -210,6 +210,22 @@ class AdminRoleSeparationTest extends TestCase
         $superAdminDashboard->assertSee('Approved Astrologers');
 
         // 2. Practitioner Workspace Dashboard View
+        // Create 2 Jajmans linked to this practitioner and 1 linked to another
+        $jajman1 = \App\Models\Jajman::create(['name' => 'Jajman One', 'phone' => '9999900001']);
+        $jajman1->professionals()->attach($this->practitioner->id, ['status' => 'active', 'source' => 'manual']);
+
+        $jajman2 = \App\Models\Jajman::create(['name' => 'Jajman Two', 'phone' => '9999900002']);
+        $jajman2->professionals()->attach($this->practitioner->id, ['status' => 'active', 'source' => 'manual']);
+
+        $otherPractitioner = Admin::create([
+            'name' => 'Other Practitioner',
+            'email' => 'otherpractitioner@astrosetu.com',
+            'password' => bcrypt('password123'),
+        ]);
+        $otherPractitioner->assignRole(\Spatie\Permission\Models\Role::firstOrCreate(['name' => 'Astrologer', 'guard_name' => 'admin']));
+        $otherJajman = \App\Models\Jajman::create(['name' => 'Other Jajman', 'phone' => '9999900003']);
+        $otherJajman->professionals()->attach($otherPractitioner->id, ['status' => 'active', 'source' => 'manual']);
+
         $this->actingAs($this->practitioner, 'admin');
         $practitionerDashboard = $this->get('/admin');
         $practitionerDashboard->assertStatus(200);
@@ -217,6 +233,7 @@ class AdminRoleSeparationTest extends TestCase
         $practitionerDashboard->assertSee('Astro Setu Marketplace Status');
         $practitionerDashboard->assertSee('Services Offered');
         $practitionerDashboard->assertSee('Jajmans (Clients)');
+        $practitionerDashboard->assertSee('2'); // only this practitioner's 2 Jajmans
         $practitionerDashboard->assertDontSee('Platform Administration Overview');
     }
 

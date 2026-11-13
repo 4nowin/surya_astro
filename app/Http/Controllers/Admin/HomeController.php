@@ -56,7 +56,9 @@ class HomeController extends Controller
             'publishedListing' => $publishedListing,
             'stats' => [
                 'services_count' => ProfessionalService::where('admin_id', $adminId)->count(),
-                'jajmans_count' => Jajman::where('admin_id', $adminId)->count(),
+                'jajmans_count' => Jajman::whereHas('professionals', function ($q) use ($adminId) {
+                    $q->where('admin_id', $adminId);
+                })->count(),
                 'invoices_count' => ProfessionalInvoice::where('admin_id', $adminId)->count(),
                 'appointments_count' => Appointment::where('admin_id', $adminId)->count(),
             ],

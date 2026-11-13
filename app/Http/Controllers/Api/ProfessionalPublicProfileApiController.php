@@ -283,7 +283,9 @@ class ProfessionalPublicProfileApiController extends Controller
 
             if (!empty($validated['jajman_id'])) {
                 // Link to selected existing Jajman
-                $jajman = Jajman::where('admin_id', $admin->id)->find($validated['jajman_id']);
+                $jajman = Jajman::whereHas('professionals', function ($q) use ($admin) {
+                    $q->where('admin_id', $admin->id);
+                })->find($validated['jajman_id']);
                 if (!$jajman) {
                     throw new \Exception("Selected Jajman was not found or is unauthorized.");
                 }
@@ -295,12 +297,16 @@ class ProfessionalPublicProfileApiController extends Controller
                 $clientCity = !empty($validated['jajman_city']) ? trim($validated['jajman_city']) : null;
 
                 $jajman = Jajman::create([
-                    'admin_id' => $admin->id,
                     'name' => $clientName,
                     'phone' => $clientPhone,
                     'email' => $clientEmail,
                     'city' => $clientCity,
-                    'notes' => "Added via public booking request ({$booking->booking_reference})",
+                ]);
+
+                // Attach to professional
+                $jajman->professionals()->attach($admin->id, [
+                    'status' => 'active',
+                    'source' => 'public_booking',
                 ]);
             }
 
