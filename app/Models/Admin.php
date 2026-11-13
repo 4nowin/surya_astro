@@ -45,6 +45,51 @@ class Admin extends Authenticatable
         'remember_token',
     ];
 
+    protected $appends = [
+        'avatar_url',
+    ];
+
+    public function getAvatarUrlAttribute(): ?string
+    {
+        // 1. Check Astrologer profile image
+        if ($this->relationLoaded('astrologer') && $this->astrologer?->image_url) {
+            return $this->astrologer->image_url;
+        }
+
+        // 2. Check public profile photo
+        if ($this->relationLoaded('publicProfile') && $this->publicProfile?->profile_photo_url) {
+            $photo = $this->publicProfile->profile_photo_url;
+            if (str_starts_with($photo, 'http://') || str_starts_with($photo, 'https://')) {
+                return $photo;
+            }
+            $clean = ltrim(preg_replace('#^/?storage/#', '', $photo), '/');
+            return \Illuminate\Support\Facades\Storage::disk('public')->url($clean);
+        }
+
+        // Fallback to query
+        $astro = $this->astrologer()->first();
+        if ($astro?->image_url) {
+            return $astro->image_url;
+        }
+
+        $app = $this->astrologerApplication()->first();
+        if ($app?->image_url) {
+            return $app->image_url;
+        }
+
+        $pub = $this->publicProfile()->first();
+        if ($pub?->profile_photo_url) {
+            $photo = $pub->profile_photo_url;
+            if (str_starts_with($photo, 'http://') || str_starts_with($photo, 'https://')) {
+                return $photo;
+            }
+            $clean = ltrim(preg_replace('#^/?storage/#', '', $photo), '/');
+            return \Illuminate\Support\Facades\Storage::disk('public')->url($clean);
+        }
+
+        return null;
+    }
+
     public function isSuperAdmin(): bool
     {
         return $this->hasAnyRole(['Super Admin', 'Admin'], 'admin');
