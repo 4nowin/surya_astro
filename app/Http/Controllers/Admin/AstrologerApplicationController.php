@@ -12,6 +12,14 @@ use Illuminate\Support\Facades\DB;
 class AstrologerApplicationController extends Controller
 {
     /**
+     * Enforce that all application review actions require Super Admin privileges.
+     */
+    public function __construct()
+    {
+        $this->middleware(['auth:admin', 'super_admin']);
+    }
+
+    /**
      * Display listing of Astro Setu listing applications.
      */
     public function index(Request $request)

@@ -44,7 +44,7 @@ class AdminAuthController extends Controller
   {
     $admin = $request->user();
 
-    if (!$admin->hasRole('Astrologer')) {
+    if (!$admin->hasRole('Astrologer', 'admin')) {
       return response()->json(['message' => 'Unauthorized. Not an astrologer.'], 403);
     }
 
@@ -71,7 +71,7 @@ class AdminAuthController extends Controller
       ], 401);
     }
 
-    if (! $admin->hasRole('Astrologer')) {
+    if (! $admin->hasRole('Astrologer', 'admin')) {
       return response()->json(['message' => 'You are not authorized as an astrologer.'], 403);
     }
 
@@ -114,7 +114,8 @@ class AdminAuthController extends Controller
       'password' => bcrypt($validated['password']),
     ]);
 
-    $admin->assignRole('Astrologer');
+    $astrologerRole = \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'Astrologer', 'guard_name' => 'admin']);
+    $admin->assignRole($astrologerRole);
 
     $token = $admin->createToken('admin-token')->plainTextToken;
 

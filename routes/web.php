@@ -105,39 +105,56 @@ Route::group([
     'middleware' => ['auth:admin'],
     'prefix' => "/admin"
 ], function () {
-    Route::get('/', [AdminHomeController::class, "index"]);
-    Route::resource('roles', RolesController::class);
-    Route::resource('users', UsersController::class);
-    Route::resource('admins', AdminsController::class);
-    Route::post('/auth/check-user-discount', [RazorpayController::class, 'checkUserDiscount']);
-    Route::resource('permissions', PermissionsController::class);
-    Route::resource('guru', GuruController::class);
-    Route::resource('cancellation', CancellationPolicyController::class);
-    Route::resource('gallery', GalleryController::class);
-    Route::resource('banner', BannerController::class);
-    Route::resource('pooja', PoojaController::class);
-    Route::post('pooja_active/{pooja}', [PoojaController::class, 'active'])->name("pooja.active");
-    Route::resource('horoscope', HoroscopeController::class);
-    Route::post('horoscope_active/{horoscope}', [HoroscopeController::class, 'active'])->name("horoscope.active");
-    Route::resource('daily-insight-rules', DailyInsightRuleController::class);
-    Route::post('daily-insight-rules/{rule}/toggle-active', [DailyInsightRuleController::class, 'toggleActive'])->name("daily-insight-rules.toggle-active");
-    Route::resource('product', ProductController::class);
-    Route::resource('astrologer', AstrologerController::class);
-    Route::post('product_active/{product}', [ProductController::class, 'active'])->name("product.active");
-    Route::post('astrologer_active/{astrologer}', [AstrologerController::class, 'active'])->name("astrologer.active");
+    Route::get('/', [AdminHomeController::class, "index"])->name('admin.home');
 
-    // Astro Setu Listing Applications & Approval
-    Route::get('/astrologer-applications', [\App\Http\Controllers\Admin\AstrologerApplicationController::class, 'index'])->name('admin.astrologer-applications.index');
-    Route::get('/astrologer-applications/{astrologerApplication}', [\App\Http\Controllers\Admin\AstrologerApplicationController::class, 'show'])->name('admin.astrologer-applications.show');
-    Route::post('/astrologer-applications/{astrologerApplication}/approve', [\App\Http\Controllers\Admin\AstrologerApplicationController::class, 'approve'])->name('admin.astrologer-applications.approve');
-    Route::post('/astrologer-applications/{astrologerApplication}/reject', [\App\Http\Controllers\Admin\AstrologerApplicationController::class, 'reject'])->name('admin.astrologer-applications.reject');
-    Route::resource('promoters', PromotersController::class);
-    Route::resource('locations', LocationsController::class);
-    Route::resource('coupon', CouponController::class);
+    // Super Admin platform administration group
+    Route::group(['middleware' => ['super_admin']], function () {
+        Route::resource('roles', RolesController::class);
+        Route::resource('users', UsersController::class);
+        Route::resource('admins', AdminsController::class);
+        Route::post('/auth/check-user-discount', [RazorpayController::class, 'checkUserDiscount']);
+        Route::resource('permissions', PermissionsController::class);
+        Route::resource('guru', GuruController::class);
+        Route::resource('cancellation', CancellationPolicyController::class);
+        Route::resource('gallery', GalleryController::class);
+        Route::resource('banner', BannerController::class);
+        Route::resource('pooja', PoojaController::class);
+        Route::post('pooja_active/{pooja}', [PoojaController::class, 'active'])->name("pooja.active");
+        Route::resource('horoscope', HoroscopeController::class);
+        Route::post('horoscope_active/{horoscope}', [HoroscopeController::class, 'active'])->name("horoscope.active");
+        Route::resource('daily-insight-rules', DailyInsightRuleController::class);
+        Route::post('daily-insight-rules/{rule}/toggle-active', [DailyInsightRuleController::class, 'toggleActive'])->name("daily-insight-rules.toggle-active");
+        Route::resource('product', ProductController::class);
+        Route::resource('astrologer', AstrologerController::class);
+        Route::post('product_active/{product}', [ProductController::class, 'active'])->name("product.active");
+        Route::post('astrologer_active/{astrologer}', [AstrologerController::class, 'active'])->name("astrologer.active");
 
+        // Astro Setu Listing Applications & Approval
+        Route::get('/astrologer-applications', [\App\Http\Controllers\Admin\AstrologerApplicationController::class, 'index'])->name('admin.astrologer-applications.index');
+        Route::get('/astrologer-applications/{astrologerApplication}', [\App\Http\Controllers\Admin\AstrologerApplicationController::class, 'show'])->name('admin.astrologer-applications.show');
+        Route::post('/astrologer-applications/{astrologerApplication}/approve', [\App\Http\Controllers\Admin\AstrologerApplicationController::class, 'approve'])->name('admin.astrologer-applications.approve');
+        Route::post('/astrologer-applications/{astrologerApplication}/reject', [\App\Http\Controllers\Admin\AstrologerApplicationController::class, 'reject'])->name('admin.astrologer-applications.reject');
+
+        Route::resource('promoters', PromotersController::class);
+        Route::resource('locations', LocationsController::class);
+        Route::resource('coupon', CouponController::class);
+
+        Route::get('/fcm/send', [NotificationController::class, 'create'])->name('fcm.create');
+        Route::post('/fcm/send', [NotificationController::class, 'send'])->name('fcm.send');
+
+        Route::post('settings/inline-edit', [SettingsController::class, "inlineEdit"]);
+
+        // Protected Diagnostics
+        Route::get('/diagnostics/astrology-engine', [App\Http\Controllers\Admin\AstrologyDiagnosticController::class, 'index'])->name('admin.diagnostics.astrology');
+        Route::get('/diagnostics/astrology-engine/export', [App\Http\Controllers\Admin\AstrologyDiagnosticController::class, 'export'])->name('admin.diagnostics.astrology.export');
+        Route::get('/diagnostics/ffi-compatibility', [App\Http\Controllers\Admin\AstrologyDiagnosticController::class, 'ffiCompatibilityTest'])->name('admin.diagnostics.ffi_compatibility');
+    });
+
+    // General / Workspace routes for authenticated admin users (Practitioners & Super Admins)
     Route::get('enquiry/completed',  [InquiryController::class, "completed"])->name('enquiry.completed');
     Route::resource('enquiry', InquiryController::class);
-    //files
+
+    // Files / FileManager
     Route::controller(FileManagerController::class)->group(function () {
         Route::get('files',  "index")->name("admin.files");
         Route::post('files/folder',  "newFolder");
@@ -145,20 +162,7 @@ Route::group([
         Route::post('files/ck-upload',  "ckUpload");
         Route::post('files/uploader',  "uploader");
     });
-
-    Route::get('/fcm/send', [NotificationController::class, 'create'])->name('fcm.create');
-    Route::post('/fcm/send', [NotificationController::class, 'send'])->name('fcm.send');
-
-    Route::post('settings/inline-edit', [SettingsController::class, "inlineEdit"]);
-
-    // Temporary FFI / Astrology Engine Diagnostics (Protected by auth:admin)
-    Route::get('/diagnostics/astrology-engine', [App\Http\Controllers\Admin\AstrologyDiagnosticController::class, 'index'])->name('admin.diagnostics.astrology');
-    Route::get('/diagnostics/astrology-engine/export', [App\Http\Controllers\Admin\AstrologyDiagnosticController::class, 'export'])->name('admin.diagnostics.astrology.export');
 });
-
-// Temporary Protected Hostinger FFI Web Runtime Compatibility Test (Admin Session OR Secure Key)
-Route::get('/admin/diagnostics/ffi-compatibility', [App\Http\Controllers\Admin\AstrologyDiagnosticController::class, 'ffiCompatibilityTest'])
-    ->name('admin.diagnostics.ffi_compatibility');
 
 Route::get('/clear-cache', function () {
     Artisan::call('config:clear');

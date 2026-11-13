@@ -15,6 +15,13 @@ class Admin extends Authenticatable
     use HasFactory, Notifiable, HasRoles, HasPermissions, HasApiTokens;
 
     /**
+     * The guard name for Spatie Laravel Permission.
+     *
+     * @var string
+     */
+    protected $guard_name = 'admin';
+
+    /**
      * The attributes that are mass assignable.
      *
      * @var array
@@ -37,6 +44,16 @@ class Admin extends Authenticatable
         'password',
         'remember_token',
     ];
+
+    public function isSuperAdmin(): bool
+    {
+        return $this->hasAnyRole(['Super Admin', 'Admin'], 'admin');
+    }
+
+    public function isPractitioner(): bool
+    {
+        return $this->hasRole('Astrologer', 'admin');
+    }
 
     public function astrologer()
     {

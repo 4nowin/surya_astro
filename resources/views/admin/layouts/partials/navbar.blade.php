@@ -71,7 +71,13 @@
                     <ul>
                         <li class="menu-header"><span> {{ trans('navbar.general') }} </span></li>
                         @auth
-                        @role('Admin')
+                        @if(Auth::user() && Auth::user()->isSuperAdmin())
+                        <li class="menu-item">
+                            <a href="{{ route('admin.home') }}">
+                                <span class="menu-icon"><i class="fas fa-gauge"></i></span>
+                                <span class="menu-title">Platform Dashboard</span>
+                            </a>
+                        </li>
                         <li class="menu-item sub-menu">
                             <a href="#">
                                 <span class="menu-icon">
@@ -98,60 +104,6 @@
                                         <a href="{{ route('permissions.index') }}">
                                             <span class="menu-title">{{ trans('navbar.permissions')}}</span>
                                         </a>
-                                    </li>
-                                    <li class="menu-item sub-menu">
-                                        <a href="#">
-                                            <span class="menu-title">{{ trans('navbar.forms')}}</span>
-                                        </a>
-                                        <div class="sub-menu-list">
-                                            <ul>
-                                                <li class="menu-item">
-                                                    <a href="#">
-                                                        <span class="menu-title">{{ trans('navbar.roles')}}</span>
-                                                    </a>
-                                                </li>
-                                                <li class="menu-item">
-                                                    <a href="#">
-                                                        <span class="menu-title">Select</span>
-                                                    </a>
-                                                </li>
-                                                <li class="menu-item sub-menu">
-                                                    <a href="#">
-                                                        <span class="menu-title">More</span>
-                                                    </a>
-                                                    <div class="sub-menu-list">
-                                                        <ul>
-                                                            <li class="menu-item">
-                                                                <a href="#">
-                                                                    <span class="menu-title">CheckBox</span>
-                                                                </a>
-                                                            </li>
-                                                            <li class="menu-item">
-                                                                <a href="#">
-                                                                    <span class="menu-title">Radio</span>
-                                                                </a>
-                                                            </li>
-                                                            <li class="menu-item sub-menu">
-                                                                <a href="#">
-                                                                    <span class="menu-title">Want more ?</span>
-                                                                    <span class="menu-suffix">&#x1F914;</span>
-                                                                </a>
-                                                                <div class="sub-menu-list">
-                                                                    <ul>
-                                                                        <li class="menu-item">
-                                                                            <a href="#">
-                                                                                <span class="menu-prefix">&#127881;</span>
-                                                                                <span class="menu-title">You made it </span>
-                                                                            </a>
-                                                                        </li>
-                                                                    </ul>
-                                                                </div>
-                                                            </li>
-                                                        </ul>
-                                                    </div>
-                                                </li>
-                                            </ul>
-                                        </div>
                                     </li>
                                 </ul>
                             </div>
@@ -228,7 +180,6 @@
                                 </ul>
                             </div>
                         </li>
-                        @endrole
                         <li class="menu-item sub-menu">
                             <a href="#">
                                 <span class="menu-icon">
@@ -332,6 +283,36 @@
                                 <span class="menu-title">{{ trans('navbar.locations')}}</span>
                             </a>
                         </li>
+                        <li class="menu-item">
+                            <a href="{{ route('admin.files') }}">
+                                <span class="menu-icon">
+                                    <i class="fas fa-folder"></i>
+                                </span>
+                                <span class="menu-title">File Manager</span>
+                            </a>
+                        </li>
+                        @elseif(Auth::user() && Auth::user()->isPractitioner())
+                        {{-- Practitioner Sidebar Navigation --}}
+                        <li class="menu-item">
+                            <a href="{{ route('admin.home') }}">
+                                <span class="menu-icon"><i class="fas fa-home"></i></span>
+                                <span class="menu-title">Workspace Home</span>
+                            </a>
+                        </li>
+                        <li class="menu-item">
+                            <a href="{{ route('enquiry.index') }}">
+                                <span class="menu-icon"><i class="fas fa-envelope-open-text"></i></span>
+                                <span class="menu-title">Client Inquiries</span>
+                            </a>
+                        </li>
+                        <li class="menu-item">
+                            <a href="{{ route('admin.files') }}">
+                                <span class="menu-icon"><i class="fas fa-folder-open"></i></span>
+                                <span class="menu-title">My Files</span>
+                            </a>
+                        </li>
+                        @endif
+                        @endauth
                     </ul>
                 </nav>
             </div>
@@ -354,7 +335,7 @@
                     <ul class="navbar-nav me-auto flex-grow-1 justify-content-center">
                         <li class="nav-item"><a href="/admin" class="nav-link">{{ __('Home') }}</a></li>
                         @auth
-                        @role('Admin')
+                        @if(Auth::user() && Auth::user()->isSuperAdmin())
                         <li class="nav-item dropdown">
                             <a id="usersDropdown" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" v-pre>{{ __('Users')}}</a>
                             <ul class="dropdown-menu" aria-labelledby="usersDropdown">
@@ -371,7 +352,6 @@
                                 <li><a href="{{ route('gallery.index') }}" class="dropdown-item">{{ __('Gallery')}}</a></li>
                             </ul>
                         </li>
-                        @endrole
                         <li class="nav-item dropdown">
                             <a id="usersDropdown" class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false" v-pre>{{ __('Catelog')}}</a>
                             <ul class="dropdown-menu" aria-labelledby="usersDropdown">
@@ -385,6 +365,10 @@
                         <li class="nav-item"><a href="/admin/gallery" class="nav-link">{{ __('Gallery')}}</a></li>
                         <li class="nav-item"><a href="/admin/coupon" class="nav-link">{{ __('Coupons')}}</a></li>
                         <li class="nav-item"><a href="/admin/locations" class="nav-link">{{ __('Locations')}}</a></li>
+                        @elseif(Auth::user() && Auth::user()->isPractitioner())
+                        <li class="nav-item"><a href="{{ route('enquiry.index') }}" class="nav-link">Inquiries</a></li>
+                        <li class="nav-item"><a href="{{ route('admin.files') }}" class="nav-link">Files</a></li>
+                        @endif
                         @endauth
                     </ul>
 
@@ -419,7 +403,6 @@
                                 </form>
                             </div>
                         </li>
-                        @endif
                         @endguest
 
 
