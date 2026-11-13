@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Storage;
 use App\Models\Review;
 use App\Models\Admin;
 use App\Models\ChatSession;
@@ -30,6 +31,24 @@ class Astrologer extends Model
         'status',
         'active',
     ];
+
+    protected $appends = [
+        'image_url',
+    ];
+
+    public function getImageUrlAttribute(): ?string
+    {
+        if (empty($this->image)) {
+            return null;
+        }
+
+        if (str_starts_with($this->image, 'http://') || str_starts_with($this->image, 'https://')) {
+            return $this->image;
+        }
+
+        $cleanPath = ltrim(preg_replace('#^/?storage/#', '', $this->image), '/');
+        return Storage::disk('public')->url($cleanPath);
+    }
 
     public function reviews()
     {

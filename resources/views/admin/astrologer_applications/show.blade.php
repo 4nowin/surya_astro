@@ -60,7 +60,7 @@
             </div>
             <div class="text-end">
                 @if($application->image)
-                    <img src="{{ $application->image }}" alt="Profile Photo" width="80" height="80" class="rounded-circle object-fit-cover border">
+                    <img src="{{ $application->image_url ?? asset($application->image) }}" alt="Profile Photo" width="80" height="80" class="rounded-circle object-fit-cover border">
                 @endif
             </div>
         </div>

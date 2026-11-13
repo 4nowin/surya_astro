@@ -195,6 +195,8 @@ Route::prefix('astrologer')->group(function () {
         // 🌟 Pandit Setu - Astro Setu Listing Application
         Route::get('/app-listing', [\App\Http\Controllers\Api\AstroSetuListingApiController::class, 'getStatus']);
         Route::post('/app-listing', [\App\Http\Controllers\Api\AstroSetuListingApiController::class, 'submitApplication']);
+        Route::put('/app-listing', [\App\Http\Controllers\Api\AstroSetuListingApiController::class, 'updatePendingApplication']);
+        Route::match(['put', 'post'], '/app-listing/update', [\App\Http\Controllers\Api\AstroSetuListingApiController::class, 'updatePendingApplication']);
     });
 });
 
