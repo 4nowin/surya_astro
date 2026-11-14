@@ -22,30 +22,33 @@ class CalculationJobManager
     /**
      * Find an existing calculation result, active job, or create a new job.
      *
-     * @param string $type E.g. 'daily_panchang'
+     * @param string $type E.g. 'daily_panchang', 'kundli'
      * @param array<string, mixed> $payload
      * @param int|null $userId Optional owning user ID for personal calculations
+     * @param bool $forceRefresh When true, bypasses cached result and forces re-calculation
      * @return array{ready: bool, result?: array, job?: AstrologyCalculationJob, canonical_key: string, is_new?: bool}
      */
-    public function findOrCreateJob(string $type, array $payload, ?int $userId = null): array
+    public function findOrCreateJob(string $type, array $payload, ?int $userId = null, bool $forceRefresh = false): array
     {
         $handler = $this->registry->get($type);
         $canonicalKey = $handler->computeCanonicalKey($payload);
         $activeKey = "{$type}:{$canonicalKey}";
 
-        // 1. Fast check: is result already in durable cache?
-        $cachedResult = $handler->getCachedResult($canonicalKey, $payload);
-        if ($cachedResult !== null) {
-            return [
-                'ready' => true,
-                'result' => $cachedResult,
-                'canonical_key' => $canonicalKey,
-            ];
+        // 1. Fast check: is result already in durable cache? (bypassed if forceRefresh requested)
+        if (!$forceRefresh) {
+            $cachedResult = $handler->getCachedResult($canonicalKey, $payload);
+            if ($cachedResult !== null) {
+                return [
+                    'ready' => true,
+                    'result' => $cachedResult,
+                    'canonical_key' => $canonicalKey,
+                ];
+            }
         }
 
         // 2. Database transaction to inspect and atomically claim/create job
         try {
-            return DB::transaction(function () use ($type, $canonicalKey, $activeKey, $payload, $userId, $handler) {
+            return DB::transaction(function () use ($type, $canonicalKey, $activeKey, $payload, $userId, $handler, $forceRefresh) {
                 // Find existing job for this canonical calculation
                 $existingJob = AstrologyCalculationJob::where('calculation_type', $type)
                     ->where('canonical_key', $canonicalKey)
@@ -54,18 +57,20 @@ class CalculationJobManager
                     ->first();
 
                 if ($existingJob) {
-                    // If previously completed, re-check cache or mark completed
+                    // If previously completed, re-check cache or mark completed (unless forceRefresh)
                     if ($existingJob->isCompleted()) {
-                        $result = $handler->getCachedResult($canonicalKey, $payload);
-                        if ($result !== null) {
-                            return [
-                                'ready' => true,
-                                'result' => $result,
-                                'job' => $existingJob,
-                                'canonical_key' => $canonicalKey,
-                            ];
+                        if (!$forceRefresh) {
+                            $result = $handler->getCachedResult($canonicalKey, $payload);
+                            if ($result !== null) {
+                                return [
+                                    'ready' => true,
+                                    'result' => $result,
+                                    'job' => $existingJob,
+                                    'canonical_key' => $canonicalKey,
+                                ];
+                            }
                         }
-                        // Cache expired; re-queue job
+                        // Cache expired or forceRefresh requested; re-queue job
                         $existingJob->update([
                             'status' => AstrologyCalculationJob::STATUS_PENDING,
                             'active_key' => $activeKey,
@@ -73,6 +78,7 @@ class CalculationJobManager
                             'started_at' => null,
                             'completed_at' => null,
                             'lease_expires_at' => null,
+                            'result' => null,
                         ]);
 
                         return [

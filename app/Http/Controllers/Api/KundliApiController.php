@@ -24,6 +24,7 @@ class KundliApiController extends Controller
     public function __construct(
         protected CalculationJobManager $jobManager,
         protected CalculationWorkerLauncher $workerLauncher,
+        protected KundliCalculationHandler $kundliHandler,
         protected DashaService $dashaService,
         protected KundliPdfService $pdfService
     ) {}
@@ -103,8 +104,6 @@ class KundliApiController extends Controller
             : (string) $profile->date_of_birth;
 
         $payload = [
-            'profile_id' => $profile->id,
-            'user_id' => $user->id,
             'date_of_birth' => $dob,
             'birth_time_precision' => (string) $profile->birth_time_precision,
             'birth_time' => $profile->birth_time,
@@ -117,11 +116,27 @@ class KundliApiController extends Controller
             'birth_city' => $profile->birth_city,
         ];
 
+        $normalized = KundliCalculationHandler::normalizePayload($payload);
+        $canonicalKey = $this->kundliHandler->computeCanonicalKey($normalized);
+
+        // 1. Fast cache & persistent MySQL check
+        $cached = $this->kundliHandler->getCachedResult($canonicalKey, $normalized);
+        if ($cached !== null) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Kundli retrieved successfully.',
+                'data' => $cached,
+            ], 200, [
+                'X-Astrology-Cached' => 'HIT',
+                'X-Astrology-Cache-Key' => "astrology:kundli:{$canonicalKey}",
+            ]);
+        }
+
         try {
             $lookup = $this->jobManager->findOrCreateJob(
                 type: KundliCalculationHandler::TYPE,
-                payload: $payload,
-                userId: $user->id
+                payload: $normalized,
+                userId: null
             );
 
             // Case A: Result is already available in cache
@@ -153,8 +168,8 @@ class KundliApiController extends Controller
                 ], 500);
             }
 
-            // Case C: Job is pending or processing. Trigger background worker launch if needed.
-            $launchResult = $this->workerLauncher->launchWorkerIfNeeded();
+            // Case C: Job is pending or processing. Trigger targeted background worker launch.
+            $launchResult = $this->workerLauncher->launchWorkerForJob($job);
             if (!empty($launchResult['error'])) {
                 Log::warning("Background calculation worker launch notice for job [{$job->job_id}]: {$launchResult['error']}", [
                     'reason' => $launchResult['reason'],
@@ -172,14 +187,14 @@ class KundliApiController extends Controller
                     'calculation_type' => $job->calculation_type,
                     'status' => $job->status,
                     'status_url' => $statusUrl,
-                    'poll_interval_ms' => 2000,
+                    'poll_interval_ms' => 1500,
                     'worker_launched' => $launchResult['launched'],
                 ],
             ], 202, [
                 'X-Astrology-Status' => $job->status,
                 'X-Astrology-Job-Id' => $job->job_id,
                 'Location' => $statusUrl,
-                'Retry-After' => '2',
+                'Retry-After' => '1',
             ]);
         } catch (\Throwable $e) {
             Log::error("Kundli calculation dispatch failed: {$e->getMessage()}", [
@@ -209,8 +224,6 @@ class KundliApiController extends Controller
             : (string) $profile->date_of_birth;
 
         $payload = [
-            'profile_id' => $profile->id,
-            'user_id' => $userId,
             'date_of_birth' => $dob,
             'birth_time_precision' => (string) $profile->birth_time_precision,
             'birth_time' => $profile->birth_time,
@@ -223,10 +236,12 @@ class KundliApiController extends Controller
             'birth_city' => $profile->birth_city,
         ];
 
+        $normalized = KundliCalculationHandler::normalizePayload($payload);
+
         return $this->jobManager->findOrCreateJob(
             type: KundliCalculationHandler::TYPE,
-            payload: $payload,
-            userId: $userId
+            payload: $normalized,
+            userId: null
         );
     }
 
@@ -284,8 +299,10 @@ class KundliApiController extends Controller
             ]);
         }
 
-        // Job is pending or queued: launch worker if needed and return 202
-        $this->workerLauncher->launchWorkerIfNeeded();
+        // Job is pending or queued: launch targeted worker and return 202
+        if (!empty($lookup['job'])) {
+            $this->workerLauncher->launchWorkerForJob($lookup['job']);
+        }
 
         return response()->json([
             'success' => true,

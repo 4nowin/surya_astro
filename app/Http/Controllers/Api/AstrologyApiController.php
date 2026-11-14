@@ -237,16 +237,17 @@ class AstrologyApiController extends Controller
     }
 
     /**
-     * Resolve Kundli response: checks cache, executes direct FFI if permitted,
-     * or queues for background worker if Hostinger web PHP restricts FFI.
+     * Resolve Kundli response: checks cache, or queues targeted background CLI worker.
+     * Web runtime (LiteSpeed / Apache / FPM) NEVER attempts direct FFI calculation.
      */
     protected function resolveKundliResponse(Request $request, array $payload, bool $forceRefresh = false): JsonResponse
     {
-        $canonicalKey = $this->kundliHandler->computeCanonicalKey($payload);
+        $normalized = KundliCalculationHandler::normalizePayload($payload);
+        $canonicalKey = $this->kundliHandler->computeCanonicalKey($normalized);
 
         // 1. Check cache (unless force-refresh requested)
         if (!$forceRefresh) {
-            $cached = $this->kundliHandler->getCachedResult($canonicalKey, $payload);
+            $cached = $this->kundliHandler->getCachedResult($canonicalKey, $normalized);
             if ($cached !== null) {
                 return response()->json([
                     'success' => true,
@@ -259,32 +260,13 @@ class AstrologyApiController extends Controller
             }
         }
 
-        // 2. Direct calculation if FFI is available in current PHP execution context
-        if ($this->canExecuteDirectFfi()) {
-            try {
-                $completeKundli = $this->buildCompleteKundli($payload);
-                $this->kundliHandler->storeResult($canonicalKey, $completeKundli, $payload);
-
-                return response()->json([
-                    'success' => true,
-                    'message' => 'Kundli calculated successfully.',
-                    'data' => $completeKundli,
-                ], 200, [
-                    'X-Astrology-Cached' => 'MISS',
-                    'X-Astrology-Cache-Key' => "astrology:kundli:{$canonicalKey}",
-                ]);
-            } catch (Throwable $e) {
-                Log::warning("Direct Kundli calculation failed or threw FFI notice: {$e->getMessage()}. Falling back to background worker queue.");
-            }
-        }
-
-        // 3. Robust Background Queue fallback (Hostinger Web FPM/Apache compatibility)
+        // 2. Queue calculation job and launch targeted CLI worker (where FFI is isolated)
         try {
-            $userId = $request->user()?->id;
             $lookup = $this->jobManager->findOrCreateJob(
                 type: KundliCalculationHandler::TYPE,
-                payload: $payload,
-                userId: $userId
+                payload: $normalized,
+                userId: null,
+                forceRefresh: $forceRefresh
             );
 
             if ($lookup['ready'] && !empty($lookup['result'])) {
@@ -292,7 +274,10 @@ class AstrologyApiController extends Controller
                     'success' => true,
                     'message' => 'Kundli retrieved successfully.',
                     'data' => $lookup['result'],
-                ], 200);
+                ], 200, [
+                    'X-Astrology-Cached' => 'HIT',
+                    'X-Astrology-Cache-Key' => "astrology:kundli:{$canonicalKey}",
+                ]);
             }
 
             /** @var AstrologyCalculationJob $job */
@@ -310,8 +295,14 @@ class AstrologyApiController extends Controller
                 ], 500);
             }
 
-            // Launch detached CLI worker process where FFI is fully enabled
-            $launchResult = $this->workerLauncher->launchWorkerIfNeeded();
+            // Launch targeted CLI worker process specifically for this job
+            $launchResult = $this->workerLauncher->launchWorkerForJob($job);
+            if (!empty($launchResult['error'])) {
+                Log::warning("Background calculation worker launch notice for job [{$job->job_id}]: {$launchResult['error']}", [
+                    'reason' => $launchResult['reason'],
+                ]);
+            }
+
             $statusUrl = url("/api/v1/calculations/{$job->job_id}");
 
             return response()->json([
@@ -323,18 +314,18 @@ class AstrologyApiController extends Controller
                     'calculation_type' => $job->calculation_type,
                     'status' => $job->status,
                     'status_url' => $statusUrl,
-                    'poll_interval_ms' => 2000,
+                    'poll_interval_ms' => 1500,
                     'worker_launched' => $launchResult['launched'],
                 ],
             ], 202, [
                 'X-Astrology-Status' => $job->status,
                 'X-Astrology-Job-Id' => $job->job_id,
                 'Location' => $statusUrl,
-                'Retry-After' => '2',
+                'Retry-After' => '1',
             ]);
         } catch (Throwable $e) {
             Log::error("Kundli calculation dispatch failed: {$e->getMessage()}", [
-                'payload' => $payload,
+                'payload' => $normalized,
                 'trace' => $e->getTraceAsString(),
             ]);
 
@@ -348,84 +339,11 @@ class AstrologyApiController extends Controller
 
     /**
      * Compute full comprehensive Kundli bundling Core, Manglik Dosha, Yogas,
-     * D-9 Navamsha chart, and Saturn transits.
+     * D-9 Navamsha chart, and Saturn transits via the calculation handler.
      */
     public function buildCompleteKundli(array $payload): array
     {
-        $birthDate = (string) $payload['date_of_birth'];
-        $birthTime = $payload['birth_time'] ?? null;
-        $precision = (string) ($payload['birth_time_precision'] ?? 'verified');
-        $approximateWindow = $payload['approximate_time_window'] ?? null;
-        $latitude = (float) $payload['latitude'];
-        $longitude = (float) $payload['longitude'];
-        $timezone = (string) ($payload['timezone'] ?? 'Asia/Kolkata');
-        $name = (string) ($payload['name'] ?? 'Native');
-        $birthCity = (string) ($payload['birth_city'] ?? 'Unknown');
-
-        // 1. Core Kundli
-        $kundli = $this->getKundliService()->computeKundli(
-            birthDate: $birthDate,
-            birthTime: $birthTime,
-            precision: $precision,
-            approximateWindow: $approximateWindow,
-            latitude: $latitude,
-            longitude: $longitude,
-            timezone: $timezone,
-            profileMetadata: [
-                'name' => $name,
-                'birth_city' => $birthCity,
-            ]
-        );
-
-        // 2. Manglik Dosha
-        $manglik = $this->getManglikService()->evaluate(
-            planets: $kundli['planets'],
-            lagnaRashiId: $kundli['ascendant']['id'] ?? $kundli['ascendant']
-        );
-
-        // 3. Classical Yogas & Aspects
-        $yogas = $this->getYogaOrchestrator()->evaluate(
-            planets: $kundli['planets'],
-            ascendantData: $kundli['ascendant'],
-            stabilityData: ['is_lagna_invariant' => true],
-            userAgeYears: 30
-        );
-
-        // 4. D-9 Navamsha Stability & Houses
-        $stability = $this->getStabilityService()->analyze(
-            birthDate: $birthDate,
-            birthTime: $birthTime,
-            precision: $precision,
-            approximateWindow: $approximateWindow,
-            latitude: $latitude,
-            longitude: $longitude,
-            timezone: $timezone
-        );
-
-        $d9Asc = $stability['d9_ascendant'] ?? null;
-        $d9Planets = $stability['planetary_navamshas'] ?? [];
-        $d9Houses = null;
-        if ($d9Asc && !empty($d9Asc['id'])) {
-            $d9Houses = $this->buildNavamshaHouses((int) $d9Asc['id'], $d9Planets);
-        }
-
-        // 5. Saturn Transit Status
-        $moonSignId = $kundli['planets']['moon']['rashi']['id'] ?? 1;
-        $saturnTransit = $this->getSaturnTransitService()->evaluateCurrentPhaseAt($moonSignId, now($timezone)->toDateString());
-
-        // Attach enriched astrology modules
-        $kundli['manglik_dosha'] = $manglik;
-        $kundli['yogas'] = $yogas['yogas'] ?? [];
-        $kundli['aspects'] = $yogas['aspects'] ?? [];
-        $kundli['navamsha'] = [
-            'status' => $d9Asc['status'] ?? 'available',
-            'ascendant' => $d9Asc,
-            'planets' => $d9Planets,
-            'houses' => $d9Houses,
-        ];
-        $kundli['saturn_transit'] = $saturnTransit;
-
-        return $kundli;
+        return $this->kundliHandler->calculate($payload);
     }
 
     /**
@@ -437,58 +355,7 @@ class AstrologyApiController extends Controller
      */
     protected function buildNavamshaHouses(int $d9AscSignId, array $d9Planets): array
     {
-        $zodiacSigns = [
-            1 => ['name' => 'Aries', 'vedic_name' => 'Mesha', 'lord' => 'Mars'],
-            2 => ['name' => 'Taurus', 'vedic_name' => 'Vrishabha', 'lord' => 'Venus'],
-            3 => ['name' => 'Gemini', 'vedic_name' => 'Mithuna', 'lord' => 'Mercury'],
-            4 => ['name' => 'Cancer', 'vedic_name' => 'Karka', 'lord' => 'Moon'],
-            5 => ['name' => 'Leo', 'vedic_name' => 'Simha', 'lord' => 'Sun'],
-            6 => ['name' => 'Virgo', 'vedic_name' => 'Kanya', 'lord' => 'Mercury'],
-            7 => ['name' => 'Libra', 'vedic_name' => 'Tula', 'lord' => 'Venus'],
-            8 => ['name' => 'Scorpio', 'vedic_name' => 'Vrischika', 'lord' => 'Mars'],
-            9 => ['name' => 'Sagittarius', 'vedic_name' => 'Dhanu', 'lord' => 'Jupiter'],
-            10 => ['name' => 'Capricorn', 'vedic_name' => 'Makara', 'lord' => 'Saturn'],
-            11 => ['name' => 'Aquarius', 'vedic_name' => 'Kumbha', 'lord' => 'Saturn'],
-            12 => ['name' => 'Pisces', 'vedic_name' => 'Meena', 'lord' => 'Jupiter'],
-        ];
-
-        // Initialize 12 houses
-        $houses = [];
-        for ($h = 1; $h <= 12; $h++) {
-            $signId = (($d9AscSignId - 1 + ($h - 1)) % 12) + 1;
-            $signMeta = $zodiacSigns[$signId];
-            $houses[$h] = [
-                'house_number' => $h,
-                'sign_id' => $signId,
-                'rashi' => [
-                    'id' => $signId,
-                    'name' => $signMeta['name'],
-                    'vedic_name' => $signMeta['vedic_name'],
-                    'lord' => $signMeta['lord'],
-                ],
-                'planets' => [],
-            ];
-        }
-
-        // Distribute planets into houses
-        foreach ($d9Planets as $key => $p) {
-            $pSignId = (int) ($p['d9_navamsha']['id'] ?? ($p['invariant_d9_sign_id'] ?? 1));
-            $houseNum = (($pSignId - $d9AscSignId + 12) % 12) + 1;
-
-            if (isset($houses[$houseNum])) {
-                $houses[$houseNum]['planets'][] = [
-                    'key' => $key,
-                    'name' => $p['name'] ?? ucfirst($key),
-                    'name_hi' => $p['name_hi'] ?? '',
-                    'sign_id' => $pSignId,
-                    'is_vargottama' => !empty($p['is_vargottama']),
-                    'is_retrograde' => false,
-                    'is_combust' => false,
-                ];
-            }
-        }
-
-        return $houses;
+        return KundliCalculationHandler::buildNavamshaHouses($d9AscSignId, $d9Planets);
     }
 
     /**

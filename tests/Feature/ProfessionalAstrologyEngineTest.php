@@ -7,6 +7,7 @@ namespace Tests\Feature;
 use App\Models\Admin;
 use App\Models\Jajman;
 use App\Models\JajmanBirthDetail;
+use App\Services\Astrology\Calculation\CalculationWorkerLauncher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Laravel\Sanctum\Sanctum;
@@ -25,6 +26,7 @@ class ProfessionalAstrologyEngineTest extends TestCase
     {
         parent::setUp();
         Cache::flush();
+        CalculationWorkerLauncher::setLaunchHook(fn() => true);
 
         Role::firstOrCreate(['name' => 'Astrologer', 'guard_name' => 'admin']);
 
@@ -49,6 +51,12 @@ class ProfessionalAstrologyEngineTest extends TestCase
             'date_of_birth' => '1990-05-15',
         ]);
         $this->jajmanA->professionals()->attach($this->practitionerA->id, ['status' => 'active', 'source' => 'manual']);
+    }
+
+    protected function tearDown(): void
+    {
+        CalculationWorkerLauncher::setLaunchHook(null);
+        parent::tearDown();
     }
 
     public function test_unauthenticated_requests_are_rejected(): void
@@ -97,6 +105,12 @@ class ProfessionalAstrologyEngineTest extends TestCase
         ]);
 
         $res = $this->getJson("/api/astrologer/jajmans/{$this->jajmanA->id}/kundli");
+        if ($res->status() === 202) {
+            $jobId = $res->json('data.job_id');
+            $this->artisan('astro:calculate-worker', ['--job' => $jobId])->assertSuccessful();
+            $res = $this->getJson("/api/astrologer/jajmans/{$this->jajmanA->id}/kundli");
+        }
+
         $res->assertOk()
             ->assertJsonPath('success', true);
 
@@ -140,6 +154,12 @@ class ProfessionalAstrologyEngineTest extends TestCase
         ]);
 
         $res = $this->postJson("/api/astrologer/jajmans/{$this->jajmanA->id}/kundli/calculate");
+        if ($res->status() === 202) {
+            $jobId = $res->json('data.job_id');
+            $this->artisan('astro:calculate-worker', ['--job' => $jobId])->assertSuccessful();
+            $res = $this->getJson("/api/astrologer/jajmans/{$this->jajmanA->id}/kundli");
+        }
+
         $res->assertOk()
             ->assertJsonPath('success', true)
             ->assertJsonPath('data.metadata.ayanamsha', 'TRUE_CITRA_LAHIRI');
@@ -149,7 +169,7 @@ class ProfessionalAstrologyEngineTest extends TestCase
     {
         $this->actingAs($this->practitionerA, 'sanctum');
 
-        $res = $this->postJson('/api/astrologer/astrology/kundli/calculate', [
+        $payload = [
             'name' => 'Walk-in Client',
             'date_of_birth' => '1985-11-20',
             'birth_time' => '08:30:00',
@@ -157,7 +177,14 @@ class ProfessionalAstrologyEngineTest extends TestCase
             'longitude' => 77.2090,
             'timezone' => 'Asia/Kolkata',
             'birth_city' => 'New Delhi',
-        ]);
+        ];
+
+        $res = $this->postJson('/api/astrologer/astrology/kundli/calculate', $payload);
+        if ($res->status() === 202) {
+            $jobId = $res->json('data.job_id');
+            $this->artisan('astro:calculate-worker', ['--job' => $jobId])->assertSuccessful();
+            $res = $this->postJson('/api/astrologer/astrology/kundli/calculate', $payload);
+        }
 
         $res->assertOk()
             ->assertJsonPath('success', true)
