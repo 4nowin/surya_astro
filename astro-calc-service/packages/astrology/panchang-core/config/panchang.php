@@ -1,0 +1,125 @@
+<?php
+
+declare(strict_types=1);
+
+return [
+    /*
+    |--------------------------------------------------------------------------
+    | Calculation Engine
+    |--------------------------------------------------------------------------
+    |
+    | Choose the astronomical engine to use for calculations.
+    | 'jme' -> Uses JPL Moshier Ephemeris via the package-native FFI wrapper.
+    |
+    */
+
+    'engine' => env('PANCHANG_ENGINE', 'jme'),
+
+    'jme_settings' => [
+        // 'auto', 'jpl', 'moshier', 'vsop_elp_meeus'
+        'mode' => env('PANCHANG_JME_MODE', 'jpl'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Native Ephemeris Configuration
+    |--------------------------------------------------------------------------
+    |
+    | Configure the native ephemeris data path and settings.
+    |
+    */
+
+    'ephe_path' => env('PANCHANG_EPHE_PATH', __DIR__ . '/../data/'),
+
+    /*
+    |--------------------------------------------------------------------------
+    | Default Calculation Options
+    |--------------------------------------------------------------------------
+    |
+    | Default options for panchanga calculations and representation formats.
+    |
+    */
+
+    'defaults' => [
+        // 'en', 'hi', 'gu'
+        'locale' => env('PANCHANG_LOCALE', 'en'),
+
+        // 'amanta', 'purnimanta'
+        // Amanta: Month ends on Amavasya (South, West, Central India)
+        // Purnimanta: Month ends on Purnima (North, East India)
+        'calendar_type' => env('PANCHANG_CALENDAR_TYPE', 'amanta'),
+
+        // 'indian_metric', 'western'
+        'measurement_system' => 'indian_metric',
+
+        // 'indian_12h', 'indian_24h', 'iso8601'
+        'date_time_format' => 'indian_12h',
+
+        // '12h', '24h'
+        'time_notation' => '12h',
+
+        // 'decimal', 'dms' (degrees, minutes, seconds)
+        'coordinate_format' => 'decimal',
+
+        // 'degree', 'dms'
+        'angle_unit' => 'degree',
+
+        // 'mixed' (e.g. '1h 30m 0s'), 'minutes' (90), 'seconds' (5400), 'hours' (1.5)
+        'duration_format' => 'mixed',
+
+        /*
+        | Bārhaspatya (Brihaspati) Saṃvatsara timing strategy.
+        |
+        | Package default is always classical_ss (Sewell–Dīkṣit / Sūrya-Siddhānta).
+        | Other keys are opt-in comparison strategies — do not set them as default
+        | merely to match a media almanac over a subset of years.
+        |
+        | Supported:
+        |   classical_ss      — canonical traditional Bārhaspatya (default)
+        |   makaranda         — experimental mean-Jupiter research model
+        |   grahalaghava      — experimental Graha-lāghava research model
+        |   modern_ephemeris  — physical geocentric sidereal Jupiter ingress (needs AstronomyService/JPL)
+        */
+        'brihaspati_samvatsara_model' => env(
+            'PANCHANG_BRIHASPATI_SAMVATSARA_MODEL',
+            'classical_ss',
+        ),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Festival Calculation Settings
+    |--------------------------------------------------------------------------
+    |
+    | Configure festival calculation behavior.
+    |
+    */
+
+    'festivals' => [
+        'default_tradition' => env('PANCHANG_DEFAULT_TRADITION', 'Vaishnava'),
+        'default_region' => env('PANCHANG_DEFAULT_REGION', 'Gujarat'),
+        'supported_traditions' => ['Smarta', 'Vaishnava'],
+        'supported_regions' => ['North', 'South', 'Bengal', 'Maharashtra', 'Tamil', 'Gujarat'],
+    ],
+
+    'shraddha' => [
+        // Canonical Ṣaṇṇavati default. Other presentation profiles may be added
+        // without changing the astronomical/tithi engine.
+        'shannavati_profile' => env('PANCHANG_SHANNAVATI_PROFILE', 'dharma_sindhu'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Cache Settings
+    |--------------------------------------------------------------------------
+    |
+    | Configure caching for expensive calculations.
+    |
+    */
+
+    'cache' => [
+        'enabled' => env('PANCHANG_CACHE_ENABLED', true),
+        'ttl' => env('PANCHANG_CACHE_TTL', 86400), // 24 hours
+        'prefix' => env('PANCHANG_CACHE_PREFIX', 'panchang_'),
+    ],
+];

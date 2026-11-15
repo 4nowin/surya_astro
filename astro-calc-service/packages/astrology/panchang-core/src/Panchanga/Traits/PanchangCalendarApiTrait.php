@@ -1,0 +1,2695 @@
+<?php
+
+declare(strict_types=1);
+
+namespace JayeshMepani\PanchangCore\Panchanga\Traits;
+
+use Carbon\CarbonImmutable;
+use DateTimeInterface;
+use InvalidArgumentException;
+use JayeshMepani\PanchangCore\Astronomy\BrihaspatiSamvatsaraService;
+use JayeshMepani\PanchangCore\Core\AstroCore;
+use JayeshMepani\PanchangCore\Core\Enums\CalendarType;
+use JayeshMepani\PanchangCore\Core\Enums\Nakshatra;
+use JayeshMepani\PanchangCore\Core\Enums\Rasi;
+use JayeshMepani\PanchangCore\Core\Enums\Ritu;
+use JayeshMepani\PanchangCore\Core\Enums\Tithi;
+use JayeshMepani\PanchangCore\Core\Enums\Vara;
+use JayeshMepani\PanchangCore\Core\Localization;
+use JayeshMepani\PanchangCore\Core\ZodiacDivision;
+use JayeshMepani\PanchangCore\Festivals\FestivalService;
+use JayeshMepani\PanchangCore\Panchanga\ElectionalEvaluator;
+use Throwable;
+
+trait PanchangCalendarApiTrait
+{
+    public function getFestivalRangeCalendar(
+        int $fromYear,
+        int $fromMonth,
+        int $toYear,
+        int $toMonth,
+        float $lat,
+        float $lon,
+        string $tz,
+        float $elevation = 0.0,
+        ?CarbonImmutable $calculationAt = null,
+        CalendarType|string $calendarType = CalendarType::Amanta,
+    ): array {
+        [$start, $end] = $this->resolveMonthRangeBounds($fromYear, $fromMonth, $toYear, $toMonth, $tz);
+
+        return $this->buildFestivalRangeCalendar($start, $end, $lat, $lon, $tz, $elevation, $calculationAt, $calendarType, 'all');
+    }
+
+    public function getFestivalRangeCalendarOnlyFestivals(
+        int $fromYear,
+        int $fromMonth,
+        int $toYear,
+        int $toMonth,
+        float $lat,
+        float $lon,
+        string $tz,
+        float $elevation = 0.0,
+        ?CarbonImmutable $calculationAt = null,
+        CalendarType|string $calendarType = CalendarType::Amanta,
+    ): array {
+        [$start, $end] = $this->resolveMonthRangeBounds($fromYear, $fromMonth, $toYear, $toMonth, $tz);
+
+        return $this->buildFestivalRangeCalendar($start, $end, $lat, $lon, $tz, $elevation, $calculationAt, $calendarType, 'festivals');
+    }
+
+    public function getVratRangeCalendar(
+        int $fromYear,
+        int $fromMonth,
+        int $toYear,
+        int $toMonth,
+        float $lat,
+        float $lon,
+        string $tz,
+        float $elevation = 0.0,
+        ?CarbonImmutable $calculationAt = null,
+        CalendarType|string $calendarType = CalendarType::Amanta,
+    ): array {
+        [$start, $end] = $this->resolveMonthRangeBounds($fromYear, $fromMonth, $toYear, $toMonth, $tz);
+
+        return $this->buildFestivalRangeCalendar($start, $end, $lat, $lon, $tz, $elevation, $calculationAt, $calendarType, 'vrats');
+    }
+
+    /**
+     * Get dedicated Hindu calendar period windows for a month range.
+     *
+     * This avoids building full month calendar rows when consumers only need
+     * period-level context such as ayana, ritu, lunar months, and samvat labels.
+     *
+     * @param array<int, string> $fields
+     *
+     * @return array<string, array<int, array<string, mixed>>>
+     */
+    public function getCalendarPeriodWindowsRange(
+        int $fromYear,
+        int $fromMonth,
+        int $toYear,
+        int $toMonth,
+        float $lat,
+        float $lon,
+        string $tz,
+        array $fields = [],
+        float $elevation = 0.0,
+        CalendarType|string $calendarType = CalendarType::Amanta,
+    ): array {
+        [$start, $endDay] = $this->resolveMonthRangeBounds($fromYear, $fromMonth, $toYear, $toMonth, $tz);
+        $end = $endDay->addDay();
+        $startJd = $this->toJulianDayFromCarbon($start, $tz);
+        $endJd = $this->toJulianDayFromCarbon($end, $tz);
+        $requested = $this->normalizeCalendarPeriodFields($fields);
+
+        $amantaWindows = null;
+        $result = [];
+
+        $defaultBrihaspatiModel = BrihaspatiSamvatsaraService::defaultModel();
+
+        // Explicit non-canonical models soft-fail. If the configured package default
+        // is itself a projection model (e.g. modern_ephemeris), the generic key soft-fails too.
+        $optionalProjectionFields = [
+            'samvatsara_brihaspati_grahalaghava',
+            'samvatsara_brihaspati_makaranda',
+            'samvatsara_brihaspati_modern',
+        ];
+        if ($defaultBrihaspatiModel !== BrihaspatiSamvatsaraService::MODEL_CLASSICAL_SS) {
+            $optionalProjectionFields[] = 'samvatsara_brihaspati';
+        }
+
+        foreach ($requested as $field) {
+            try {
+                [$windows, $rule] = match ($field) {
+                    'ayana' => [$this->buildSolarLongitudePeriodWindows($startJd, $endJd, $tz, [90.0, 270.0], fn(float $sunLon): string => $this->panchanga->getAyana($sunLon)), 'continuous_astronomical'],
+                    'ritu' => [$this->buildSolarLongitudePeriodWindows($startJd, $endJd, $tz, [30.0, 90.0, 150.0, 210.0, 270.0, 330.0], fn(float $sunLon): string => Ritu::fromSunLongitude($sunLon)->getName()), 'continuous_astronomical'],
+                    'sayana_ayana' => [$this->buildSolarLongitudePeriodWindows($startJd, $endJd, $tz, [90.0, 270.0], fn(float $sunLon): string => $this->panchanga->getAyana($sunLon), tropical: true), 'continuous_astronomical'],
+                    'sayana_ritu' => [$this->buildSolarLongitudePeriodWindows($startJd, $endJd, $tz, [30.0, 90.0, 150.0, 210.0, 270.0, 330.0], fn(float $sunLon): string => Ritu::fromSunLongitude($sunLon)->getName(), tropical: true), 'continuous_astronomical'],
+                    'amanta_month' => [$amantaWindows ??= $this->buildLunarMonthPeriodWindows($startJd, $endJd, $tz, 0.0, 'Month_Amanta'), 'lunar_month_at_sunrise'],
+                    'purnimanta_month' => [$this->buildLunarMonthPeriodWindows($startJd, $endJd, $tz, 180.0, 'Month_Purnimanta'), 'lunar_month_at_sunrise'],
+                    'vikram_samvat' => [$this->buildChaitradiVikramSamvatWindows($startJd, $endJd, $tz, $amantaWindows ??= $this->buildLunarMonthPeriodWindows($startJd, $endJd, $tz, 0.0, 'Month_Amanta')), 'chaitra_shukla_pratipada_at_sunrise'],
+                    // Śālivāhana Śaka lunisolar year (Ugadi / Panchanga reckoning) — distinct from the
+                    // Indian National Calendar (Saka Era) whose civil year begins on 22 March.
+                    'shalivahana_saka_samvat' => [$this->buildSakaSamvatWindows($startJd, $endJd, $tz, $amantaWindows ??= $this->buildLunarMonthPeriodWindows($startJd, $endJd, $tz, 0.0, 'Month_Amanta')), 'chaitra_shukla_pratipada_at_sunrise'],
+                    'kali_samvat' => [$this->buildKaliSamvatWindows($startJd, $endJd, $tz, $amantaWindows ??= $this->buildLunarMonthPeriodWindows($startJd, $endJd, $tz, 0.0, 'Month_Amanta')), 'chaitra_shukla_pratipada_at_sunrise'],
+                    'samvatsara', 'samvatsara_south' => [$this->buildSamvatsaraSouthWindows($startJd, $endJd, $tz, $amantaWindows ??= $this->buildLunarMonthPeriodWindows($startJd, $endJd, $tz, 0.0, 'Month_Amanta')), 'chaitra_shukla_pratipada_at_sunrise'],
+                    'samvatsara_north' => [$this->buildSamvatsaraNorthWindows($startJd, $endJd, $tz, $amantaWindows ??= $this->buildLunarMonthPeriodWindows($startJd, $endJd, $tz, 0.0, 'Month_Amanta')), 'chaitra_shukla_pratipada_at_sunrise'],
+                    // Configured / package default strategy (classical_ss unless config overrides).
+                    'samvatsara_brihaspati' => [
+                        $this->buildSamvatsaraBrihaspatiWindows(
+                            $startJd,
+                            $endJd,
+                            $tz,
+                            $defaultBrihaspatiModel,
+                        ),
+                        BrihaspatiSamvatsaraService::assignmentRuleForModel($defaultBrihaspatiModel),
+                    ],
+                    // Explicit Sewell–Dīkṣit / Sūrya-Siddhānta Bārhaspatya (always classical_ss).
+                    'samvatsara_brihaspati_classical' => [
+                        $this->buildSamvatsaraBrihaspatiWindows(
+                            $startJd,
+                            $endJd,
+                            $tz,
+                            BrihaspatiSamvatsaraService::MODEL_CLASSICAL_SS,
+                        ),
+                        BrihaspatiSamvatsaraService::assignmentRuleForModel(
+                            BrihaspatiSamvatsaraService::MODEL_CLASSICAL_SS,
+                        ),
+                    ],
+                    // Historical Graha-lāghava comparison (experimental): classical 60-name phase projected
+                    // onto Gaṇeśa Daivajña's mean-Jupiter 30° ingress timing.
+                    'samvatsara_brihaspati_grahalaghava' => [
+                        $this->buildSamvatsaraBrihaspatiWindows(
+                            $startJd,
+                            $endJd,
+                            $tz,
+                            BrihaspatiSamvatsaraService::MODEL_GRAHALAGHAVA,
+                        ),
+                        BrihaspatiSamvatsaraService::assignmentRuleForModel(
+                            BrihaspatiSamvatsaraService::MODEL_GRAHALAGHAVA,
+                        ),
+                    ],
+                    // Historical Makaranda comparison (experimental): classical 60-name phase projected
+                    // onto the Saurapakṣa bīja mean-Jupiter 30° ingress timing.
+                    'samvatsara_brihaspati_makaranda' => [
+                        $this->buildSamvatsaraBrihaspatiWindows(
+                            $startJd,
+                            $endJd,
+                            $tz,
+                            BrihaspatiSamvatsaraService::MODEL_MAKARANDA,
+                        ),
+                        BrihaspatiSamvatsaraService::assignmentRuleForModel(
+                            BrihaspatiSamvatsaraService::MODEL_MAKARANDA,
+                        ),
+                    ],
+                    // Modern physical-astronomy comparison: classical 60-name phase projected onto
+                    // the nearest prograde sidereal Jupiter rāśi ingress from AstronomyService.
+                    // Deliberately NOT a Drik-Panchang compatibility model and not package default.
+                    'samvatsara_brihaspati_modern' => [
+                        $this->buildSamvatsaraBrihaspatiWindows(
+                            $startJd,
+                            $endJd,
+                            $tz,
+                            BrihaspatiSamvatsaraService::MODEL_MODERN_EPHEMERIS,
+                        ),
+                        BrihaspatiSamvatsaraService::assignmentRuleForModel(
+                            BrihaspatiSamvatsaraService::MODEL_MODERN_EPHEMERIS,
+                        ),
+                    ],
+                    'samvatsara_gujarati' => [
+                        $this->buildGujaratiSamvatsaraWindows(
+                            $startJd,
+                            $endJd,
+                            $tz,
+                            $amantaWindows ??= $this->buildLunarMonthPeriodWindows($startJd, $endJd, $tz, 0.0, 'Month_Amanta'),
+                        ),
+                        'kartika_shukla_pratipada_at_sunrise',
+                    ],
+                    'gujarati_samvat' => [$this->buildGujaratiSamvatWindows($startJd, $endJd, $tz, $amantaWindows ??= $this->buildLunarMonthPeriodWindows($startJd, $endJd, $tz, 0.0, 'Month_Amanta')), 'kartika_shukla_pratipada_at_sunrise'],
+                    default => throw new InvalidArgumentException('Unknown calendar period field: ' . $field),
+                };
+
+                $result[$field . '_windows'] = $this->publicCalendarPeriodWindows(
+                    $this->attachCivilObservanceDates($windows, $lat, $lon, $tz, $elevation, $rule),
+                );
+            } catch (Throwable $e) {
+                // Opt-in projection models must not fail the whole calendar-periods payload.
+                if (in_array($field, $optionalProjectionFields, true)) {
+                    $result[$field . '_windows'] = [];
+                    $result[$field . '_error'] = $e->getMessage();
+                    continue;
+                }
+
+                throw $e;
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Compare classical Sūrya-Siddhānta Bārhaspatya timing with historical
+     * Graha-lāghava, historical Makaranda, and modern physical Jupiter timing
+     * projections over a month range.
+     *
+     * All projected sides retain the SAME 60-name classical sequence and change
+     * only the timing basis; no independent 60-name phase is invented.
+     *
+     * @return array{
+     *   models: array<string, array<string, mixed>>,
+     *   from: string,
+     *   to: string,
+     *   timezone: string,
+     *   comparisons: array<int, array<string, mixed>>
+     * }
+     */
+    public function getBrihaspatiSamvatsaraComparisonRange(
+        int $fromYear,
+        int $fromMonth,
+        int $toYear,
+        int $toMonth,
+        string $tz,
+    ): array {
+        [$start, $endDay] = $this->resolveMonthRangeBounds(
+            $fromYear,
+            $fromMonth,
+            $toYear,
+            $toMonth,
+            $tz,
+        );
+
+        $rangeStartJd = $this->toJulianDayFromCarbon($start, $tz);
+        $rangeEndJd = $this->toJulianDayFromCarbon($endDay->addDay(), $tz);
+
+        $service = new BrihaspatiSamvatsaraService($this->astronomy);
+        $comparisons = [];
+        $cursorJd = $rangeStartJd;
+        $seen = [];
+
+        while ($cursorJd < $rangeEndJd) {
+            $comparison = $service->compareModelsFromJd($cursorJd);
+            $sameName = (array) ($comparison['same_name_timing'] ?? []);
+            $classical = (array) ($sameName['classical'] ?? []);
+            $grahalaghava = (array) ($sameName['grahalaghava'] ?? []);
+            $makaranda = (array) ($sameName['makaranda'] ?? []);
+            $modern = (array) ($sameName['modern'] ?? []);
+            $legacyModernDifference = (array) ($sameName['difference'] ?? []);
+            $differences = (array) ($sameName['differences_from_classical'] ?? []);
+
+            $classicalStartJd = (float) ($classical['start_jd'] ?? 0.0);
+            $classicalEndJd = (float) ($classical['end_jd'] ?? 0.0);
+
+            if ($classicalStartJd <= 0.0 || $classicalEndJd <= $classicalStartJd) {
+                throw new InvalidArgumentException(
+                    'Brihaspati comparison returned an invalid classical window.',
+                );
+            }
+
+            $key = sprintf(
+                '%d|%.8F',
+                (int) ($sameName['index'] ?? -1),
+                $classicalStartJd,
+            );
+
+            if (!isset($seen[$key])) {
+                $seen[$key] = true;
+
+                $formatProjection = function (array $timing, string $fallbackModel) use ($tz): array {
+                    $startJd = (float) ($timing['start_jd'] ?? 0.0);
+                    $endJd = (float) ($timing['end_jd'] ?? 0.0);
+
+                    if ($startJd <= 0.0 || $endJd <= $startJd) {
+                        throw new InvalidArgumentException(
+                            sprintf("Brihaspati comparison returned an invalid '%s' window.", $fallbackModel),
+                        );
+                    }
+
+                    return [
+                        'model' => (string) ($timing['model'] ?? $fallbackModel),
+                        'variant' => (string) ($timing['variant'] ?? ''),
+                        'start_jd' => $startJd,
+                        'end_jd' => $endJd,
+                        'start_iso' => AstroCore::formatDateTime(
+                            $this->sunService->jdToCarbonPublic($startJd, $tz),
+                        ),
+                        'end_iso' => AstroCore::formatDateTime(
+                            $this->sunService->jdToCarbonPublic($endJd, $tz),
+                        ),
+                        'start_rashi_index' => isset($timing['start_rashi_index'])
+                            ? (int) $timing['start_rashi_index']
+                            : null,
+                        'end_rashi_index' => isset($timing['end_rashi_index'])
+                            ? (int) $timing['end_rashi_index']
+                            : null,
+                    ];
+                };
+
+                $formatDifference = (static fn(array $difference): array => [
+                    'start_seconds' => (float) ($difference['start_seconds'] ?? 0.0),
+                    'end_seconds' => (float) ($difference['end_seconds'] ?? 0.0),
+                    'start_days' => (float) ($difference['start_days'] ?? 0.0),
+                    'end_days' => (float) ($difference['end_days'] ?? 0.0),
+                ]);
+
+                $classicalPublic = [
+                    'model' => (string) ($classical['model'] ?? BrihaspatiSamvatsaraService::MODEL_CLASSICAL_SS),
+                    'variant' => (string) ($classical['variant'] ?? ''),
+                    'start_jd' => $classicalStartJd,
+                    'end_jd' => $classicalEndJd,
+                    'start_iso' => AstroCore::formatDateTime(
+                        $this->sunService->jdToCarbonPublic($classicalStartJd, $tz),
+                    ),
+                    'end_iso' => AstroCore::formatDateTime(
+                        $this->sunService->jdToCarbonPublic($classicalEndJd, $tz),
+                    ),
+                ];
+
+                $row = [
+                    'name' => (string) ($sameName['name'] ?? ''),
+                    'index' => (int) ($sameName['index'] ?? -1),
+                    'classical' => $classicalPublic,
+                    'grahalaghava' => $formatProjection(
+                        $grahalaghava,
+                        BrihaspatiSamvatsaraService::MODEL_GRAHALAGHAVA,
+                    ),
+                    'makaranda' => $formatProjection(
+                        $makaranda,
+                        BrihaspatiSamvatsaraService::MODEL_MAKARANDA,
+                    ),
+                    // Backward-compatible legacy difference = modern - classical when present.
+                    'difference' => $legacyModernDifference !== []
+                        ? $formatDifference($legacyModernDifference)
+                        : null,
+                    'differences_from_classical' => [
+                        BrihaspatiSamvatsaraService::MODEL_GRAHALAGHAVA => $formatDifference((array) ($differences[BrihaspatiSamvatsaraService::MODEL_GRAHALAGHAVA] ?? [])),
+                        BrihaspatiSamvatsaraService::MODEL_MAKARANDA => $formatDifference((array) ($differences[BrihaspatiSamvatsaraService::MODEL_MAKARANDA] ?? [])),
+                    ],
+                ];
+
+                if ($modern !== [] && isset($modern['start_jd'])) {
+                    $row['modern'] = $formatProjection(
+                        $modern,
+                        BrihaspatiSamvatsaraService::MODEL_MODERN_EPHEMERIS,
+                    );
+                    $row['differences_from_classical'][BrihaspatiSamvatsaraService::MODEL_MODERN_EPHEMERIS]
+                        = $formatDifference((array) ($differences[BrihaspatiSamvatsaraService::MODEL_MODERN_EPHEMERIS] ?? $legacyModernDifference));
+                }
+
+                $comparisons[] = $row;
+            }
+
+            $cursorJd = $classicalEndJd + (0.1 / 86400.0);
+        }
+
+        return [
+            'models' => BrihaspatiSamvatsaraService::supportedModels(),
+            'from' => $start->toDateString(),
+            'to' => $endDay->toDateString(),
+            'timezone' => $tz,
+            'comparisons' => $comparisons,
+        ];
+    }
+
+    public function getFestivalYearCalendar(
+        int $year,
+        float $lat,
+        float $lon,
+        string $tz,
+        float $elevation = 0.0,
+        ?CarbonImmutable $calculationAt = null,
+        CalendarType|string $calendarType = CalendarType::Amanta,
+    ): array {
+        return $this->buildFestivalYearCalendar($year, $lat, $lon, $tz, $elevation, $calculationAt, $calendarType, 'all');
+    }
+
+    public function getFestivalYearCalendarOnlyFestivals(
+        int $year,
+        float $lat,
+        float $lon,
+        string $tz,
+        float $elevation = 0.0,
+        ?CarbonImmutable $calculationAt = null,
+        CalendarType|string $calendarType = CalendarType::Amanta,
+    ): array {
+        return $this->buildFestivalYearCalendar($year, $lat, $lon, $tz, $elevation, $calculationAt, $calendarType, 'festivals');
+    }
+
+    public function getVratYearCalendar(
+        int $year,
+        float $lat,
+        float $lon,
+        string $tz,
+        float $elevation = 0.0,
+        ?CarbonImmutable $calculationAt = null,
+        CalendarType|string $calendarType = CalendarType::Amanta,
+    ): array {
+        return $this->buildFestivalYearCalendar($year, $lat, $lon, $tz, $elevation, $calculationAt, $calendarType, 'vrats');
+    }
+
+    /** @return array<string, array<string, array<string, mixed>>> Indexed by YYYY-MM then YYYY-MM-DD */
+    public function getMonthRangeFields(
+        int $fromYear,
+        int $fromMonth,
+        int $toYear,
+        int $toMonth,
+        float $lat,
+        float $lon,
+        string $tz,
+        array $fields,
+        float $elevation = 0.0,
+        array $options = [],
+        ?CarbonImmutable $calculationAt = null,
+        CalendarType|string $calendarType = CalendarType::Amanta,
+    ): array {
+        [$start, $end] = $this->resolveMonthRangeBounds($fromYear, $fromMonth, $toYear, $toMonth, $tz);
+        $months = [];
+
+        for ($cursor = $start->startOfMonth(); $cursor->lessThanOrEqualTo($end); $cursor = $cursor->addMonth()) {
+            $monthKey = $cursor->format('Y-m');
+            $months[$monthKey] = $this->getMonthFields(
+                $cursor->year,
+                $cursor->month,
+                $lat,
+                $lon,
+                $tz,
+                $fields,
+                $elevation,
+                $options,
+                $calculationAt,
+                $calendarType,
+            );
+        }
+
+        return $months;
+    }
+
+    /** @return array<string, array<string, array<string, mixed>>> Indexed by YYYY-MM then YYYY-MM-DD */
+    public function getMonthRangeCalendar(
+        int $fromYear,
+        int $fromMonth,
+        int $toYear,
+        int $toMonth,
+        float $lat,
+        float $lon,
+        string $tz,
+        float $elevation = 0.0,
+        array $options = [],
+        ?CarbonImmutable $calculationAt = null,
+        CalendarType|string $calendarType = CalendarType::Amanta,
+    ): array {
+        [$start, $end] = $this->resolveMonthRangeBounds($fromYear, $fromMonth, $toYear, $toMonth, $tz);
+        $months = [];
+
+        for ($cursor = $start->startOfMonth(); $cursor->lessThanOrEqualTo($end); $cursor = $cursor->addMonth()) {
+            $monthKey = $cursor->format('Y-m');
+            $months[$monthKey] = $this->getMonthCalendar(
+                $cursor->year,
+                $cursor->month,
+                $lat,
+                $lon,
+                $tz,
+                $elevation,
+                $options,
+                $calculationAt,
+                $calendarType,
+            );
+        }
+
+        return $months;
+    }
+
+    /**
+     * Get a month-wise calendar summary of Panchang details.
+     * Ideal for grid-based calendar views.
+     *
+     * @return array<string, array<string, mixed>> Indexed by YYYY-MM-DD
+     */
+    public function getMonthCalendar(
+        int $year,
+        int $month,
+        float $lat,
+        float $lon,
+        string $tz,
+        float $elevation = 0.0,
+        array $options = [],
+        ?CarbonImmutable $calculationAt = null,
+        CalendarType|string $calendarType = CalendarType::Amanta,
+    ): array {
+        // Normalize calendar_type from string to enum
+        if (is_string($calendarType)) {
+            $calendarType = match (strtolower($calendarType)) {
+                'purnimanta', 'purnimant' => CalendarType::Purnimanta,
+                default => CalendarType::Amanta,
+            };
+        }
+
+        $start = CarbonImmutable::create($year, $month, 1, 0, 0, 0, $tz);
+        $daysInMonth = $start->daysInMonth;
+
+        $festivalScope = (string) ($options['festival_scope'] ?? 'year');
+        if (isset($options['festivals_by_date']) && is_array($options['festivals_by_date'])) {
+            $festivalsByDate = $options['festivals_by_date'];
+        } elseif ($festivalScope === 'month') {
+            $festivalsByDate = $this->getFestivalCalendarForDateRange(
+                start: $start,
+                end: $start->addDays($daysInMonth - 1),
+                lat: $lat,
+                lon: $lon,
+                tz: $tz,
+                elevation: $elevation,
+                calculationAt: $calculationAt,
+                calendarType: $calendarType,
+            );
+        } else {
+            // Check if pre-generated festivals_{year}.json exists for the current calendar/locale
+            $calTypeStr = $calendarType->value;
+            $locale = function_exists('panchang_script_locale') ? panchang_script_locale() : 'en';
+            $candidatePath = dirname(__DIR__, 3) . DIRECTORY_SEPARATOR . 'scripts' . DIRECTORY_SEPARATOR . 'output'
+                . DIRECTORY_SEPARATOR . $calTypeStr . DIRECTORY_SEPARATOR . $locale . DIRECTORY_SEPARATOR . sprintf('festivals_%d.json', $year);
+
+            if (file_exists($candidatePath)) {
+                $decoded = json_decode((string) file_get_contents($candidatePath), true);
+                if (is_array($decoded) && isset($decoded['festivals']['by_date']) && is_array($decoded['festivals']['by_date'])) {
+                    $festivalsByDate = $decoded['festivals']['by_date'];
+                }
+            }
+
+            if (!isset($festivalsByDate)) {
+                // Fallback: Use the same year-level festival orchestration pipeline
+                $yearFestivalCalendar = $this->getFestivalYearCalendar(
+                    year: $year,
+                    lat: $lat,
+                    lon: $lon,
+                    tz: $tz,
+                    elevation: $elevation,
+                    calculationAt: $calculationAt,
+                    calendarType: $calendarType,
+                );
+                $festivalsByDate = $yearFestivalCalendar['by_date'];
+            }
+        }
+
+        $snapshots = [];
+        for ($i = -1; $i <= $daysInMonth; $i++) {
+            $date = $start->addDays($i);
+            $snapshots[$i] = $this->getFestivalSnapshot($date, $lat, $lon, $tz, $elevation, $calculationAt, $calendarType, false);
+        }
+
+        $calendar = [];
+        for ($i = 0; $i < $daysInMonth; $i++) {
+            $date = $start->addDays($i);
+            $todaySnapshot = $snapshots[$i];
+
+            $dateKey = $date->toDateString();
+            $festivals = $festivalsByDate[$dateKey] ?? [];
+            $dailyObservances = $this->festivalService->getDailyObservances($todaySnapshot);
+
+            $sankranti = null;
+            if ($todaySnapshot['Resolution_Context']['sankranti_rashi'] !== null) {
+                $rashiIdx = $todaySnapshot['Resolution_Context']['sankranti_rashi'];
+                $sankranti = Rasi::from($rashiIdx)->getName() . ' ' . Localization::translate('Common', 'Sankranti');
+            }
+
+            $tithiDisplay = $this->buildMonthCalendarTithiDisplay($todaySnapshot);
+
+            $calendar[$date->toDateString()] = [
+                'date' => $date->toDateString(),
+                'day' => (int) $date->format('d'),
+                'tithi' => $todaySnapshot['Tithi'],
+                'tithi_display' => $tithiDisplay,
+                'tithi_windows' => $todaySnapshot['Tithi_Windows'] ?? [],
+                'nakshatra' => $todaySnapshot['Nakshatra'],
+                'nakshatra_windows' => $todaySnapshot['Nakshatra_Windows'] ?? [],
+                'nakshatra_padas' => $todaySnapshot['Nakshatra_Padas'] ?? [],
+                'yoga' => $todaySnapshot['Yoga'],
+                'yoga_windows' => $todaySnapshot['Yoga_Windows'] ?? [],
+                'karana' => $todaySnapshot['Karana'],
+                'karana_windows' => $todaySnapshot['Karana_Windows'] ?? [],
+                'vara' => $todaySnapshot['Vara'],
+                'sun_sign' => $todaySnapshot['Sun_Sign'],
+                'moon_sign' => $todaySnapshot['Moon_Sign'],
+                'moon_phase' => $todaySnapshot['Moon_Phase'] ?? null,
+                'sunrise' => $todaySnapshot['Sunrise'],
+                'sunset' => $todaySnapshot['Sunset'],
+                'moonrise' => $todaySnapshot['Moonrise'],
+                'moonset' => $todaySnapshot['Moonset'],
+                'moonrise_date' => $todaySnapshot['Moonrise_Date'],
+                'moonset_date' => $todaySnapshot['Moonset_Date'],
+                'moonrise_iso' => $todaySnapshot['Moonrise_ISO'],
+                'moonset_iso' => $todaySnapshot['Moonset_ISO'],
+                'moonset_day_relation' => $todaySnapshot['Moonset_Day_Relation'],
+                'moon_visibility' => [
+                    'starts_at' => $todaySnapshot['Moonrise'],
+                    'starts_on' => $todaySnapshot['Moonrise_Date'],
+                    'starts_iso' => $todaySnapshot['Moonrise_ISO'],
+                    'ends_at' => $todaySnapshot['Moonset'],
+                    'ends_on' => $todaySnapshot['Moonset_Date'],
+                    'ends_iso' => $todaySnapshot['Moonset_ISO'],
+                    'ends_day_relation' => $todaySnapshot['Moonset_Day_Relation'],
+                ],
+                'hindu_calendar' => $todaySnapshot['Hindu_Calendar'],
+                'festivals' => $festivals,
+                'daily_observances' => $dailyObservances,
+                'sankranti' => $sankranti,
+            ];
+        }
+
+        return $calendar;
+    }
+
+    /**
+     * Get selected month-calendar component groups per date.
+     *
+     * Examples:
+     * - tithi => tithi, tithi_display, tithi_windows
+     * - nakshatra => nakshatra, nakshatra_windows, nakshatra_padas
+     * - festivals => festivals, daily_observances, sankranti
+     *
+     * @param array<int, string> $fields
+     *
+     * @return array<string, array<string, mixed>> Indexed by YYYY-MM-DD
+     */
+    public function getMonthFields(
+        int $year,
+        int $month,
+        float $lat,
+        float $lon,
+        string $tz,
+        array $fields,
+        float $elevation = 0.0,
+        array $options = [],
+        ?CarbonImmutable $calculationAt = null,
+        CalendarType|string $calendarType = CalendarType::Amanta,
+    ): array {
+        if (is_string($calendarType)) {
+            $calendarType = match (strtolower($calendarType)) {
+                'purnimanta', 'purnimant' => CalendarType::Purnimanta,
+                default => CalendarType::Amanta,
+            };
+        }
+
+        $groups = [];
+        foreach ($fields as $field) {
+            $group = $this->normalizeMonthFieldGroup($field);
+            $this->assertKnownMonthFieldGroup($group);
+            $groups[$group] = true;
+        }
+
+        if ($groups === []) {
+            return [];
+        }
+
+        $start = CarbonImmutable::create($year, $month, 1, 0, 0, 0, $tz);
+        $daysInMonth = $start->daysInMonth;
+        $needsFestivals = isset($groups['festivals']);
+        $festivalsByDate = [];
+
+        if ($needsFestivals) {
+            $festivalScope = (string) ($options['festival_scope'] ?? 'year');
+            if ($festivalScope === 'month') {
+                $festivalsByDate = $this->getFestivalCalendarForDateRange(
+                    start: $start,
+                    end: $start->addDays($daysInMonth - 1),
+                    lat: $lat,
+                    lon: $lon,
+                    tz: $tz,
+                    elevation: $elevation,
+                    calculationAt: $calculationAt,
+                    calendarType: $calendarType,
+                );
+            } else {
+                $yearFestivalCalendar = $this->getFestivalYearCalendar(
+                    year: $year,
+                    lat: $lat,
+                    lon: $lon,
+                    tz: $tz,
+                    elevation: $elevation,
+                    calculationAt: $calculationAt,
+                    calendarType: $calendarType,
+                );
+                $festivalsByDate = $yearFestivalCalendar['by_date'];
+            }
+        }
+
+        $calendar = [];
+        for ($i = 0; $i < $daysInMonth; $i++) {
+            $date = $start->addDays($i);
+            $dateKey = $date->toDateString();
+            $snapshot = $this->getFestivalSnapshot($date, $lat, $lon, $tz, $elevation, $calculationAt, $calendarType, false);
+
+            $day = [
+                'date' => $dateKey,
+                'day' => (int) $date->format('d'),
+            ];
+
+            $day += $this->buildSelectedMonthCalendarFields($groups, $snapshot, $festivalsByDate[$dateKey] ?? []);
+
+            $calendar[$dateKey] = $day;
+        }
+
+        return $calendar;
+    }
+
+    public function getElectionalSnapshot(
+        CarbonImmutable $date,
+        float $lat,
+        float $lon,
+        string $tz,
+        float $elevation = 0.0,
+        array $options = [],
+    ): array {
+        $dayDetails = $this->getSelectedDetails($date, $lat, $lon, $tz, ['Basic_Details'], $elevation, null, CalendarType::Amanta, $options)['Basic_Details'];
+        $sunrise = $this->parseDisplayDateTime((string) $dayDetails['sunrise_dt'], $tz);
+        [$sunset] = [$this->resolveTimeStringToDateTime((string) $dayDetails['Sunset'], $sunrise, $tz)];
+
+        $sunriseBirth = $this->buildBirthArray($sunrise, $lat, $lon, $tz, $elevation);
+        $sunMoon = $this->getSunMoonLongitudes($sunriseBirth);
+        $moonLongitude = (float) $sunMoon['Moon'];
+        $nakIndex = ZodiacDivision::nakshatraIndex($moonLongitude) + 1;
+        $moonSign = ZodiacDivision::rashiIndex($moonLongitude);
+        $ascLongitude = $this->astronomy->getAscendant($sunriseBirth);
+
+        return [
+            'day_details' => $dayDetails,
+            'sunrise_context' => [
+                'sunrise_iso' => AstroCore::formatDateTime($sunrise),
+                'sunset_iso' => $sunset instanceof CarbonImmutable ? AstroCore::formatDateTime($sunset) : null,
+                'nakshatra_index' => $nakIndex,
+                'moon_sign_index' => $moonSign,
+                'lagna_sign' => Rasi::from(AstroCore::getSign($ascLongitude))->getName(),
+                'lagna_degree_in_sign' => fmod(AstroCore::normalize($ascLongitude), 30.0),
+            ],
+        ];
+    }
+
+    /**
+     * Compute complete daily Muhurta evaluation package from canonical day details.
+     * This centralizes ElectionalEvaluator input extraction so consumer scripts stay thin.
+     */
+    public function getDailyMuhurtaEvaluation(
+        CarbonImmutable $date,
+        float $lat,
+        float $lon,
+        string $tz,
+        ?CarbonImmutable $currentAt = null,
+        float $elevation = 0.0,
+        array $options = [],
+    ): array {
+        $at = $currentAt instanceof CarbonImmutable ? $currentAt->setTimezone($tz) : CarbonImmutable::now($tz);
+        $selectedDetails = $this->getSelectedDetails(
+            $date,
+            $lat,
+            $lon,
+            $tz,
+            ['Basic_Details', 'Bhadra', 'Varjyam', 'Amrita_Kaal'],
+            $elevation,
+            $at,
+            CalendarType::Amanta,
+            $options,
+        );
+        $dayDetails = [
+            ...$selectedDetails['Basic_Details'],
+            'Bhadra' => $selectedDetails['Bhadra'],
+            'Varjyam' => $selectedDetails['Varjyam'],
+            'Amrita_Kaal' => $selectedDetails['Amrita_Kaal'],
+        ];
+        $sunriseDt = $this->parseDisplayDateTime((string) ($dayDetails['sunrise_dt'] ?? ''), $tz);
+        $currentBirth = $this->buildBirthArray($at, $lat, $lon, $tz, $elevation);
+        $sunMoon = $this->getSunMoonLongitudes($currentBirth);
+        $moonLongitude = (float) ($sunMoon['Moon'] ?? 0.0);
+        $moonSignIdx = ZodiacDivision::rashiIndex($moonLongitude);
+        $nakshatraIdxCurrent = ZodiacDivision::nakshatraIndex($moonLongitude);
+        $currentTithi = $this->panchanga->calculateTithi((float) ($sunMoon['Sun'] ?? 0.0), $moonLongitude);
+        $currentAscLongitude = $this->astronomy->getAscendant($currentBirth);
+
+        $tithiNumber = max(1, (int) ($currentTithi['index'] ?? ($dayDetails['Tithi']['index'] ?? 1)));
+        $varaNumber = ((int) ($this->panchanga->calculateVara($currentBirth, $this->sunService)['index'] ?? ($dayDetails['Vara']['index'] ?? 0))) % 7;
+        $nakshatraNumber = max(1, $nakshatraIdxCurrent + 1);
+        $lagnaNumber = (AstroCore::getSign($currentAscLongitude) % 12) + 1;
+        $isKrishnaPaksha = strcasecmp((string) ($currentTithi['paksha'] ?? ($dayDetails['Tithi']['paksha'] ?? '')), 'Krishna') === 0;
+        $tithiEnum = Tithi::from($tithiNumber);
+        $varaEnum = Vara::from($varaNumber);
+        $nakshatraEnum = Nakshatra::from($nakshatraNumber - 1);
+        $lagnaEnum = Rasi::from($lagnaNumber - 1);
+        $moonSignEnum = Rasi::from($moonSignIdx);
+
+        $sunsetDt = $this->resolveTimeStringToDateTime((string) ($dayDetails['Sunset'] ?? ''), $sunriseDt, $tz) ?? $sunriseDt;
+        $nextSunriseIso = (string) (($dayDetails['Resolution_Context']['next_sunrise_iso'] ?? $dayDetails['next_sunrise_iso'] ?? ''));
+        $nextSunriseDt = $nextSunriseIso !== ''
+            ? $this->parseDisplayDateTime($nextSunriseIso, $tz)
+            : $sunriseDt->addDay();
+        $midnight = $sunriseDt->startOfDay();
+
+        $sunrise = $this->toDecimalHoursFromBase($sunriseDt, $midnight);
+        $sunset = $this->toDecimalHoursFromBase($sunsetDt, $midnight);
+        $nextSunrise = $this->toDecimalHoursFromBase($nextSunriseDt, $midnight);
+        $currentTime = $this->toDecimalHoursFromBase($at, $midnight);
+
+        $currentYoga = $this->panchanga->calculateYoga((float) ($sunMoon['Sun'] ?? 0.0), $moonLongitude);
+        $nityaYogaObservations = ElectionalEvaluator::calculateNityaYogaObservations(
+            (int) ($currentYoga['index'] ?? 1),
+            (string) ($currentYoga['name'] ?? ''),
+        );
+        $varaTithiDoshas = ElectionalEvaluator::calculateVaraTithiDoshas($varaNumber, $tithiNumber);
+
+        $evaluationResults = [
+            'panchaka_dosha' => ElectionalEvaluator::calculatePanchakaDosha($tithiNumber, $varaNumber, $nakshatraNumber, $lagnaNumber),
+            'dagdha_tithi' => ElectionalEvaluator::calculateDagdhaTithi($tithiNumber, $moonSignIdx),
+            'dagdha_yoga' => ElectionalEvaluator::calculateDagdhaYoga($varaNumber, $tithiNumber),
+            'bhadra' => $this->evaluateCurrentBhadra($at, (array) ($dayDetails['Bhadra'] ?? [])),
+            'rikta_tithi' => ElectionalEvaluator::calculateRiktaTithi($tithiNumber, $isKrishnaPaksha),
+            'varjyam' => $this->evaluateCurrentVarjyam($at, (array) ($dayDetails['Varjyam'] ?? []), $tz),
+            'amrita_kaal' => $this->evaluateCurrentNamedWindow(
+                $at,
+                (array) ($dayDetails['Amrita_Kaal'] ?? []),
+                'amrita_kaal_start',
+                'amrita_kaal_end',
+                Localization::translate('String', 'Amrita Kaal'),
+                Localization::translate('Source', 'Classical Panchanga Calculation Texts'),
+            ),
+            'abhijit_cancellation' => ElectionalEvaluator::calculateAbhijitCancellation($sunrise, $sunset, $varaNumber, $currentTime),
+            // Normalize newer electional payloads so generateRejectionReport() can read has_dosha.
+            'vara_tithi_doshas' => [
+                ...$varaTithiDoshas,
+                'has_dosha' => $varaTithiDoshas['has_any_dosha'] ?? false,
+                'severity' => ($varaTithiDoshas['has_any_dosha'] ?? false) ? 'high' : 'none',
+                'description' => ($varaTithiDoshas['has_any_dosha'] ?? false)
+                    ? Localization::translate('String', 'Vara-Tithi dosha present')
+                    : Localization::translate('String', 'No Vara-Tithi dosha'),
+            ],
+            'nitya_yoga_observations' => [
+                ...$nityaYogaObservations,
+                'has_dosha' => ($nityaYogaObservations['is_marriage_prohibited'] ?? false)
+                    || ($nityaYogaObservations['is_kranti_dosha'] ?? false),
+                'severity' => (string) ($nityaYogaObservations['severity'] ?? 'none'),
+                'description' => (string) ($nityaYogaObservations['description'] ?? ''),
+            ],
+        ];
+
+        $rejectionReport = ElectionalEvaluator::generateRejectionReport($evaluationResults);
+
+        return [
+            'title' => Localization::translate('String', 'Complete Muhurta Evaluation - Centralized package output'),
+            'input_now' => AstroCore::formatDateTime($at),
+            'date' => $date->toDateString(),
+            'input_parameters' => [
+                'tithi_number' => $tithiNumber,
+                'tithi_name' => $tithiEnum->getName(),
+                'tithi_number_base' => 1,
+                'vara_number' => $varaNumber,
+                'vara_name' => $varaEnum->getName(),
+                'vara_index_base' => 0,
+                'vara_sequence_number' => $varaNumber + 1,
+                'vara_sequence_number_base' => 1,
+                'nakshatra_number' => $nakshatraNumber,
+                'nakshatra_name' => $nakshatraEnum->getName(),
+                'nakshatra_number_base' => 1,
+                'lagna_number' => $lagnaNumber,
+                'lagna_name' => $lagnaEnum->getName(),
+                'lagna_number_base' => 1,
+                'moon_sign_idx' => $moonSignIdx,
+                'moon_sign_name' => $moonSignEnum->getName(),
+                'moon_sign_index_base' => 0,
+                'moon_sign_number' => $moonSignIdx + 1,
+                'moon_sign_number_base' => 1,
+                'is_krishna_paksha' => $isKrishnaPaksha,
+                'sunrise' => AstroCore::formatTime($sunriseDt),
+                'sunrise_iso' => AstroCore::formatDateTime($sunriseDt),
+                'sunrise_decimal_hours' => $sunrise,
+                'sunset' => AstroCore::formatTime($sunsetDt),
+                'sunset_iso' => AstroCore::formatDateTime($sunsetDt),
+                'sunset_decimal_hours' => $sunset,
+                'next_sunrise' => AstroCore::formatTime($nextSunriseDt),
+                'next_sunrise_iso' => AstroCore::formatDateTime($nextSunriseDt),
+                'next_sunrise_decimal_hours' => $nextSunrise,
+                'current_time' => AstroCore::formatTime($at),
+                'current_time_iso' => AstroCore::formatDateTime($at),
+                'current_time_decimal_hours' => $currentTime,
+            ],
+            'evaluation_results' => $evaluationResults,
+            'rejection_report' => $rejectionReport,
+        ];
+    }
+
+    private function buildFestivalYearCalendar(
+        int $year,
+        float $lat,
+        float $lon,
+        string $tz,
+        float $elevation = 0.0,
+        ?CarbonImmutable $calculationAt = null,
+        CalendarType|string $calendarType = CalendarType::Amanta,
+        string $selection = 'all',
+    ): array {
+        if (is_string($calendarType)) {
+            $calendarType = match (strtolower($calendarType)) {
+                'purnimanta', 'purnimant' => CalendarType::Purnimanta,
+                default => CalendarType::Amanta,
+            };
+        }
+
+        $start = CarbonImmutable::create($year, 1, 1, 0, 0, 0, $tz);
+        $end = CarbonImmutable::create($year, 12, 31, 0, 0, 0, $tz);
+
+        return $this->buildFestivalRangeCalendar($start, $end, $lat, $lon, $tz, $elevation, $calculationAt, $calendarType, $selection);
+    }
+
+    private function buildFestivalRangeCalendar(
+        CarbonImmutable $start,
+        CarbonImmutable $end,
+        float $lat,
+        float $lon,
+        string $tz,
+        float $elevation = 0.0,
+        ?CarbonImmutable $calculationAt = null,
+        CalendarType|string $calendarType = CalendarType::Amanta,
+        string $selection = 'all',
+        ?string $tradition = null,
+        ?array $onlyNames = null,
+    ): array {
+        if (is_string($calendarType)) {
+            $calendarType = match (strtolower($calendarType)) {
+                'purnimanta', 'purnimant' => CalendarType::Purnimanta,
+                default => CalendarType::Amanta,
+            };
+        }
+
+        if ($end->lessThan($start)) {
+            throw new InvalidArgumentException('Festival range end must be greater than or equal to start.');
+        }
+
+        /** @var array<string, array<int, array<string, mixed>>> $festivalsByDate */
+        $festivalsByDate = [];
+        /** @var array<int, array{date:string, festival:array<string, mixed>}> $festivalFlat */
+        $festivalFlat = [];
+
+        $rangeStart = $start->subDays(3);
+        $rangeEnd = $end->addDays(3);
+        $fetchHistoricalSnapshot = fn(CarbonImmutable $targetDate): array => $this->getFestivalSnapshot(
+            $targetDate,
+            $lat,
+            $lon,
+            $tz,
+            $elevation,
+            $calculationAt,
+            $calendarType,
+            false,
+        );
+
+        for ($date = $rangeStart; $date->lessThanOrEqualTo($rangeEnd); $date = $date->addDay()) {
+            $todaySnapshot = $this->getFestivalSnapshot($date, $lat, $lon, $tz, $elevation, $calculationAt, $calendarType, false);
+            $tomorrowSnapshot = $this->getFestivalSnapshot($date->addDay(), $lat, $lon, $tz, $elevation, $calculationAt, $calendarType, false);
+            $yesterdaySnapshot = $this->getFestivalSnapshot($date->subDay(), $lat, $lon, $tz, $elevation, $calculationAt, $calendarType, false);
+            $festivals = $this->festivalService->resolveFestivalsForDate($date, $todaySnapshot, $tomorrowSnapshot, $yesterdaySnapshot, $fetchHistoricalSnapshot, false, $selection, $tradition, $onlyNames);
+
+            foreach ($festivals as $festival) {
+                $festival = $this->withFestivalTimingWindow($festival, $tz);
+                $dateKey = $this->festivalObservanceDate($festival, $date->toDateString());
+                $festivalsByDate[$dateKey] ??= [];
+                $festivalsByDate[$dateKey][] = $festival;
+                $festivalFlat[] = [
+                    'date' => $dateKey,
+                    'festival' => $festival,
+                ];
+            }
+        }
+
+        $festivalFlat = $this->consolidateAdjacentFestivalsByWinningScore($festivalFlat, $tz);
+        $festivalFlat = $this->consolidateYearlySingleObservanceFestivals($festivalFlat);
+        $festivalFlat = $this->consolidateAdjacentFestivalsByWinningScore($festivalFlat, $tz);
+
+        $festivalsByDate = [];
+        foreach ($festivalFlat as $entry) {
+            $festivalsByDate[$entry['date']] ??= [];
+            $festivalsByDate[$entry['date']][] = $entry['festival'];
+        }
+
+        $this->appendRelativeDayFestivals($start, $end, $tz, $festivalsByDate, $festivalFlat, $selection);
+
+        $festivalFlat = $this->consolidateAdjacentFestivalsByWinningScore($festivalFlat, $tz);
+        $festivalFlat = $this->consolidateYearlySingleObservanceFestivals($festivalFlat);
+
+        $filteredByDate = [];
+        $filteredFlat = [];
+        $startKey = $start->toDateString();
+        $endKey = $end->toDateString();
+
+        foreach ($festivalFlat as $entry) {
+            $dateKey = $entry['date'];
+            if ($dateKey < $startKey || $dateKey > $endKey) {
+                continue;
+            }
+
+            $filteredByDate[$dateKey] ??= [];
+            $filteredByDate[$dateKey][] = $entry['festival'];
+            $filteredFlat[] = $entry;
+        }
+
+        ksort($filteredByDate);
+
+        return [
+            'year' => $start->year === $end->year ? $start->year : null,
+            'from_year' => $start->year,
+            'from_month' => $start->month,
+            'to_year' => $end->year,
+            'to_month' => $end->month,
+            'festival_day_count' => count($filteredByDate),
+            'festival_entry_count' => count($filteredFlat),
+            'by_date' => $filteredByDate,
+            'flat' => $filteredFlat,
+        ];
+    }
+
+    /**
+     * Attach consumer-friendly timing for festivals whose resolver emits an
+     * explicit visibility/observance window.
+     *
+     * @param array<string, mixed> $festival
+     *
+     * @return array<string, mixed>
+     */
+    private function withFestivalTimingWindow(array $festival, string $tz): array
+    {
+        $decision = (array) ($festival['rules_applied'] ?? []);
+        $startJd = isset($decision['moon_visibility_start_jd']) ? (float) $decision['moon_visibility_start_jd'] : null;
+        $endJd = isset($decision['moon_visibility_end_jd']) ? (float) $decision['moon_visibility_end_jd'] : null;
+
+        if ($startJd === null || $endJd === null || $endJd <= $startJd) {
+            return $festival;
+        }
+
+        $start = $this->sunService->jdToCarbonPublic($startJd, $tz);
+        $end = $this->sunService->jdToCarbonPublic($endJd, $tz);
+        $seconds = max(0.0, ($endJd - $startJd) * 86400.0);
+        $startDisplay = $this->formatFestivalWindowTime($start);
+        $endDisplay = $this->formatFestivalWindowTime($end);
+
+        $window = [
+            'type' => 'moon_visibility',
+            'type_name' => Localization::translate('String', 'chandra_darshana_visibility'),
+            'display' => $startDisplay . Localization::translate('String', 'time_range_to') . $endDisplay,
+            'start' => $startDisplay,
+            'end' => $endDisplay,
+            'start_iso' => AstroCore::formatDateTime($start),
+            'end_iso' => AstroCore::formatDateTime($end),
+            'start_jd' => $startJd,
+            'end_jd' => $endJd,
+            'duration_seconds' => $seconds,
+            'duration_minutes' => $seconds / 60.0,
+            'duration_min' => $this->formatFestivalDuration($seconds),
+        ];
+
+        $festival['visibility_window'] = $window;
+        $festival['observance_window'] = $window;
+
+        return $festival;
+    }
+
+    private function formatFestivalWindowTime(CarbonImmutable $time): string
+    {
+        $notation = (string) config('panchang.defaults.time_notation', '12h');
+        $locale = (string) config('panchang.defaults.locale', 'en');
+        $display = $notation === '24h' ? $time->format('H:i') : $time->format('h:i A');
+
+        $display = match ($locale) {
+            'hi' => str_replace(['AM', 'PM'], ['पूर्वाह्न', 'अपराह्न'], $display),
+            'gu' => str_replace(['AM', 'PM'], ['પૂર્વાહ્ન', 'અપરાહ્ન'], $display),
+            default => $display,
+        };
+
+        return Localization::localizeNumber($display, $locale);
+    }
+
+    private function formatFestivalDuration(float $seconds): string
+    {
+        $rounded = (int) round($seconds);
+        $hours = intdiv($rounded, 3600);
+        $minutes = intdiv($rounded % 3600, 60);
+        $remainingSeconds = $rounded % 60;
+
+        $parts = [];
+        if ($hours > 0) {
+            $parts[] = sprintf('%dh', $hours);
+        }
+
+        $parts[] = sprintf('%dm', $minutes);
+
+        if ($remainingSeconds > 0) {
+            $parts[] = sprintf('%ds', $remainingSeconds);
+        }
+
+        return implode(' ', $parts);
+    }
+
+    /**
+     * Build a calendar-cell-oriented Tithi summary.
+     *
+     * The sunrise tithi remains in `tithi`. This helper adds:
+     * - compact display like `30/1`
+     * - explicit multiple-tithi metadata
+     * - explicit kshaya-tithi metadata when a tithi begins and ends between two sunrises
+     *
+     * @param array<string, mixed> $todaySnapshot
+     *
+     * @return array<string, mixed>
+     */
+    private function buildMonthCalendarTithiDisplay(array $todaySnapshot): array
+    {
+        $sunriseTithi = $todaySnapshot['Tithi'] ?? [];
+        $windows = $todaySnapshot['Tithi_Windows'] ?? [];
+        $sunriseJd = (float) ($todaySnapshot['Resolution_Context']['sunrise_jd'] ?? 0.0);
+        $nextSunriseJd = (float) ($todaySnapshot['Resolution_Context']['next_sunrise_jd'] ?? 0.0);
+
+        $sunriseIndex = (int) ($sunriseTithi['index'] ?? 0);
+        $indexes = [$sunriseIndex];
+        $phaseIndexes = [(($sunriseIndex - 1) % 15) + 1];
+        $names = [(string) ($sunriseTithi['name'] ?? '')];
+        $kshayaTithi = null;
+
+        foreach ($windows as $window) {
+            $windowIndex = (int) ($window['index'] ?? 0);
+            if ($windowIndex === 0 || $windowIndex === $sunriseIndex) {
+                continue;
+            }
+
+            $windowStartJd = (float) ($window['start_jd'] ?? 0.0);
+            $windowEndJd = (float) ($window['end_jd'] ?? 0.0);
+            if ($windowStartJd <= $sunriseJd) {
+                continue;
+            }
+
+            if ($windowEndJd < $nextSunriseJd) {
+                $paksha = $windowIndex > 15 ? 'Krishna' : 'Shukla';
+                $indexes[] = $windowIndex;
+                $phaseIndexes[] = (int) (($window['phase_index'] ?? ((($windowIndex - 1) % 15) + 1)));
+                $names[] = (string) ($window['name'] ?? '');
+                $kshayaTithi = [
+                    'index' => $windowIndex,
+                    'phase_index' => (int) (($window['phase_index'] ?? ((($windowIndex - 1) % 15) + 1))),
+                    'name' => (string) ($window['name'] ?? ''),
+                    'paksha' => $paksha,
+                    'paksha_name' => Localization::translate(
+                        'String',
+                        $paksha === 'Shukla' ? 'Shukla Paksha (waxing)' : 'Krishna Paksha (waning)',
+                    ),
+                    'start_jd' => $windowStartJd,
+                    'end_jd' => $windowEndJd,
+                    'start_iso' => $window['start_iso'] ?? null,
+                    'end_iso' => $window['end_iso'] ?? null,
+                ];
+            }
+        }
+
+        $displayParts = array_map(static fn(int $index): string => (string) $index, $indexes);
+
+        return [
+            'display' => implode('/', $displayParts),
+            'indexes' => $indexes,
+            'phase_indexes' => $phaseIndexes,
+            'names' => $names,
+            'has_multiple_tithis' => count($indexes) > 1,
+            'has_kshaya_tithi' => $kshayaTithi !== null,
+            'kshaya_tithi' => $kshayaTithi,
+        ];
+    }
+
+    /**
+     * @param array<string, bool> $groups
+     * @param array<string, mixed> $snapshot
+     * @param array<int, array<string, mixed>> $festivals
+     *
+     * @return array<string, mixed>
+     */
+    private function buildSelectedMonthCalendarFields(array $groups, array $snapshot, array $festivals): array
+    {
+        $fields = [];
+
+        if (isset($groups['tithi'])) {
+            $fields['tithi'] = $snapshot['Tithi'];
+            $fields['tithi_display'] = $this->buildMonthCalendarTithiDisplay($snapshot);
+            $fields['tithi_windows'] = $snapshot['Tithi_Windows'] ?? [];
+        }
+
+        if (isset($groups['nakshatra'])) {
+            $fields['nakshatra'] = $snapshot['Nakshatra'];
+            $fields['nakshatra_windows'] = $snapshot['Nakshatra_Windows'] ?? [];
+            $fields['nakshatra_padas'] = $snapshot['Nakshatra_Padas'] ?? [];
+        }
+
+        if (isset($groups['yoga'])) {
+            $fields['yoga'] = $snapshot['Yoga'];
+            $fields['yoga_windows'] = $snapshot['Yoga_Windows'] ?? [];
+        }
+
+        if (isset($groups['karana'])) {
+            $fields['karana'] = $snapshot['Karana'];
+            $fields['karana_windows'] = $snapshot['Karana_Windows'] ?? [];
+        }
+
+        if (isset($groups['vara'])) {
+            $fields['vara'] = $snapshot['Vara'];
+        }
+
+        if (isset($groups['sun'])) {
+            $fields['sun_sign'] = $snapshot['Sun_Sign'];
+        }
+
+        if (isset($groups['moon'])) {
+            $fields['moon_sign'] = $snapshot['Moon_Sign'];
+            $fields['moon_phase'] = $snapshot['Moon_Phase'] ?? null;
+        }
+
+        if (isset($groups['sun'])) {
+            $fields['sunrise'] = $snapshot['Sunrise'];
+            $fields['sunset'] = $snapshot['Sunset'];
+        }
+
+        if (isset($groups['moon'])) {
+            $fields['moonrise'] = $snapshot['Moonrise'];
+            $fields['moonset'] = $snapshot['Moonset'];
+            $fields['moonrise_date'] = $snapshot['Moonrise_Date'];
+            $fields['moonset_date'] = $snapshot['Moonset_Date'];
+            $fields['moonrise_iso'] = $snapshot['Moonrise_ISO'];
+            $fields['moonset_iso'] = $snapshot['Moonset_ISO'];
+            $fields['moonset_day_relation'] = $snapshot['Moonset_Day_Relation'];
+            $fields['moon_visibility'] = [
+                'starts_at' => $snapshot['Moonrise'],
+                'starts_on' => $snapshot['Moonrise_Date'],
+                'starts_iso' => $snapshot['Moonrise_ISO'],
+                'ends_at' => $snapshot['Moonset'],
+                'ends_on' => $snapshot['Moonset_Date'],
+                'ends_iso' => $snapshot['Moonset_ISO'],
+                'ends_day_relation' => $snapshot['Moonset_Day_Relation'],
+            ];
+        }
+
+        if (isset($groups['hindu_calendar'])) {
+            $fields['hindu_calendar'] = $snapshot['Hindu_Calendar'];
+        }
+
+        if (isset($groups['festivals'])) {
+            $sankranti = null;
+            if ($snapshot['Resolution_Context']['sankranti_rashi'] !== null) {
+                $rashiIdx = $snapshot['Resolution_Context']['sankranti_rashi'];
+                $sankranti = Rasi::from($rashiIdx)->getName() . ' ' . Localization::translate('Common', 'Sankranti');
+            }
+
+            $fields['festivals'] = $festivals;
+            $fields['daily_observances'] = $this->festivalService->getDailyObservances($snapshot);
+            $fields['sankranti'] = $sankranti;
+        }
+
+        return $fields;
+    }
+
+    private function normalizeMonthFieldGroup(string $field): string
+    {
+        $key = strtolower(str_replace([' ', '-'], '_', trim($field)));
+
+        return match ($key) {
+            'tithi', 'tithi_display', 'tithi_windows' => 'tithi',
+            'nakshatra', 'nakshatra_windows', 'nakshatra_padas' => 'nakshatra',
+            'yoga', 'yoga_windows' => 'yoga',
+            'karana', 'karana_windows' => 'karana',
+            'vara', 'weekday' => 'vara',
+            'sun', 'solar', 'sunrise', 'sunset', 'sun_sign' => 'sun',
+            'moon', 'lunar', 'moonrise', 'moonset', 'moon_sign', 'moon_phase', 'moon_visibility' => 'moon',
+            'calendar', 'hindu_calendar', 'month' => 'hindu_calendar',
+            'festival', 'festivals', 'daily_observances', 'sankranti' => 'festivals',
+            default => $field,
+        };
+    }
+
+    private function assertKnownMonthFieldGroup(string $group): void
+    {
+        match ($group) {
+            'tithi',
+            'nakshatra',
+            'yoga',
+            'karana',
+            'vara',
+            'sun',
+            'moon',
+            'hindu_calendar',
+            'festivals' => true,
+            default => throw new InvalidArgumentException('Unknown month field group: ' . $group),
+        };
+    }
+
+    private function moonsetDayRelation(CarbonImmutable $date, ?CarbonImmutable $moonset): ?string
+    {
+        if (!$moonset instanceof CarbonImmutable) {
+            return null;
+        }
+
+        return $moonset->isSameDay($date) ? 'same_day' : 'next_day';
+    }
+
+    /**
+     * @param array<string, array<int, array<string, mixed>>> $festivalsByDate
+     * @param array<int, array{date:string, festival:array<string, mixed>}> $festivalFlat
+     */
+    private function appendRelativeDayFestivals(
+        CarbonImmutable $start,
+        CarbonImmutable $end,
+        string $tz,
+        array &$festivalsByDate,
+        array &$festivalFlat,
+        string $selection = 'all',
+    ): void {
+        foreach (FestivalService::FESTIVALS as $festName => $rules) {
+            if ((string) ($rules['type'] ?? '') !== 'day_after') {
+                continue;
+            }
+
+            $isVrat = (bool) ($rules['fasting'] ?? false);
+            if (($selection === 'vrats' && !$isVrat) || ($selection === 'festivals' && $isVrat)) {
+                continue;
+            }
+
+            $parentName = (string) ($rules['parent_festival'] ?? '');
+            $daysAfter = (int) ($rules['days_after'] ?? 1);
+            if ($parentName === '') {
+                continue;
+            }
+
+            $parentDisplayName = Localization::translate('Festival', $parentName);
+            foreach ($festivalsByDate as $observanceDate => $observedFestivals) {
+                foreach ($observedFestivals as $observedFestival) {
+                    $rawObservedName = (string) ($observedFestival['resolution']['festival_name'] ?? '');
+                    $displayObservedName = (string) ($observedFestival['name'] ?? '');
+                    if ($rawObservedName !== $parentName && $displayObservedName !== $parentDisplayName) {
+                        continue;
+                    }
+
+                    if ($daysAfter > 0 && $this->isWeakerAdjacentRelativeParent($festivalsByDate, $observanceDate, $observedFestival, $parentName, $parentDisplayName, $tz)) {
+                        continue;
+                    }
+
+                    $relativeDate = CarbonImmutable::parse($observanceDate, $tz)->addDays($daysAfter);
+                    if ($relativeDate->lessThan($start) || $relativeDate->greaterThan($end)) {
+                        continue;
+                    }
+
+                    $relativeDateKey = $relativeDate->toDateString();
+                    $observanceNoteTemplate = Localization::translate('String', 'observance_note_day_after');
+                    $observanceNote = $observanceNoteTemplate !== 'observance_note_day_after'
+                        ? sprintf($observanceNoteTemplate, $daysAfter, $parentDisplayName)
+                        : 'Observed ' . $daysAfter . ' day(s) after ' . $parentDisplayName;
+
+                    $festival = $this->festivalService->buildFestivalPayload($festName, $rules, [
+                        'festival_name' => $festName,
+                        'standard_date' => $relativeDateKey,
+                        'observance_date' => $relativeDateKey,
+                        'observance_note' => $observanceNote,
+                        'decision' => [
+                            'winning_reason' => 'day_after_parent_festival',
+                            'parent_festival' => $parentName,
+                            'parent_observance_date' => $observanceDate,
+                            'days_after' => $daysAfter,
+                            'winning_score' => 1000,
+                        ],
+                    ]);
+
+                    $festivalsByDate[$relativeDateKey] ??= [];
+                    $festivalsByDate[$relativeDateKey][] = $festival;
+                    $festivalFlat[] = [
+                        'date' => $relativeDateKey,
+                        'festival' => $festival,
+                    ];
+                }
+            }
+        }
+    }
+
+    /**
+     * Avoid deriving relatives from the weaker day in an adjacent duplicate parent cluster.
+     *
+     * @param array<string, array<int, array<string, mixed>>> $festivalsByDate
+     * @param array<string, mixed> $observedFestival
+     */
+    private function isWeakerAdjacentRelativeParent(
+        array $festivalsByDate,
+        string $observanceDate,
+        array $observedFestival,
+        string $parentName,
+        string $parentDisplayName,
+        string $tz,
+    ): bool {
+        $currentReason = (string) (
+            $observedFestival['rules_applied']['winning_reason_key']
+            ?? $observedFestival['rules_applied']['winning_reason']
+            ?? $observedFestival['resolution']['decision']['winning_reason']
+            ?? ''
+        );
+        if (!in_array($currentReason, ['target_at_sunrise', 'target tithi at sunrise', 'nakshatra_match'], true)) {
+            return false;
+        }
+
+        $previousDate = CarbonImmutable::parse($observanceDate, $tz)->subDay()->toDateString();
+        $previousFestivals = $festivalsByDate[$previousDate] ?? [];
+        foreach ($previousFestivals as $previousFestival) {
+            $rawPreviousName = (string) ($previousFestival['resolution']['festival_name'] ?? '');
+            $displayPreviousName = (string) ($previousFestival['name'] ?? '');
+            if ($rawPreviousName !== $parentName && $displayPreviousName !== $parentDisplayName) {
+                continue;
+            }
+
+            $previousReason = (string) (
+                $previousFestival['rules_applied']['winning_reason_key']
+                ?? $previousFestival['rules_applied']['winning_reason']
+                ?? $previousFestival['resolution']['decision']['winning_reason']
+                ?? ''
+            );
+            if (in_array($previousReason, ['target_at_karmakala', 'target tithi at karmakala', 'target_covers_full_karmakala'], true)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * For adjacent duplicate observances of the same festival, keep the
+     * strongest rule-engine decision.
+     *
+     * @param array<int, array{date:string, festival:array<string, mixed>}> $festivalFlat
+     *
+     * @return array<int, array{date:string, festival:array<string, mixed>}>
+     */
+    private function consolidateAdjacentFestivalsByWinningScore(array $festivalFlat, string $tz): array
+    {
+        $grouped = [];
+        foreach ($festivalFlat as $idx => $entry) {
+            $name = (string) (
+                $entry['festival']['resolution']['festival_name_key']
+                ?? $entry['festival']['name_key']
+                ?? $entry['festival']['resolution']['festival_name']
+                ?? $entry['festival']['name']
+                ?? ''
+            );
+            if ($name === '') {
+                continue;
+            }
+
+            $grouped[$name][] = ['idx' => $idx, 'entry' => $entry];
+        }
+
+        $remove = [];
+        foreach ($grouped as $items) {
+            usort($items, static fn(array $a, array $b): int => strcmp($a['entry']['date'], $b['entry']['date']));
+
+            $clusters = [];
+            $current = [];
+            $previousDate = null;
+
+            foreach ($items as $item) {
+                $date = CarbonImmutable::parse($item['entry']['date'], $tz);
+                if (!$previousDate instanceof CarbonImmutable || $previousDate->diffInDays($date) <= 1) {
+                    $current[] = $item;
+                } else {
+                    $clusters[] = $current;
+                    $current = [$item];
+                }
+
+                $previousDate = $date;
+            }
+
+            $clusters[] = $current;
+
+            foreach ($clusters as $cluster) {
+                if (count($cluster) <= 1) {
+                    continue;
+                }
+
+                $best = null;
+                foreach ($cluster as $candidate) {
+                    $festival = $candidate['entry']['festival'];
+                    $rules = (array) ($festival['rules_applied'] ?? []);
+                    $decision = (array) ($festival['resolution']['decision'] ?? []);
+                    $basis = (array) ($festival['calculation_basis'] ?? []);
+                    $score = (int) ($rules['winning_score'] ?? -1);
+                    $reason = (string) ($rules['winning_reason'] ?? '');
+                    $reasonKey = (string) ($rules['winning_reason_key'] ?? $reason);
+                    $date = $candidate['entry']['date'];
+                    $vriddhiPreference = (string) ($rules['vriddhi_preference'] ?? $decision['vriddhi_preference'] ?? '');
+                    $preferFirstKarmakala = (bool) ($rules['prefer_first_karmakala'] ?? $decision['prefer_first_karmakala'] ?? false);
+                    $preferHigherTithi = (bool) ($basis['prefer_higher_tithi_option'] ?? false);
+                    $requiredTithi = (int) ($festival['resolution']['required_tithi'] ?? 0);
+
+                    if ($score < 0) {
+                        continue;
+                    }
+
+                    if ($best === null || $this->isStrongerFestivalDecision(
+                        $score,
+                        $reason,
+                        $reasonKey,
+                        $date,
+                        $vriddhiPreference,
+                        $preferHigherTithi,
+                        $requiredTithi,
+                        $best,
+                        $preferFirstKarmakala,
+                    )) {
+                        $best = [
+                            'idx' => $candidate['idx'],
+                            'score' => $score,
+                            'reason' => $reason,
+                            'reason_key' => $reasonKey,
+                            'date' => $date,
+                            'vriddhi_preference' => $vriddhiPreference,
+                            'prefer_first_karmakala' => $preferFirstKarmakala,
+                            'prefer_higher_tithi_option' => $preferHigherTithi,
+                            'required_tithi' => $requiredTithi,
+                        ];
+                    }
+                }
+
+                if ($best === null) {
+                    continue;
+                }
+
+                foreach ($cluster as $candidate) {
+                    if ($candidate['idx'] !== $best['idx']) {
+                        $remove[$candidate['idx']] = true;
+                    }
+                }
+            }
+        }
+
+        if ($remove === []) {
+            return $festivalFlat;
+        }
+
+        $filtered = [];
+        foreach ($festivalFlat as $idx => $entry) {
+            if (!isset($remove[$idx])) {
+                $filtered[] = $entry;
+            }
+        }
+
+        return $filtered;
+    }
+
+    /**
+     * Keep a single best observance per year for configured festival names.
+     * Useful for Adhika/Nija duplicate resolutions when observances are not adjacent dates.
+     *
+     * @param array<int, array{date:string, festival:array<string, mixed>}> $festivalFlat
+     *
+     * @return array<int, array{date:string, festival:array<string, mixed>}>
+     */
+    private function consolidateYearlySingleObservanceFestivals(array $festivalFlat): array
+    {
+        if ($festivalFlat === []) {
+            return $festivalFlat;
+        }
+
+        $targets = array_flip(self::YEARLY_SINGLE_OBSERVANCE_FESTIVALS);
+        $grouped = [];
+        foreach ($festivalFlat as $idx => $entry) {
+            $name = (string) (
+                $entry['festival']['resolution']['festival_name_key']
+                ?? $entry['festival']['name_key']
+                ?? $entry['festival']['resolution']['festival_name']
+                ?? $entry['festival']['name']
+                ?? ''
+            );
+            if ($name === '' || !isset($targets[$name])) {
+                continue;
+            }
+
+            $groupKey = $name . '|' . substr($entry['date'], 0, 4);
+            $grouped[$groupKey][] = ['idx' => $idx, 'entry' => $entry];
+        }
+
+        $remove = [];
+        foreach ($grouped as $items) {
+            if (count($items) <= 1) {
+                continue;
+            }
+
+            $best = null;
+            foreach ($items as $candidate) {
+                $festival = $candidate['entry']['festival'];
+                $rules = (array) ($festival['rules_applied'] ?? []);
+                $score = (int) ($rules['winning_score'] ?? -1);
+                $reason = (string) ($rules['winning_reason'] ?? '');
+                $date = $candidate['entry']['date'];
+
+                $reasonRank = match ($reason) {
+                    'target_at_karmakala' => 2,
+                    'target_during_observance' => 1,
+                    default => 0,
+                };
+
+                if ($best === null
+                    || $score > $best['score']
+                    || ($score === $best['score'] && $reasonRank > $best['reason_rank'])
+                    || ($score === $best['score'] && $reasonRank === $best['reason_rank'] && strcmp($date, $best['date']) < 0)) {
+                    $best = [
+                        'idx' => $candidate['idx'],
+                        'score' => $score,
+                        'reason_rank' => $reasonRank,
+                        'date' => $date,
+                    ];
+                }
+            }
+
+            foreach ($items as $candidate) {
+                if ($candidate['idx'] !== $best['idx']) {
+                    $remove[$candidate['idx']] = true;
+                }
+            }
+        }
+
+        if ($remove === []) {
+            return $festivalFlat;
+        }
+
+        $filtered = [];
+        foreach ($festivalFlat as $idx => $entry) {
+            if (!isset($remove[$idx])) {
+                $filtered[] = $entry;
+            }
+        }
+
+        return $filtered;
+    }
+
+    /** @param array{score:int, reason:string, reason_key:string, date:string, vriddhi_preference:string, prefer_first_karmakala?:bool, prefer_higher_tithi_option?:bool, required_tithi?:int} $best */
+    private function isStrongerFestivalDecision(
+        int $score,
+        string $reason,
+        string $reasonKey,
+        string $date,
+        string $vriddhiPreference,
+        bool $preferHigherTithi,
+        int $requiredTithi,
+        array $best,
+        bool $preferFirstKarmakala = false,
+    ): bool {
+        $bestPrefersHigherTithi = $best['prefer_higher_tithi_option'] ?? false;
+        if ($preferHigherTithi || $bestPrefersHigherTithi) {
+            $bestRequiredTithi = $best['required_tithi'] ?? 0;
+            if ($requiredTithi > 0 && $bestRequiredTithi > 0 && $requiredTithi !== $bestRequiredTithi) {
+                return $requiredTithi > $bestRequiredTithi;
+            }
+
+            if ($requiredTithi > 0 && $bestRequiredTithi > 0 && $requiredTithi === $bestRequiredTithi) {
+                return strcmp($date, $best['date']) > 0;
+            }
+        }
+
+        // Bahukala-purva: when either candidate carries prefer_first_karmakala,
+        // keep the earlier civil day even if the later day scored higher alone.
+        if ($preferFirstKarmakala || ($best['prefer_first_karmakala'] ?? false)) {
+            return strcmp($date, $best['date']) < 0;
+        }
+
+        // Sankashti / Vinayaki: same Chaturthi often resolves on Tritiya-yuta day and again on
+        // the sunrise-host day (equal score). Keep the earlier observance.
+        $isPurvaChaturthiFamily = static fn(string $r): bool => str_starts_with($r, 'sankashti_')
+            || str_starts_with($r, 'vinayaki_');
+        if ($isPurvaChaturthiFamily($reasonKey) && $isPurvaChaturthiFamily($best['reason_key'])) {
+            return strcmp($date, $best['date']) < 0;
+        }
+
+        $isChandraDarshanaReason = static fn(string $r): bool => str_starts_with($r, 'chandra_darshana_');
+        if ($isChandraDarshanaReason($reasonKey) && $isChandraDarshanaReason($best['reason_key'])) {
+            return strcmp($date, $best['date']) < 0;
+        }
+
+        if ($reasonKey === 'same_day_linked_parent_festival' && $best['reason_key'] === 'same_day_linked_parent_festival') {
+            return strcmp($date, $best['date']) < 0;
+        }
+
+        $reasonRank = static fn(string $r): int => match (true) {
+            str_starts_with($r, 'masik_janmashtami_') && !str_contains($r, '_no_nishitha_') => 3,
+            str_starts_with($r, 'masik_janmashtami_no_nishitha_') => 1,
+            default => match ($r) {
+                'target_at_karmakala' => 2,
+                'target_during_observance' => 1,
+                default => 0,
+            },
+        };
+
+        $sameScore = $score === $best['score'];
+        $sameReason = $reasonRank($reason) === $reasonRank($best['reason']);
+        $sameVriddhiPreference = $vriddhiPreference !== ''
+            && $vriddhiPreference === $best['vriddhi_preference'];
+
+        if ($sameScore && $sameReason && $sameVriddhiPreference) {
+            if ($vriddhiPreference === 'first') {
+                return strcmp($date, $best['date']) < 0;
+            }
+
+            if ($vriddhiPreference === 'last') {
+                return strcmp($date, $best['date']) > 0;
+            }
+        }
+
+        return $score > $best['score']
+            || ($score === $best['score'] && $reasonRank($reason) > $reasonRank($best['reason']))
+            || ($score === $best['score']
+                && $reasonRank($reason) === $reasonRank($best['reason'])
+                && $vriddhiPreference === ''
+                && strcmp($date, $best['date']) > 0);
+    }
+
+    /** @param array<string, mixed> $festival */
+    private function festivalObservanceDate(array $festival, string $fallbackDate): string
+    {
+        $observanceDate = (string) ($festival['resolution']['observance_date'] ?? '');
+        if ($observanceDate !== '') {
+            return $observanceDate;
+        }
+
+        return $fallbackDate;
+    }
+
+    /** @return array<string, array<int, array<string, mixed>>> */
+    private function getFestivalCalendarForDateRange(
+        CarbonImmutable $start,
+        CarbonImmutable $end,
+        float $lat,
+        float $lon,
+        string $tz,
+        float $elevation,
+        ?CarbonImmutable $calculationAt,
+        CalendarType $calendarType,
+    ): array {
+        return $this->buildFestivalRangeCalendar($start, $end, $lat, $lon, $tz, $elevation, $calculationAt, $calendarType, 'all')['by_date'];
+    }
+
+    /**
+     * @param array<int, string> $fields
+     *
+     * @return array<int, string>
+     */
+    private function normalizeCalendarPeriodFields(array $fields): array
+    {
+        if ($fields === []) {
+            $fields = [
+                // Nirayana (sidereal) — default short keys
+                'ayana',
+                'ritu',
+                // Sayana (tropical)
+                'sayana_ayana',
+                'sayana_ritu',
+                'vikram_samvat',
+                'gujarati_samvat',
+                // Śālivāhana Śaka lunisolar (Ugadi / Panchanga) — NOT the Indian National Calendar
+                'shalivahana_saka_samvat',
+                'kali_samvat',
+                'samvatsara',
+                'samvatsara_south',
+                'samvatsara_north',
+                // Classical Bārhaspatya remains in the default payload. Explicit classical,
+                // Graha-lāghava, Makaranda and modern comparison fields are opt-in.
+                'samvatsara_brihaspati',
+                'samvatsara_gujarati',
+                'amanta_month',
+                'purnimanta_month',
+            ];
+        }
+
+        $normalized = [];
+        foreach ($fields as $field) {
+            $key = strtolower(str_replace([' ', '-'], '_', trim($field)));
+            $key = match ($key) {
+                // Nirayana / sidereal aliases (constellation-based)
+                'ayana_windows',
+                'nirayana_ayana',
+                'nirayana_ayana_windows',
+                'sidereal_ayana',
+                'sidereal_ayana_windows' => 'ayana',
+                'ritu_windows',
+                'nirayana_ritu',
+                'nirayana_ritu_windows',
+                'sidereal_ritu',
+                'sidereal_ritu_windows' => 'ritu',
+                // Sayana / tropical aliases (seasonal)
+                'sayana_ayana_windows',
+                'tropical_ayana',
+                'tropical_ayana_windows' => 'sayana_ayana',
+                'sayana_ritu_windows',
+                'tropical_ritu',
+                'tropical_ritu_windows' => 'sayana_ritu',
+                'vikram', 'vikram_samvat_windows' => 'vikram_samvat',
+                'gujarati', 'gujarati_samvat_windows' => 'gujarati_samvat',
+                // Accept old 'saka_samvat' key for backwards compatibility → canonical name
+                'saka', 'saka_samvat', 'saka_samvat_windows',
+                'shalivahana_saka_samvat_windows' => 'shalivahana_saka_samvat',
+                'kali', 'kali_samvat_windows' => 'kali_samvat',
+                'samvatsara_windows' => 'samvatsara',
+                'samvatsara_south_windows', 'south_samvatsara' => 'samvatsara_south',
+                'samvatsara_north_windows' => 'samvatsara_north',
+                'samvatsara_brihaspati_windows',
+                'brihaspati_samvatsara',
+                'mean_jovian_samvatsara' => 'samvatsara_brihaspati',
+                'samvatsara_brihaspati_classical_windows',
+                'brihaspati_classical',
+                'brihaspati_classical_windows' => 'samvatsara_brihaspati_classical',
+                'samvatsara_brihaspati_grahalaghava_windows',
+                'brihaspati_grahalaghava',
+                'brihaspati_grahalaghava_windows',
+                'grahalaghava_brihaspati',
+                'grahalaghava_samvatsara' => 'samvatsara_brihaspati_grahalaghava',
+                'samvatsara_brihaspati_makaranda_windows',
+                'brihaspati_makaranda',
+                'brihaspati_makaranda_windows',
+                'makaranda_brihaspati',
+                'makaranda_samvatsara' => 'samvatsara_brihaspati_makaranda',
+                'samvatsara_brihaspati_modern_windows',
+                'brihaspati_modern',
+                'brihaspati_modern_windows',
+                'true_jupiter_samvatsara',
+                'true_astronomical_samvatsara' => 'samvatsara_brihaspati_modern',
+                'samvatsara_gujarati_windows', 'gujarati_samvatsara' => 'samvatsara_gujarati',
+                'amanta', 'month_amanta', 'amanta_month_windows' => 'amanta_month',
+                'purnimanta', 'month_purnimanta', 'purnimanta_month_windows' => 'purnimanta_month',
+                default => $key,
+            };
+
+            match ($key) {
+                'ayana', // nirayana / sidereal
+                'ritu', // nirayana / sidereal
+                'sayana_ayana', // tropical
+                'sayana_ritu', // tropical
+                'vikram_samvat',
+                'gujarati_samvat',
+                'shalivahana_saka_samvat',
+                'kali_samvat',
+                'samvatsara',
+                'samvatsara_south',
+                'samvatsara_north',
+                'samvatsara_brihaspati',
+                'samvatsara_brihaspati_classical',
+                'samvatsara_brihaspati_grahalaghava',
+                'samvatsara_brihaspati_makaranda',
+                'samvatsara_brihaspati_modern',
+                'samvatsara_gujarati',
+                'amanta_month',
+                'purnimanta_month' => true,
+                default => throw new InvalidArgumentException('Unknown calendar period field: ' . $field),
+            };
+
+            $normalized[$key] = $key;
+        }
+
+        return array_values($normalized);
+    }
+
+    /**
+     * @param array<int, float> $boundaries
+     * @param callable(float): string $nameResolver
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildSolarLongitudePeriodWindows(
+        float $startJd,
+        float $endJd,
+        string $tz,
+        array $boundaries,
+        callable $nameResolver,
+        bool $tropical = false,
+    ): array {
+        sort($boundaries);
+        $sampleJd = $startJd + 1e-7;
+        $longitudeResolver = $tropical
+            ? fn(float $jd): float => $this->getTropicalSunLongitude($jd)
+            : fn(float $jd): float => $this->getSunLongitude($jd);
+        $sunLon = $longitudeResolver($sampleJd);
+        $cursor = $this->findAngleCrossing(
+            $startJd,
+            $this->previousSolarBoundary($sunLon, $boundaries),
+            -1,
+            $longitudeResolver,
+        );
+        $windows = [];
+
+        while ($cursor < $endJd - 1e-8) {
+            $sunLon = $longitudeResolver($cursor + 1e-7);
+            $target = $this->nextSolarBoundary($sunLon, $boundaries);
+            $nextJd = $this->findAngleCrossing($cursor + 1e-5, $target, 1, $longitudeResolver);
+
+            if ($nextJd > $startJd + 1e-8) {
+                $windows[] = $this->periodWindow($nameResolver($sunLon), $cursor, $nextJd, $tz);
+            }
+
+            $cursor = $nextJd;
+        }
+
+        return $this->mergeAdjacentPeriodWindows($windows);
+    }
+
+    /** @param array<int, float> $boundaries */
+    private function nextSolarBoundary(float $sunLon, array $boundaries): float
+    {
+        foreach ($boundaries as $boundary) {
+            if ($boundary > $sunLon + 1e-8) {
+                return $boundary;
+            }
+        }
+
+        return $boundaries[0];
+    }
+
+    /** @param array<int, float> $boundaries */
+    private function previousSolarBoundary(float $sunLon, array $boundaries): float
+    {
+        for ($index = count($boundaries) - 1; $index >= 0; $index--) {
+            if ($boundaries[$index] < $sunLon - 1e-8) {
+                return $boundaries[$index];
+            }
+        }
+
+        return $boundaries[array_key_last($boundaries)];
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    private function buildLunarMonthPeriodWindows(float $startJd, float $endJd, string $tz, float $boundaryAngle, string $monthKey): array
+    {
+        $periodStart = $this->findAngleCrossing($startJd, $boundaryAngle, -1, fn(float $jd): float => $this->getMoonSunAngle($jd));
+        $windows = [];
+
+        while ($periodStart < $endJd - 1e-8) {
+            $periodEnd = $this->findAngleCrossing($periodStart + 1.0, $boundaryAngle, 1, fn(float $jd): float => $this->getMoonSunAngle($jd));
+            if ($periodEnd <= $startJd) {
+                $periodStart = $periodEnd;
+                continue;
+            }
+
+            $sampleJd = $monthKey === 'Month_Purnimanta'
+                ? $periodEnd - 1e-5
+                : ($periodStart + $periodEnd) / 2.0;
+            $month = $this->getTrueHinduMonth($sampleJd);
+            $windows[] = [
+                ...$this->periodWindow((string) $month[$monthKey], $periodStart, $periodEnd, $tz),
+                'index' => $monthKey === 'Month_Amanta' ? $month['Amanta_Index'] : $month['Purnimanta_Index'],
+            ];
+
+            $periodStart = $periodEnd;
+        }
+
+        return $windows;
+    }
+
+    /**
+     * @param callable(CarbonImmutable): (scalar|null) $valueResolver
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildCivilCalendarValueWindows(CarbonImmutable $start, CarbonImmutable $endDay, callable $valueResolver): array
+    {
+        $windowStart = $start;
+        $activeValue = $valueResolver($windowStart);
+
+        while (true) {
+            $previousDate = $windowStart->subDay();
+            if ($valueResolver($previousDate) !== $activeValue) {
+                break;
+            }
+
+            $windowStart = $previousDate;
+        }
+
+        $windows = [];
+        for ($date = $windowStart; ; $date = $date->addDay()) {
+            $nextDate = $date->addDay();
+            $nextValue = $valueResolver($nextDate);
+
+            if ($nextValue === $activeValue) {
+                continue;
+            }
+
+            $windows[] = $this->civilWindow((string) $activeValue, $activeValue, $windowStart, $date);
+
+            if ($date->greaterThanOrEqualTo($endDay)) {
+                break;
+            }
+
+            $windowStart = $nextDate;
+            $activeValue = $nextValue;
+        }
+
+        return $windows;
+    }
+
+    /** @return array<int, array<string, mixed>> */
+    /**
+     * @param array<int, array<string, mixed>> $windows
+     * @param callable(int): string $samvatsaraResolver
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function mapCivilWindowsWithSamvatsara(array $windows, callable $samvatsaraResolver): array
+    {
+        return array_map(function (array $window) use ($samvatsaraResolver): array {
+            $year = (int) $window['value'];
+
+            return [
+                'name' => $samvatsaraResolver($year),
+                'value' => $year,
+                'year' => $year,
+                'era_year' => $year,
+                'start_date' => $window['start_date'],
+                'end_date' => $window['end_date'],
+                'start_iso' => $window['start_iso'],
+                'end_iso' => $window['end_iso'],
+            ];
+        }, $windows);
+    }
+
+    private function resolveChaitradiVikramSamvatFromAmantaWindow(array $window, string $tz): int
+    {
+        $start = CarbonImmutable::createFromFormat('d/m/Y h:i:s A', (string) $window['start_iso'], $tz);
+        $monthIndex = (int) ($window['index'] ?? 0);
+
+        if (!$start instanceof CarbonImmutable) {
+            throw new InvalidArgumentException('Unable to parse Amānta month start for Vikram Samvat resolution.');
+        }
+
+        return $this->panchanga->resolveChaitradiVikramSamvat($start, $monthIndex);
+    }
+
+    private function buildChaitradiVikramSamvatWindows(float $startJd, float $endJd, string $tz, array $amantaWindows): array
+    {
+        $windows = array_map(function (array $window) use ($tz): array {
+            $vikram = $this->resolveChaitradiVikramSamvatFromAmantaWindow($window, $tz);
+            $name = $this->panchanga->getSamvatsaraNorth($vikram);
+
+            return [
+                'name' => $name,
+                'value' => $vikram,
+                'year' => $vikram,
+                'era_year' => $vikram,
+                'start_jd' => (float) $window['start_jd'],
+                'end_jd' => (float) $window['end_jd'],
+                'start_iso' => $window['start_iso'],
+                'end_iso' => $window['end_iso'],
+            ];
+        }, $amantaWindows);
+
+        $windows = $this->mergeAdjacentPeriodWindows($windows);
+
+        return $this->expandPeriodWindowsToRangeBoundaries($windows, $tz, fn(array $w): int => $this->resolveChaitradiVikramSamvatFromAmantaWindow($w, $tz));
+    }
+
+    private function buildSakaSamvatWindows(float $startJd, float $endJd, string $tz, array $amantaWindows): array
+    {
+        $windows = array_map(function (array $window) use ($tz): array {
+            $vikram = $this->resolveChaitradiVikramSamvatFromAmantaWindow($window, $tz);
+            $saka = $vikram - 135;
+            $name = $this->panchanga->getSamvatsaraSouth($vikram);
+
+            return [
+                'name' => $name,
+                'value' => $saka,
+                'year' => $saka,
+                'era_year' => $saka,
+                'start_jd' => (float) $window['start_jd'],
+                'end_jd' => (float) $window['end_jd'],
+                'start_iso' => $window['start_iso'],
+                'end_iso' => $window['end_iso'],
+            ];
+        }, $amantaWindows);
+
+        $windows = $this->mergeAdjacentPeriodWindows($windows);
+
+        return $this->expandPeriodWindowsToRangeBoundaries($windows, $tz, fn(array $w): int => $this->resolveChaitradiVikramSamvatFromAmantaWindow($w, $tz) - 135);
+    }
+
+    private function buildKaliSamvatWindows(float $startJd, float $endJd, string $tz, array $amantaWindows): array
+    {
+        $windows = array_map(function (array $window) use ($tz): array {
+            $vikram = $this->resolveChaitradiVikramSamvatFromAmantaWindow($window, $tz);
+            $kali = $vikram + 3044;
+
+            return [
+                'name' => (string) $kali,
+                'value' => $kali,
+                'year' => $kali,
+                'era_year' => $kali,
+                'start_jd' => (float) $window['start_jd'],
+                'end_jd' => (float) $window['end_jd'],
+                'start_iso' => $window['start_iso'],
+                'end_iso' => $window['end_iso'],
+            ];
+        }, $amantaWindows);
+
+        $windows = $this->mergeAdjacentPeriodWindows($windows);
+
+        return $this->expandPeriodWindowsToRangeBoundaries($windows, $tz, fn(array $w): int => $this->resolveChaitradiVikramSamvatFromAmantaWindow($w, $tz) + 3044);
+    }
+
+    private function buildSamvatsaraSouthWindows(float $startJd, float $endJd, string $tz, array $amantaWindows): array
+    {
+        $windows = array_map(function (array $window) use ($tz): array {
+            $vikram = $this->resolveChaitradiVikramSamvatFromAmantaWindow($window, $tz);
+            $name = $this->panchanga->getSamvatsaraSouth($vikram);
+
+            return [
+                'name' => $name,
+                'value' => $name,
+                'year' => $vikram - 135,
+                'era_year' => $vikram - 135,
+                'start_jd' => (float) $window['start_jd'],
+                'end_jd' => (float) $window['end_jd'],
+                'start_iso' => $window['start_iso'],
+                'end_iso' => $window['end_iso'],
+            ];
+        }, $amantaWindows);
+
+        $windows = $this->mergeAdjacentPeriodWindows($windows);
+
+        return $this->expandPeriodWindowsToRangeBoundaries($windows, $tz, fn(array $w): string => $this->panchanga->getSamvatsaraSouth($this->resolveChaitradiVikramSamvatFromAmantaWindow($w, $tz)));
+    }
+
+    private function buildSamvatsaraNorthWindows(float $startJd, float $endJd, string $tz, array $amantaWindows): array
+    {
+        $windows = array_map(function (array $window) use ($tz): array {
+            $vikram = $this->resolveChaitradiVikramSamvatFromAmantaWindow($window, $tz);
+            $name = $this->panchanga->getSamvatsaraNorth($vikram);
+
+            return [
+                'name' => $name,
+                'value' => $name,
+                'year' => $vikram,
+                'era_year' => $vikram,
+                'start_jd' => (float) $window['start_jd'],
+                'end_jd' => (float) $window['end_jd'],
+                'start_iso' => $window['start_iso'],
+                'end_iso' => $window['end_iso'],
+            ];
+        }, $amantaWindows);
+
+        $windows = $this->mergeAdjacentPeriodWindows($windows);
+
+        return $this->expandPeriodWindowsToRangeBoundaries($windows, $tz, fn(array $w): string => $this->panchanga->getSamvatsaraNorth($this->resolveChaitradiVikramSamvatFromAmantaWindow($w, $tz)));
+    }
+
+    private function buildSamvatsaraBrihaspatiWindows(
+        float $startJd,
+        float $endJd,
+        string $tz,
+        ?string $model = null,
+    ): array {
+        $resolvedModel = BrihaspatiSamvatsaraService::normalizeModelKey(
+            $model ?? BrihaspatiSamvatsaraService::defaultModel(),
+        );
+        $service = new BrihaspatiSamvatsaraService($this->astronomy);
+
+        $windows = [];
+        $currentJd = $startJd;
+
+        while ($currentJd < $endJd) {
+            $info = $service->getBrihaspatiSamvatsaraInfoFromJd($currentJd, $resolvedModel);
+
+            $wStartJd = (float) $info['start_jd'];
+            $wEndJd = (float) $info['end_jd'];
+
+            $window = [
+                'name' => (string) $info['name'],
+                'value' => (string) $info['name'],
+                'start_jd' => $wStartJd,
+                'end_jd' => $wEndJd,
+                'start_iso' => AstroCore::formatDateTime($this->sunService->jdToCarbonPublic($wStartJd, $tz)),
+                'end_iso' => AstroCore::formatDateTime($this->sunService->jdToCarbonPublic($wEndJd, $tz)),
+                'brihaspati_model' => (string) ($info['model'] ?? $resolvedModel),
+                'brihaspati_model_status' => (string) (
+                    $info['status']
+                    ?? BrihaspatiSamvatsaraService::modelStatus($resolvedModel)
+                ),
+                'brihaspati_model_family' => (string) (
+                    $info['model_family']
+                    ?? BrihaspatiSamvatsaraService::modelFamily($resolvedModel)
+                ),
+                'brihaspati_model_variant' => (string) ($info['variant'] ?? $info['model'] ?? $resolvedModel),
+                'brihaspati_timing_basis' => (string) ($info['timing_basis'] ?? ''),
+            ];
+
+            if (array_key_exists('name_phase_source', $info)) {
+                $window['brihaspati_name_phase_source'] = (string) $info['name_phase_source'];
+            }
+
+            if (array_key_exists('start_rashi_index', $info)) {
+                $window['brihaspati_start_rashi_index'] = (int) $info['start_rashi_index'];
+            }
+
+            if (array_key_exists('end_rashi_index', $info)) {
+                $window['brihaspati_end_rashi_index'] = (int) $info['end_rashi_index'];
+            }
+
+            if (array_key_exists('classical_reference_start_jd', $info)) {
+                $window['brihaspati_classical_reference_start_jd'] = (float) $info['classical_reference_start_jd'];
+            }
+
+            if (array_key_exists('classical_reference_end_jd', $info)) {
+                $window['brihaspati_classical_reference_end_jd'] = (float) $info['classical_reference_end_jd'];
+            }
+
+            $windows[] = $window;
+
+            $currentJd = $wEndJd + (0.1 / 86400.0);
+        }
+
+        return $windows;
+    }
+
+    private function expandPeriodWindowsToRangeBoundaries(array $windows, string $tz, callable $valueResolver): array
+    {
+        if ($windows === []) {
+            return [];
+        }
+
+        while (true) {
+            $firstIndex = array_key_first($windows);
+            $firstWindow = $windows[$firstIndex];
+            $previousWindow = $this->buildAdjacentAmantaMonthWindow((float) $firstWindow['start_jd'], -1, $tz);
+            $prevVal = $valueResolver($previousWindow);
+            if ($prevVal !== $firstWindow['value'] && $prevVal !== ($firstWindow['year'] ?? null)) {
+                break;
+            }
+
+            $windows[$firstIndex]['start_jd'] = $previousWindow['start_jd'];
+            $windows[$firstIndex]['start_iso'] = $previousWindow['start_iso'];
+        }
+
+        while (true) {
+            $lastIndex = array_key_last($windows);
+            $lastWindow = $windows[$lastIndex];
+            $nextWindow = $this->buildAdjacentAmantaMonthWindow((float) $lastWindow['end_jd'], 1, $tz);
+            $nextVal = $valueResolver($nextWindow);
+            if ($nextVal !== $lastWindow['value'] && $nextVal !== ($lastWindow['year'] ?? null)) {
+                break;
+            }
+
+            $windows[$lastIndex]['end_jd'] = $nextWindow['end_jd'];
+            $windows[$lastIndex]['end_iso'] = $nextWindow['end_iso'];
+        }
+
+        return $windows;
+    }
+
+    /**
+     * Gujarati Saṃvatsara name windows derived from Gujarati Vikram year windows.
+     *
+     * @param array<int, array<string, mixed>> $amantaWindows
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function buildGujaratiSamvatsaraWindows(float $startJd, float $endJd, string $tz, array $amantaWindows): array
+    {
+        $yearWindows = $this->buildGujaratiSamvatWindows($startJd, $endJd, $tz, $amantaWindows);
+        $named = [];
+        foreach ($yearWindows as $window) {
+            $year = (int) $window['value'];
+            $named[] = [
+                ...$window,
+                'name' => $this->panchanga->getSamvatsaraGujarati($year),
+                'value' => $this->panchanga->getSamvatsaraGujarati($year),
+                'year' => $year,
+                'era_year' => $year,
+            ];
+        }
+
+        return $this->mergeAdjacentPeriodWindows($named);
+    }
+
+    private function resolveGujaratiSamvatFromAmantaWindow(array $window, string $tz): int
+    {
+        $chaitradiVikram = $this->resolveChaitradiVikramSamvatFromAmantaWindow($window, $tz);
+        $monthIndex = (int) ($window['index'] ?? 0);
+
+        return $monthIndex >= 7 ? $chaitradiVikram : $chaitradiVikram - 1;
+    }
+
+    private function buildGujaratiSamvatWindows(float $startJd, float $endJd, string $tz, array $amantaWindows): array
+    {
+        $windows = array_map(fn(array $window): array => $this->gujaratiSamvatWindowFromAmantaWindow($window, $tz), $amantaWindows);
+        $windows = $this->mergeAdjacentPeriodWindows($windows);
+
+        if ($windows === []) {
+            return [];
+        }
+
+        return $this->expandPeriodWindowsToRangeBoundaries($windows, $tz, fn(array $w): int => $this->resolveGujaratiSamvatFromAmantaWindow($w, $tz));
+    }
+
+    /** @param array<string, mixed> $window */
+    private function gujaratiSamvatWindowFromAmantaWindow(array $window, string $tz): array
+    {
+        $value = $this->resolveGujaratiSamvatFromAmantaWindow($window, $tz);
+        $name = $this->panchanga->getSamvatsaraGujarati($value);
+
+        return [
+            'name' => $name,
+            'value' => $value,
+            'year' => $value,
+            'era_year' => $value,
+            'start_jd' => (float) $window['start_jd'],
+            'end_jd' => (float) $window['end_jd'],
+            'start_iso' => $window['start_iso'],
+            'end_iso' => $window['end_iso'],
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function buildAdjacentAmantaMonthWindow(float $boundaryJd, int $direction, string $tz): array
+    {
+        if ($direction !== -1 && $direction !== 1) {
+            throw new InvalidArgumentException('Adjacent amanta month direction must be -1 or 1.');
+        }
+
+        if ($direction === -1) {
+            $startJd = $this->findAngleCrossing($boundaryJd - 1.0, 0.0, -1, fn(float $jd): float => $this->getMoonSunAngle($jd));
+            $sampleJd = ($startJd + $boundaryJd) / 2.0;
+            $month = $this->getTrueHinduMonth($sampleJd);
+
+            return [
+                ...$this->periodWindow((string) $month['Month_Amanta'], $startJd, $boundaryJd, $tz),
+                'index' => $month['Amanta_Index'],
+            ];
+        }
+
+        $endJd = $this->findAngleCrossing($boundaryJd + 1.0, 0.0, 1, fn(float $jd): float => $this->getMoonSunAngle($jd));
+        $sampleJd = ($boundaryJd + $endJd) / 2.0;
+        $month = $this->getTrueHinduMonth($sampleJd);
+
+        return [
+            ...$this->periodWindow((string) $month['Month_Amanta'], $boundaryJd, $endJd, $tz),
+            'index' => $month['Amanta_Index'],
+        ];
+    }
+
+    /** @return array<string, mixed> */
+    private function periodWindow(string $name, float $startJd, float $endJd, string $tz): array
+    {
+        return [
+            'name' => $name,
+            'value' => $name,
+            'start_jd' => $startJd,
+            'end_jd' => $endJd,
+            'start_iso' => AstroCore::formatDateTime($this->sunService->jdToCarbonPublic($startJd, $tz)),
+            'end_iso' => AstroCore::formatDateTime($this->sunService->jdToCarbonPublic($endJd, $tz)),
+        ];
+    }
+
+    private function civilWindow(string $name, mixed $value, CarbonImmutable $start, CarbonImmutable $end): array
+    {
+        return [
+            'name' => $name,
+            'value' => $value,
+            'start_date' => $start->toDateString(),
+            'end_date' => $end->toDateString(),
+            'start_iso' => AstroCore::formatDateTime($start->startOfDay()),
+            'end_iso' => AstroCore::formatDateTime($end->endOfDay()),
+        ];
+    }
+
+    private function resolveCivilSunriseDate(array $window, float $latitude, float $longitude, string $tz, float $elevation): CarbonImmutable
+    {
+        $startIso = (string) ($window['start_iso'] ?? '');
+        $parsed = CarbonImmutable::createFromFormat('d/m/Y h:i:s A', $startIso, $tz);
+        $carbon = $parsed instanceof CarbonImmutable ? $parsed : null;
+        if (!$carbon instanceof CarbonImmutable) {
+            try {
+                $carbon = CarbonImmutable::parse($startIso, $tz);
+            } catch (Throwable) {
+                $carbon = null;
+            }
+        }
+
+        if (!$carbon instanceof CarbonImmutable) {
+            return CarbonImmutable::now($tz)->startOfDay();
+        }
+
+        $birth = [
+            'year' => (int) $carbon->format('Y'),
+            'month' => (int) $carbon->format('m'),
+            'day' => (int) $carbon->format('d'),
+            'latitude' => $latitude,
+            'longitude' => $longitude,
+            'timezone' => $tz,
+            'elevation' => $elevation,
+        ];
+
+        [$sunrise] = $this->sunService->getSunriseSunset($birth);
+
+        $sunriseCarbon = null;
+        if ($sunrise instanceof DateTimeInterface) {
+            $sunriseCarbon = CarbonImmutable::instance($sunrise)->setTimezone($tz);
+        } elseif (is_string($sunrise) && trim($sunrise) !== '') {
+            try {
+                $sunriseCarbon = CarbonImmutable::parse($sunrise, $tz);
+            } catch (Throwable) {
+                $sunriseCarbon = null;
+            }
+        }
+
+        if ($sunriseCarbon instanceof CarbonImmutable) {
+            if ($carbon->greaterThanOrEqualTo($sunriseCarbon)) {
+                return $carbon->startOfDay()->addDay();
+            }
+
+            return $carbon->startOfDay();
+        }
+
+        return $carbon->startOfDay();
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $windows
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function attachCivilObservanceDates(
+        array $windows,
+        float $latitude,
+        float $longitude,
+        string $tz,
+        float $elevation,
+        string $assignmentRule = 'lunar_month_at_sunrise',
+    ): array {
+        $count = count($windows);
+        if ($count === 0) {
+            return [];
+        }
+
+        // Periods where the boundary is the astronomical instant itself — no civil-day window
+        // is manufactured. This covers both nirayana/tropical seasons and the Bārhaspatya
+        // mean-sign transit (which changes continuously at the exact transit instant).
+        $isContinuous = str_starts_with($assignmentRule, 'continuous_');
+
+        $result = [];
+        for ($i = 0; $i < $count; $i++) {
+            $window = $windows[$i];
+
+            $window['astronomical_start_iso'] = $window['start_iso'];
+            $window['astronomical_end_iso'] = $window['end_iso'];
+            $window['assignment_rule'] = $assignmentRule;
+
+            if ($isContinuous) {
+                // For continuous periods, the civil_* fields are meaningless (the state does not
+                // change at midnight). Only the exact astronomical ISO strings are exposed.
+                unset($window['civil_start_date'], $window['civil_end_date'], $window['civil_start_iso'], $window['civil_end_iso']);
+                $result[] = $window;
+                continue;
+            }
+
+            $civilStart = $this->resolveCivilSunriseDate($window, $latitude, $longitude, $tz, $elevation);
+
+            if ($i + 1 < $count) {
+                $nextCivilStart = $this->resolveCivilSunriseDate($windows[$i + 1], $latitude, $longitude, $tz, $elevation);
+                $civilEnd = $nextCivilStart->subDay();
+            } else {
+                $endCarbon = CarbonImmutable::createFromFormat('d/m/Y h:i:s A', (string) $window['end_iso'], $tz);
+                $endBirth = [
+                    'year' => $endCarbon->year,
+                    'month' => $endCarbon->month,
+                    'day' => $endCarbon->day,
+                    'latitude' => $latitude,
+                    'longitude' => $longitude,
+                    'timezone' => $tz,
+                    'elevation' => $elevation,
+                ];
+                [$endSunrise] = $this->sunService->getSunriseSunset($endBirth);
+                $endSunriseCarbon = null;
+                if ($endSunrise instanceof DateTimeInterface) {
+                    $endSunriseCarbon = CarbonImmutable::instance($endSunrise)->setTimezone($tz);
+                } elseif (is_string($endSunrise) && trim($endSunrise) !== '') {
+                    try {
+                        $endSunriseCarbon = CarbonImmutable::parse($endSunrise, $tz);
+                    } catch (Throwable) {
+                        $endSunriseCarbon = null;
+                    }
+                }
+
+                $civilEnd = ($endSunriseCarbon instanceof CarbonImmutable && $endCarbon->greaterThanOrEqualTo($endSunriseCarbon))
+                    ? $endCarbon->startOfDay()
+                    : $endCarbon->startOfDay()->subDay();
+
+                if ($civilEnd->lessThan($civilStart)) {
+                    $civilEnd = $civilStart;
+                }
+            }
+
+            // calendar_effective_date      = inclusive first civil day of this era/year
+            // calendar_effective_end_date  = inclusive last civil day of this era/year
+            // (civil_end_date is identical; treat as the day on which this era is still in effect,
+            //  not as an exclusive upper bound — the next era begins on calendar_effective_date + 1)
+            $window['calendar_effective_date'] = $civilStart->toDateString();
+            $window['calendar_effective_end_date'] = $civilEnd->toDateString();
+            $window['civil_start_date'] = $civilStart->toDateString();
+            $window['civil_end_date'] = $civilEnd->toDateString();
+            $window['civil_start_iso'] = AstroCore::formatDateTime($civilStart->startOfDay());
+            $window['civil_end_iso'] = AstroCore::formatDateTime($civilEnd->endOfDay());
+
+            $result[] = $window;
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $windows
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function publicCalendarPeriodWindows(array $windows): array
+    {
+        return array_map(static function (array $window): array {
+            $public = [
+                'name' => (string) $window['name'],
+                'start_iso' => (string) $window['start_iso'],
+                'end_iso' => (string) $window['end_iso'],
+            ];
+
+            if (array_key_exists('astronomical_start_iso', $window)) {
+                $public['astronomical_start_iso'] = (string) $window['astronomical_start_iso'];
+            }
+
+            if (array_key_exists('astronomical_end_iso', $window)) {
+                $public['astronomical_end_iso'] = (string) $window['astronomical_end_iso'];
+            }
+
+            if (array_key_exists('calendar_effective_date', $window)) {
+                $public['calendar_effective_date'] = (string) $window['calendar_effective_date'];
+            }
+
+            if (array_key_exists('calendar_effective_end_date', $window)) {
+                $public['calendar_effective_end_date'] = (string) $window['calendar_effective_end_date'];
+            }
+
+            if (array_key_exists('assignment_rule', $window)) {
+                $public['assignment_rule'] = (string) $window['assignment_rule'];
+            }
+
+            if (array_key_exists('civil_start_date', $window)) {
+                $public['civil_start_date'] = (string) $window['civil_start_date'];
+            }
+
+            if (array_key_exists('civil_end_date', $window)) {
+                $public['civil_end_date'] = (string) $window['civil_end_date'];
+            }
+
+            if (array_key_exists('civil_start_iso', $window)) {
+                $public['civil_start_iso'] = (string) $window['civil_start_iso'];
+            }
+
+            if (array_key_exists('civil_end_iso', $window)) {
+                $public['civil_end_iso'] = (string) $window['civil_end_iso'];
+            }
+
+            if (array_key_exists('year', $window)) {
+                $public['year'] = (int) $window['year'];
+            }
+
+            if (array_key_exists('era_year', $window)) {
+                $public['era_year'] = (int) $window['era_year'];
+            }
+
+            if (array_key_exists('index', $window)) {
+                $public['index'] = (int) $window['index'];
+            }
+
+            if (array_key_exists('brihaspati_model', $window)) {
+                $public['brihaspati_model'] = (string) $window['brihaspati_model'];
+            }
+
+            if (array_key_exists('brihaspati_model_status', $window)) {
+                $public['brihaspati_model_status'] = (string) $window['brihaspati_model_status'];
+            }
+
+            if (array_key_exists('brihaspati_model_family', $window)) {
+                $public['brihaspati_model_family'] = (string) $window['brihaspati_model_family'];
+            }
+
+            if (array_key_exists('brihaspati_model_variant', $window)) {
+                $public['brihaspati_model_variant'] = (string) $window['brihaspati_model_variant'];
+            }
+
+            if (array_key_exists('brihaspati_timing_basis', $window)) {
+                $public['brihaspati_timing_basis'] = (string) $window['brihaspati_timing_basis'];
+            }
+
+            if (array_key_exists('brihaspati_name_phase_source', $window)) {
+                $public['brihaspati_name_phase_source'] = (string) $window['brihaspati_name_phase_source'];
+            }
+
+            if (array_key_exists('brihaspati_start_rashi_index', $window)) {
+                $public['brihaspati_start_rashi_index'] = (int) $window['brihaspati_start_rashi_index'];
+            }
+
+            if (array_key_exists('brihaspati_end_rashi_index', $window)) {
+                $public['brihaspati_end_rashi_index'] = (int) $window['brihaspati_end_rashi_index'];
+            }
+
+            if (array_key_exists('brihaspati_classical_reference_start_jd', $window)) {
+                $public['brihaspati_classical_reference_start_jd'] = (float) $window['brihaspati_classical_reference_start_jd'];
+            }
+
+            if (array_key_exists('brihaspati_classical_reference_end_jd', $window)) {
+                $public['brihaspati_classical_reference_end_jd'] = (float) $window['brihaspati_classical_reference_end_jd'];
+            }
+
+            return $public;
+        }, $windows);
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $windows
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function mergeAdjacentPeriodWindows(array $windows): array
+    {
+        $merged = [];
+        foreach ($windows as $window) {
+            $lastIndex = array_key_last($merged);
+            if ($lastIndex !== null && $merged[$lastIndex]['value'] === $window['value']) {
+                $merged[$lastIndex]['end_jd'] = $window['end_jd'] ?? $merged[$lastIndex]['end_jd'] ?? null;
+                $merged[$lastIndex]['end_iso'] = $window['end_iso'];
+                continue;
+            }
+
+            $merged[] = $window;
+        }
+
+        return $merged;
+    }
+
+    /** @return array{0: CarbonImmutable, 1: CarbonImmutable} */
+    private function resolveMonthRangeBounds(
+        int $fromYear,
+        int $fromMonth,
+        int $toYear,
+        int $toMonth,
+        string $tz,
+    ): array {
+        $start = CarbonImmutable::create($fromYear, $fromMonth, 1, 0, 0, 0, $tz)->startOfDay();
+        $end = CarbonImmutable::create($toYear, $toMonth, 1, 0, 0, 0, $tz)->endOfMonth()->startOfDay();
+
+        if ($end->lessThan($start)) {
+            throw new InvalidArgumentException('Month range end must be greater than or equal to start.');
+        }
+
+        return [$start, $end];
+    }
+
+    /**
+     * @param array<int, array<string, mixed>> $festivals
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    private function retainFestivalsForDate(array $festivals, string $dateKey): array
+    {
+        return array_values(array_filter(
+            $festivals,
+            fn(array $festival): bool => $this->festivalObservanceDate($festival, $dateKey) === $dateKey,
+        ));
+    }
+}
