@@ -13,9 +13,13 @@ use App\Services\Astrology\Calculation\Handlers\DetailedKundliReportCalculationH
 use App\Services\Astrology\Calculation\Handlers\KundliCalculationHandler;
 use App\Services\Astrology\Calculation\Handlers\PersonalizedInsightsCalculationHandler;
 use App\Services\Astrology\DailyPanchangService;
+use App\Services\Astrology\Interpretation\DetailedInterpretationService;
 use App\Services\Astrology\KundliService;
+use App\Services\Astrology\Pdf\SvgVargaRenderer;
+use App\Services\Astrology\Reports\DetailedKundliReportService;
 use App\Services\Astrology\Stability\AstrologyIntervalStabilityService;
 use App\Services\Astrology\Transits\SaturnTransitService;
+use App\Services\Astrology\Yogas\YogaDoshaOrchestrator;
 use App\Services\Geo\GeocodingServiceInterface;
 use App\Services\Geo\LocalGazetteerGeocodingProvider;
 use Illuminate\Support\Facades\App;
@@ -87,17 +91,14 @@ class AppServiceProvider extends ServiceProvider
             $driver = config('astrology.driver', 'local');
             if ($driver === 'remote') {
                 $remoteConfig = config('astrology.remote', []);
-                $localDriver = !empty($remoteConfig['fallback_to_local'])
-                    ? new LocalCalculationDriver()
-                    : null;
-
+                // Strictly disable local fallback when driver is remote to prevent native FFI crashes on Hostinger
                 return new RemoteHttpCalculationDriver(
                     baseUrl: (string) ($remoteConfig['url'] ?? $remoteConfig['base_url'] ?? 'http://127.0.0.1:8080'),
                     secret: (string) ($remoteConfig['secret'] ?? ''),
                     connectTimeout: (float) ($remoteConfig['connect_timeout'] ?? 3.0),
                     timeout: (float) ($remoteConfig['timeout'] ?? 10.0),
-                    fallbackToLocal: (bool) (!empty($remoteConfig['fallback_to_local'])),
-                    localDriver: $localDriver
+                    fallbackToLocal: false,
+                    localDriver: null
                 );
             }
 
@@ -108,8 +109,8 @@ class AppServiceProvider extends ServiceProvider
             return new DailyPanchangCalculationHandler(null, $app->make(CalculationDriverInterface::class));
         });
 
-        $this->app->singleton(PersonalizedInsightsCalculationHandler::class, function () {
-            return new PersonalizedInsightsCalculationHandler();
+        $this->app->singleton(PersonalizedInsightsCalculationHandler::class, function ($app) {
+            return new PersonalizedInsightsCalculationHandler(null, $app->make(CalculationDriverInterface::class));
         });
 
         $this->app->singleton(KundliCalculationHandler::class, function ($app) {
@@ -118,6 +119,21 @@ class AppServiceProvider extends ServiceProvider
 
         $this->app->singleton(DetailedKundliReportCalculationHandler::class, function () {
             return new DetailedKundliReportCalculationHandler();
+        });
+
+        $this->app->singleton(DetailedKundliReportService::class, function ($app) {
+            if (config('astrology.driver') === 'remote') {
+                return new DetailedKundliReportService(
+                    kundliService: null,
+                    stabilityService: null,
+                    yogaOrchestrator: $app->make(YogaDoshaOrchestrator::class),
+                    transitService: null,
+                    svgRenderer: $app->make(SvgVargaRenderer::class),
+                    interpretationService: $app->make(DetailedInterpretationService::class)
+                );
+            }
+
+            return new DetailedKundliReportService();
         });
 
         $this->app->singleton(CalculationHandlerRegistry::class, function ($app) {

@@ -258,6 +258,7 @@ class CalculationServiceIntegrationTest extends TestCase
 
     public function test_remote_failure_falls_back_to_local_when_enabled(): void
     {
+        config(['astrology.driver' => 'local']);
         $localDriver = new LocalCalculationDriver();
         $driver = new RemoteHttpCalculationDriver('http://127.0.0.1:59999', $this->secret, 0.5, 0.5, true, $localDriver);
 

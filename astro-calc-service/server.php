@@ -33,6 +33,7 @@ use App\Services\Astrology\Calculation\Handlers\KundliCalculationHandler;
 use App\Services\Astrology\DailyPanchangService;
 use App\Services\Astrology\KundliService;
 use App\Services\Astrology\NativeEphemerisResolver;
+use App\Services\Astrology\PersonalizedAstrologyService;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Cache;
 use JayeshMepani\PanchangCore\Astronomy\AstronomyService;
@@ -67,6 +68,7 @@ $astronomyService = app(AstronomyService::class);
 $kundliService = app(KundliService::class);
 $dailyPanchangService = app(DailyPanchangService::class);
 $kundliHandler = app(KundliCalculationHandler::class);
+$personalizedService = app(PersonalizedAstrologyService::class);
 
 $hmacSecret = getenv('ASTRO_CALCULATION_HMAC_SECRET') ?: '';
 if (empty($hmacSecret)) {
@@ -353,6 +355,13 @@ while ($client = @stream_socket_accept($socket, -1)) {
             $responsePayload = [
                 'status' => 'success',
                 'data' => $kundliComplete,
+            ];
+        } elseif ($method === 'POST' && $uri === '/calculate/personalized-insights') {
+            // Operation 5: Personalized Insights
+            $insights = $personalizedService->calculateFromPayload($input);
+            $responsePayload = [
+                'status' => 'success',
+                'data' => $insights,
             ];
         } else {
             $responseCode = 404;

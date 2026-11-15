@@ -27,11 +27,18 @@ class RemoteHttpCalculationDriver implements CalculationDriverInterface
      * @param string $method 'GET' or 'POST'
      * @param string $path E.g. '/calculate/kundli'
      * @param array<string, mixed>|null $data
+     * @param string|null $calcType Optional calculation type for minimal structured audit logging
+     * @param string|null $jobId Optional calculation job ID for minimal structured audit logging
      * @return array<string, mixed>
      * @throws CalculationServiceUnavailableException
      */
-    protected function request(string $method, string $path, ?array $data = null): array
-    {
+    protected function request(
+        string $method,
+        string $path,
+        ?array $data = null,
+        ?string $calcType = null,
+        ?string $jobId = null
+    ): array {
         $url = "{$this->baseUrl}{$path}";
         $rawBody = $data !== null ? json_encode($data, JSON_UNESCAPED_SLASHES) : '';
         $timestamp = (string) time();
@@ -65,10 +72,13 @@ class RemoteHttpCalculationDriver implements CalculationDriverInterface
             curl_setopt($ch, CURLOPT_POSTFIELDS, $rawBody);
         }
 
+        $startTime = microtime(true);
         $response = curl_exec($ch);
+        $durationMs = round((microtime(true) - $startTime) * 1000, 2);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $curlError = curl_error($ch);
         $curlErrno = curl_errno($ch);
+        curl_close($ch);
 
         if ($response === false || $curlErrno !== 0) {
             $msg = "Calculation microservice unreachable at {$this->baseUrl}{$path}: [{$curlErrno}] {$curlError}";
@@ -97,6 +107,10 @@ class RemoteHttpCalculationDriver implements CalculationDriverInterface
             return $this->handleFailure($msg);
         }
 
+        $jobStr = !empty($jobId) ? $jobId : 'none';
+        $typeStr = !empty($calcType) ? $calcType : 'unknown';
+        Log::info("Remote calculation request successful: job_id=[{$jobStr}], type=[{$typeStr}], endpoint=[{$path}], status=[{$httpCode}], duration_ms=[{$durationMs}]");
+
         return $decoded;
     }
 
@@ -108,21 +122,22 @@ class RemoteHttpCalculationDriver implements CalculationDriverInterface
      */
     protected function handleFailure(string $errorMessage): array
     {
-        if ($this->fallbackToLocal && $this->localDriver !== null) {
-            Log::warning("[FALLBACK] Remote calculation service failure; falling back to local calculation driver: {$errorMessage}");
-            throw new \RuntimeException("__FALLBACK_TRIGGERED__");
+        // When configured driver is remote, fallback to local is strictly impossible
+        if (config('astrology.driver') === 'remote' || !$this->fallbackToLocal || $this->localDriver === null) {
+            throw new CalculationServiceUnavailableException($errorMessage);
         }
 
-        throw new CalculationServiceUnavailableException($errorMessage);
+        Log::warning("[FALLBACK] Remote calculation service failure; falling back to local calculation driver: {$errorMessage}");
+        throw new \RuntimeException("__FALLBACK_TRIGGERED__");
     }
 
     public function calculatePlanetaryPositions(float $jd): array
     {
         try {
-            $res = $this->request('POST', '/calculate/planetary-positions', ['jd' => $jd]);
+            $res = $this->request('POST', '/calculate/planetary-positions', ['jd' => $jd], 'planetary_positions', null);
             return $res;
         } catch (\RuntimeException $e) {
-            if ($e->getMessage() === '__FALLBACK_TRIGGERED__' && $this->localDriver) {
+            if ($e->getMessage() === '__FALLBACK_TRIGGERED__' && $this->localDriver && config('astrology.driver') !== 'remote') {
                 return $this->localDriver->calculatePlanetaryPositions($jd);
             }
             throw $e;
@@ -132,10 +147,11 @@ class RemoteHttpCalculationDriver implements CalculationDriverInterface
     public function calculateDailyPanchang(array $payload): array
     {
         try {
-            $res = $this->request('POST', '/calculate/daily-panchang', $payload);
+            $jobId = isset($payload['job_id']) ? (string) $payload['job_id'] : null;
+            $res = $this->request('POST', '/calculate/daily-panchang', $payload, 'daily_panchang', $jobId);
             return $res['data'] ?? [];
         } catch (\RuntimeException $e) {
-            if ($e->getMessage() === '__FALLBACK_TRIGGERED__' && $this->localDriver) {
+            if ($e->getMessage() === '__FALLBACK_TRIGGERED__' && $this->localDriver && config('astrology.driver') !== 'remote') {
                 return $this->localDriver->calculateDailyPanchang($payload);
             }
             throw $e;
@@ -145,10 +161,11 @@ class RemoteHttpCalculationDriver implements CalculationDriverInterface
     public function calculateKundli(array $payload): array
     {
         try {
-            $res = $this->request('POST', '/calculate/kundli', $payload);
+            $jobId = isset($payload['job_id']) ? (string) $payload['job_id'] : null;
+            $res = $this->request('POST', '/calculate/kundli', $payload, 'kundli', $jobId);
             return $res['data'] ?? [];
         } catch (\RuntimeException $e) {
-            if ($e->getMessage() === '__FALLBACK_TRIGGERED__' && $this->localDriver) {
+            if ($e->getMessage() === '__FALLBACK_TRIGGERED__' && $this->localDriver && config('astrology.driver') !== 'remote') {
                 return $this->localDriver->calculateKundli($payload);
             }
             throw $e;
@@ -158,11 +175,26 @@ class RemoteHttpCalculationDriver implements CalculationDriverInterface
     public function calculateKundliComplete(array $payload): array
     {
         try {
-            $res = $this->request('POST', '/calculate/kundli-complete', $payload);
+            $jobId = isset($payload['job_id']) ? (string) $payload['job_id'] : null;
+            $res = $this->request('POST', '/calculate/kundli-complete', $payload, 'kundli_complete', $jobId);
             return $res['data'] ?? [];
         } catch (\RuntimeException $e) {
-            if ($e->getMessage() === '__FALLBACK_TRIGGERED__' && $this->localDriver) {
+            if ($e->getMessage() === '__FALLBACK_TRIGGERED__' && $this->localDriver && config('astrology.driver') !== 'remote') {
                 return $this->localDriver->calculateKundliComplete($payload);
+            }
+            throw $e;
+        }
+    }
+
+    public function calculatePersonalizedInsights(array $payload): array
+    {
+        try {
+            $jobId = isset($payload['job_id']) ? (string) $payload['job_id'] : null;
+            $res = $this->request('POST', '/calculate/personalized-insights', $payload, 'personalized_insights', $jobId);
+            return $res['data'] ?? [];
+        } catch (\RuntimeException $e) {
+            if ($e->getMessage() === '__FALLBACK_TRIGGERED__' && $this->localDriver && config('astrology.driver') !== 'remote') {
+                return $this->localDriver->calculatePersonalizedInsights($payload);
             }
             throw $e;
         }

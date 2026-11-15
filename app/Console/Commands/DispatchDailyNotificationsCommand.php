@@ -10,9 +10,10 @@ use App\Models\User;
 use App\Models\UserAstrologyProfile;
 use App\Models\UserDevice;
 use App\Models\UserNotificationPreference;
-use App\Services\Astrology\DailyPanchangService;
 use App\Services\Astrology\Calculation\CalculationJobManager;
+use App\Services\Astrology\Calculation\Handlers\DailyPanchangCalculationHandler;
 use App\Services\Astrology\Calculation\Handlers\PersonalizedInsightsCalculationHandler;
+use App\Services\Astrology\DailyPanchangService;
 use App\Services\Astrology\Interpretation\PersonalizedDailyInterpretationService;
 use App\Services\FirebaseNotificationService;
 use Carbon\CarbonImmutable;
@@ -49,9 +50,10 @@ class DispatchDailyNotificationsCommand extends Command
 
     public function __construct(
         protected FirebaseNotificationService $fcmService,
-        protected DailyPanchangService $panchangService,
+        protected DailyPanchangCalculationHandler $panchangHandler,
         protected CalculationJobManager $jobManager,
-        protected PersonalizedDailyInterpretationService $interpretationService
+        protected PersonalizedDailyInterpretationService $interpretationService,
+        protected ?DailyPanchangService $panchangService = null
     ) {
         parent::__construct();
     }
@@ -360,13 +362,21 @@ class DispatchDailyNotificationsCommand extends Command
     protected function fetchPanchangLimbs(string $targetDate): array
     {
         try {
-            $panchang = $this->panchangService->getDailyPanchang(
-                date: $targetDate,
-                latitude: 28.6139,
-                longitude: 77.2090,
-                timezone: 'Asia/Kolkata',
-                elevation: 0.0
-            );
+            $payload = DailyPanchangCalculationHandler::normalizePayload([
+                'date' => $targetDate,
+                'latitude' => 28.6139,
+                'longitude' => 77.2090,
+                'timezone' => 'Asia/Kolkata',
+                'elevation' => 0.0,
+            ]);
+
+            $canonicalKey = $this->panchangHandler->computeCanonicalKey($payload);
+            $panchang = $this->panchangHandler->getCachedResult($canonicalKey, $payload);
+
+            if ($panchang === null) {
+                $panchang = $this->panchangHandler->calculate($payload);
+                $this->panchangHandler->storeResult($canonicalKey, $panchang, $payload);
+            }
 
             return [
                 'tithi' => $panchang['panchanga']['tithi']['name'] ?? 'Tithi',

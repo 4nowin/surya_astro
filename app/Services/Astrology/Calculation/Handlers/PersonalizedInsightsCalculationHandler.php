@@ -6,6 +6,8 @@ namespace App\Services\Astrology\Calculation\Handlers;
 
 use App\Models\UserAstrologyProfile;
 use App\Services\Astrology\Calculation\CalculationHandlerInterface;
+use App\Services\Astrology\Calculation\Drivers\CalculationDriverInterface;
+use App\Services\Astrology\Calculation\Drivers\RemoteHttpCalculationDriver;
 use App\Services\Astrology\Interpretation\PersonalizedDailyInterpretationService;
 use App\Services\Astrology\PersonalizedAstrologyService;
 use Illuminate\Support\Facades\Cache;
@@ -20,10 +22,19 @@ class PersonalizedInsightsCalculationHandler implements CalculationHandlerInterf
      * MUST NOT be instantiated in web SAPI processes where native FFI is restricted.
      */
     protected ?PersonalizedAstrologyService $astrologyService = null;
+    protected ?CalculationDriverInterface $driver = null;
 
-    public function __construct(?PersonalizedAstrologyService $astrologyService = null)
-    {
+    public function __construct(
+        ?PersonalizedAstrologyService $astrologyService = null,
+        ?CalculationDriverInterface $driver = null
+    ) {
         $this->astrologyService = $astrologyService;
+        $this->driver = $driver;
+    }
+
+    public function setDriver(CalculationDriverInterface $driver): void
+    {
+        $this->driver = $driver;
     }
 
     public function getCalculationType(): string
@@ -61,6 +72,12 @@ class PersonalizedInsightsCalculationHandler implements CalculationHandlerInterf
 
     public function calculate(array $payload): array
     {
+        $driver = $this->driver ?? (app()->bound(CalculationDriverInterface::class) ? app(CalculationDriverInterface::class) : null);
+
+        if ($driver !== null && (config('astrology.driver') === 'remote' || $this->driver instanceof RemoteHttpCalculationDriver)) {
+            return $driver->calculatePersonalizedInsights($payload);
+        }
+
         return $this->getService()->calculateFromPayload($payload);
     }
 

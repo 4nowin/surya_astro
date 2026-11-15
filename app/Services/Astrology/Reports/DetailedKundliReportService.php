@@ -216,10 +216,12 @@ class DetailedKundliReportService
         protected ?SvgVargaRenderer $svgRenderer = null,
         protected ?DetailedInterpretationService $interpretationService = null
     ) {
-        $this->kundliService ??= app(KundliService::class);
-        $this->stabilityService ??= app(AstrologyIntervalStabilityService::class);
+        if (config('astrology.driver') !== 'remote') {
+            $this->kundliService ??= app(KundliService::class);
+            $this->stabilityService ??= app(AstrologyIntervalStabilityService::class);
+            $this->transitService ??= app(SaturnTransitService::class);
+        }
         $this->yogaOrchestrator ??= app(YogaDoshaOrchestrator::class);
-        $this->transitService ??= app(SaturnTransitService::class);
         $this->svgRenderer ??= app(SvgVargaRenderer::class);
         $this->interpretationService ??= app(DetailedInterpretationService::class);
     }
@@ -418,8 +420,10 @@ class DetailedKundliReportService
             throw new RuntimeException('Missing date_of_birth in report calculation payload.');
         }
 
-        // 1. Core Kundli calculation
-        $kundli = $this->kundliService->calculateFromPayload([
+        $birthCarbon = CarbonImmutable::parse($birthDate, $timezone);
+        $userAgeYears = (int) $birthCarbon->diffInYears(CarbonImmutable::now($timezone));
+
+        $normalizedBirthPayload = [
             'date_of_birth' => $birthDate,
             'birth_time' => $birthTime,
             'birth_time_precision' => $precision,
@@ -429,24 +433,34 @@ class DetailedKundliReportService
             'timezone' => $timezone,
             'name' => $personName,
             'birth_city' => $birthCity,
-        ]);
+        ];
 
-        // 2. Interval stability analysis across birth uncertainty window
-        $stability = $this->stabilityService->analyze(
-            birthDate: $birthDate,
-            birthTime: $birthTime,
-            precision: $precision,
-            approximateWindow: $approximateWindow,
-            latitude: $latitude,
-            longitude: $longitude,
-            timezone: $timezone,
-            targetDate: CarbonImmutable::now($timezone)->toIso8601String(),
-            locale: $locale
-        );
+        if (config('astrology.driver') === 'remote') {
+            /** @var \App\Services\Astrology\Calculation\Handlers\KundliCalculationHandler $kundliHandler */
+            $kundliHandler = app(\App\Services\Astrology\Calculation\Handlers\KundliCalculationHandler::class);
+            $kundli = $kundliHandler->calculate($normalizedBirthPayload);
+            $stability = $kundli['stability'] ?? [];
+            $transitData = $kundli['saturn_transit_timeline'] ?? ($kundli['saturn_transit'] ?? []);
+        } else {
+            // 1. Core Kundli calculation
+            $kundli = $this->kundliService->calculateFromPayload($normalizedBirthPayload);
 
-        // Calculate user age in years
-        $birthCarbon = CarbonImmutable::parse($birthDate, $timezone);
-        $userAgeYears = (int) $birthCarbon->diffInYears(CarbonImmutable::now($timezone));
+            // 2. Interval stability analysis across birth uncertainty window
+            $stability = $this->stabilityService->analyze(
+                birthDate: $birthDate,
+                birthTime: $birthTime,
+                precision: $precision,
+                approximateWindow: $approximateWindow,
+                latitude: $latitude,
+                longitude: $longitude,
+                timezone: $timezone,
+                targetDate: CarbonImmutable::now($timezone)->toIso8601String(),
+                locale: $locale
+            );
+
+            // 4. Saturn transits (Sade Sati & Dhaiya)
+            $transitData = $this->resolveSaturnTransits($kundli, $stability, $birthCarbon);
+        }
 
         // 3. Yogas, aspects & Manglik Dosha
         $yogas = $this->yogaOrchestrator->evaluate(
@@ -455,9 +469,6 @@ class DetailedKundliReportService
             stabilityData: $stability,
             userAgeYears: $userAgeYears
         );
-
-        // 4. Saturn transits (Sade Sati & Dhaiya)
-        $transitData = $this->resolveSaturnTransits($kundli, $stability, $birthCarbon);
 
         // 5. Active verified astrologers for referral section
         $astrologers = $this->getReferralAstrologers($locale);

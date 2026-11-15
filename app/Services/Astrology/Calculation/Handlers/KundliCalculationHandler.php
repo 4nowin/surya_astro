@@ -226,6 +226,7 @@ class KundliCalculationHandler implements CalculationHandlerInterface
                         'planets' => $d9Planets,
                         'houses' => $d9Houses,
                     ];
+                    $kundli['stability'] = $stability;
                 }
 
                 // Saturn Transit Status
@@ -233,6 +234,28 @@ class KundliCalculationHandler implements CalculationHandlerInterface
                     $moonSignId = $kundli['planets']['moon']['rashi']['id'] ?? 1;
                     $saturnService = app(SaturnTransitService::class);
                     $kundli['saturn_transit'] = $saturnService->evaluateCurrentPhaseAt($moonSignId, now($timezone)->toDateString());
+                    try {
+                        $birthCarbon = CarbonImmutable::parse($birthDate, $timezone);
+                        $timeline = $saturnService->calculateTimeline(
+                            natalMoonRashi: $moonSignId - 1,
+                            startDate: $birthCarbon,
+                            endDate: $birthCarbon->addYears(15),
+                            options: [
+                                'reference_date' => CarbonImmutable::now('UTC'),
+                                'sample_step_days' => 7.0,
+                            ]
+                        );
+                        $timeline['is_stable'] = true;
+                        $kundli['saturn_transit_timeline'] = $timeline;
+                    } catch (\Throwable $e) {
+                        $fallback = $saturnService->evaluateCurrentPhaseAt($moonSignId);
+                        $kundli['saturn_transit_timeline'] = [
+                            'status' => 'fallback',
+                            'is_stable' => true,
+                            'qualitative_fallback' => $fallback,
+                            'reason' => 'Current phase summary provided.',
+                        ];
+                    }
                 }
             }
         } catch (Throwable $e) {

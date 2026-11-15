@@ -39,6 +39,14 @@ interface CalculationDriverInterface
     public function calculateKundliComplete(array $payload): array;
 
     /**
+     * Compute Personalized Astrology Insights and transit geometry.
+     *
+     * @param array<string, mixed> $payload
+     * @return array<string, mixed>
+     */
+    public function calculatePersonalizedInsights(array $payload): array;
+
+    /**
      * Check whether the calculation driver/backend is healthy.
      */
     public function isHealthy(): bool;

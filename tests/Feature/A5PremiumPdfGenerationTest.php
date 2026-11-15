@@ -39,6 +39,7 @@ class A5PremiumPdfGenerationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        config(['astrology.driver' => 'local']);
         $this->reportService = app(DetailedKundliReportService::class);
         $this->pdfService = app(PremiumKundliPdfService::class);
         $this->handler = app(DetailedKundliReportCalculationHandler::class);

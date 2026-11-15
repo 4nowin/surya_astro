@@ -8,6 +8,7 @@ use App\Models\UserAstrologyProfile;
 use App\Services\Astrology\DailyPanchangService;
 use App\Services\Astrology\KundliService;
 use App\Services\Astrology\NativeEphemerisResolver;
+use App\Services\Astrology\PersonalizedAstrologyService;
 use App\Services\Astrology\Stability\AstrologyIntervalStabilityService;
 use App\Services\Astrology\Transits\SaturnTransitService;
 use App\Services\Astrology\Yogas\ManglikDoshaService;
@@ -53,6 +54,11 @@ class LocalCalculationDriver implements CalculationDriverInterface
     protected function getDailyPanchangService(): DailyPanchangService
     {
         return $this->dailyPanchangService ??= app(DailyPanchangService::class);
+    }
+
+    protected function getPersonalizedAstrologyService(): PersonalizedAstrologyService
+    {
+        return app(PersonalizedAstrologyService::class);
     }
 
     public function calculatePlanetaryPositions(float $jd): array
@@ -197,6 +203,11 @@ class LocalCalculationDriver implements CalculationDriverInterface
         }
 
         return $kundli;
+    }
+
+    public function calculatePersonalizedInsights(array $payload): array
+    {
+        return $this->getPersonalizedAstrologyService()->calculateFromPayload($payload);
     }
 
     public function isHealthy(): bool

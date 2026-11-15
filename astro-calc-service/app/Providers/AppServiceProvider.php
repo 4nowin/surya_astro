@@ -8,6 +8,7 @@ use App\Services\Astrology\Calculation\Handlers\DailyPanchangCalculationHandler;
 use App\Services\Astrology\Calculation\Handlers\KundliCalculationHandler;
 use App\Services\Astrology\DailyPanchangService;
 use App\Services\Astrology\KundliService;
+use App\Services\Astrology\PersonalizedAstrologyService;
 use App\Services\Astrology\Stability\AstrologyIntervalStabilityService;
 use App\Services\Astrology\Transits\SaturnTransitService;
 use Illuminate\Support\ServiceProvider;
@@ -41,6 +42,10 @@ class AppServiceProvider extends ServiceProvider
 
         $this->app->singleton(KundliCalculationHandler::class, function () {
             return new KundliCalculationHandler();
+        });
+
+        $this->app->singleton(PersonalizedAstrologyService::class, function () {
+            return new PersonalizedAstrologyService();
         });
     }
 
