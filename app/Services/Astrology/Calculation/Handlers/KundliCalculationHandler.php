@@ -7,6 +7,8 @@ namespace App\Services\Astrology\Calculation\Handlers;
 use App\Models\AstrologyCalculationJob;
 use App\Models\UserAstrologyProfile;
 use App\Services\Astrology\Calculation\CalculationHandlerInterface;
+use App\Services\Astrology\Calculation\Drivers\CalculationDriverInterface;
+use App\Services\Astrology\Calculation\Drivers\RemoteHttpCalculationDriver;
 use App\Services\Astrology\KundliService;
 use App\Services\Astrology\Stability\AstrologyIntervalStabilityService;
 use App\Services\Astrology\Transits\SaturnTransitService;
@@ -26,15 +28,24 @@ class KundliCalculationHandler implements CalculationHandlerInterface
      * MUST NOT be instantiated in web SAPI processes where native FFI is restricted.
      */
     protected ?KundliService $kundliService = null;
+    protected ?CalculationDriverInterface $driver = null;
 
-    public function __construct(?KundliService $kundliService = null)
-    {
+    public function __construct(
+        ?KundliService $kundliService = null,
+        ?CalculationDriverInterface $driver = null
+    ) {
         $this->kundliService = $kundliService;
+        $this->driver = $driver;
     }
 
     public function setKundliService(KundliService $kundliService): void
     {
         $this->kundliService = $kundliService;
+    }
+
+    public function setDriver(CalculationDriverInterface $driver): void
+    {
+        $this->driver = $driver;
     }
 
     public function getCalculationType(): string
@@ -132,6 +143,12 @@ class KundliCalculationHandler implements CalculationHandlerInterface
     public function calculate(array $payload): array
     {
         $normalized = self::normalizePayload($payload);
+
+        $driver = $this->driver ?? (app()->bound(CalculationDriverInterface::class) ? app(CalculationDriverInterface::class) : null);
+
+        if ($driver !== null && (config('astrology.driver') === 'remote' || $this->driver instanceof RemoteHttpCalculationDriver)) {
+            return $driver->calculateKundliComplete($normalized);
+        }
 
         $birthDate = $normalized['date_of_birth'];
         $birthTime = $normalized['birth_time'];

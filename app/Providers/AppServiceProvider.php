@@ -5,6 +5,9 @@ namespace App\Providers;
 use App\Services\Astrology\Calculation\CalculationHandlerRegistry;
 use App\Services\Astrology\Calculation\CalculationJobManager;
 use App\Services\Astrology\Calculation\CalculationWorkerLauncher;
+use App\Services\Astrology\Calculation\Drivers\CalculationDriverInterface;
+use App\Services\Astrology\Calculation\Drivers\LocalCalculationDriver;
+use App\Services\Astrology\Calculation\Drivers\RemoteHttpCalculationDriver;
 use App\Services\Astrology\Calculation\Handlers\DailyPanchangCalculationHandler;
 use App\Services\Astrology\Calculation\Handlers\DetailedKundliReportCalculationHandler;
 use App\Services\Astrology\Calculation\Handlers\KundliCalculationHandler;
@@ -80,16 +83,37 @@ class AppServiceProvider extends ServiceProvider
             return new AstrologyIntervalStabilityService();
         });
 
-        $this->app->singleton(DailyPanchangCalculationHandler::class, function () {
-            return new DailyPanchangCalculationHandler();
+        $this->app->singleton(CalculationDriverInterface::class, function ($app) {
+            $driver = config('astrology.driver', 'local');
+            if ($driver === 'remote') {
+                $remoteConfig = config('astrology.remote', []);
+                $localDriver = !empty($remoteConfig['fallback_to_local'])
+                    ? new LocalCalculationDriver()
+                    : null;
+
+                return new RemoteHttpCalculationDriver(
+                    baseUrl: (string) ($remoteConfig['url'] ?? $remoteConfig['base_url'] ?? 'http://127.0.0.1:8080'),
+                    secret: (string) ($remoteConfig['secret'] ?? ''),
+                    connectTimeout: (float) ($remoteConfig['connect_timeout'] ?? 3.0),
+                    timeout: (float) ($remoteConfig['timeout'] ?? 10.0),
+                    fallbackToLocal: (bool) (!empty($remoteConfig['fallback_to_local'])),
+                    localDriver: $localDriver
+                );
+            }
+
+            return new LocalCalculationDriver();
+        });
+
+        $this->app->singleton(DailyPanchangCalculationHandler::class, function ($app) {
+            return new DailyPanchangCalculationHandler(null, $app->make(CalculationDriverInterface::class));
         });
 
         $this->app->singleton(PersonalizedInsightsCalculationHandler::class, function () {
             return new PersonalizedInsightsCalculationHandler();
         });
 
-        $this->app->singleton(KundliCalculationHandler::class, function () {
-            return new KundliCalculationHandler();
+        $this->app->singleton(KundliCalculationHandler::class, function ($app) {
+            return new KundliCalculationHandler(null, $app->make(CalculationDriverInterface::class));
         });
 
         $this->app->singleton(DetailedKundliReportCalculationHandler::class, function () {

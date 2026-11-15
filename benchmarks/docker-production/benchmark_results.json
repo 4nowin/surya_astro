@@ -1,0 +1,308 @@
+{
+    "timestamp": "2026-11-15T13:24:09+00:00",
+    "environment": {
+        "os": "Debian GNU\/Linux 12 (bookworm)",
+        "arch": "x86_64",
+        "php_version": "8.4.27",
+        "ffi": true,
+        "opcache_cli": true,
+        "cpu_quota": "1.00 vCPUs (100000 \/ 100000)",
+        "memory_limit": "512.00 MB (536870912 bytes)",
+        "swap_limit": "512.00 MB (536870912 bytes)",
+        "native_lib": "\/app\/packages\/astrology\/jpl-moshier-ephemeris-php\/libs\/jme-linux-x64-glibc228\/libjme.so"
+    },
+    "accuracy": {
+        "total_tests": 6,
+        "passed_tests": 6,
+        "pass_rate_pct": 100,
+        "details": [
+            {
+                "test": "Julian Day J2000.0 UT",
+                "expected": 2451545,
+                "measured": 2451545,
+                "diff": 0,
+                "pass": true
+            },
+            {
+                "test": "True Citra Ayanamsha at J2000.0",
+                "expected": 23.841358,
+                "measured": 23.841357829111814,
+                "diff": 1.7088818538013584e-7,
+                "pass": true
+            },
+            {
+                "test": "Tropical Sun Longitude at J2000.0",
+                "expected": 280.3705,
+                "measured": 280.3705,
+                "diff": 1.5214558231946285e-5,
+                "pass": true
+            },
+            {
+                "test": "Panchanga Core 5 Limbs (2026-11-01)",
+                "expected": "Sunday, Valid Tithi\/Nakshatra\/Sunrise",
+                "measured": "Sunday, Tithi=Seventh Lunar Day of Dark Half, Nakshatra=Pushya",
+                "pass": true
+            },
+            {
+                "test": "Kundli Ascendant & 12 Houses (Delhi)",
+                "expected": "Lagna degrees & 12 Houses populated",
+                "measured": "Lagna=Virgo (1.9202\u00b0), Houses=12",
+                "pass": true
+            },
+            {
+                "test": "Vimshottari Dasha Cycle",
+                "expected": "Complete Mahadasha sequence",
+                "measured": "Mahadashas=9",
+                "pass": true
+            }
+        ]
+    },
+    "workloads": {
+        "A_Planetary_Positions": {
+            "wall_time_ms": {
+                "min": 16.09,
+                "max": 22.5,
+                "mean": 17.6,
+                "median": 16.97,
+                "p95": 20.44,
+                "stddev": 1.62
+            },
+            "cpu_time_ms": {
+                "min": 16.11,
+                "max": 22.51,
+                "mean": 17.61,
+                "median": 16.98,
+                "p95": 20.45,
+                "stddev": 1.62
+            },
+            "json_time_ms": {
+                "min": 0.03,
+                "max": 0.05,
+                "mean": 0.03,
+                "median": 0.03,
+                "p95": 0.05,
+                "stddev": 0
+            },
+            "peak_php_mem_mb": {
+                "avg": 12,
+                "max": 12
+            },
+            "process_rss_mb": {
+                "avg": 67.25,
+                "max": 67.25
+            },
+            "payload_size_kb": 0.66
+        },
+        "B_Daily_Panchang": {
+            "wall_time_ms": {
+                "min": 128.35,
+                "max": 168.16,
+                "mean": 138.04,
+                "median": 135.41,
+                "p95": 151.74,
+                "stddev": 8.16
+            },
+            "cpu_time_ms": {
+                "min": 46.96,
+                "max": 59.01,
+                "mean": 50.67,
+                "median": 49.9,
+                "p95": 55.45,
+                "stddev": 3.18
+            },
+            "json_time_ms": {
+                "min": 0.03,
+                "max": 0.06,
+                "mean": 0.04,
+                "median": 0.04,
+                "p95": 0.06,
+                "stddev": 0.01
+            },
+            "peak_php_mem_mb": {
+                "avg": 12,
+                "max": 12
+            },
+            "process_rss_mb": {
+                "avg": 68.18,
+                "max": 68.18
+            },
+            "payload_size_kb": 2.78
+        },
+        "C_Core_Kundli_Dasha": {
+            "wall_time_ms": {
+                "min": 13.67,
+                "max": 17.05,
+                "mean": 15.12,
+                "median": 14.94,
+                "p95": 16.93,
+                "stddev": 1.05
+            },
+            "cpu_time_ms": {
+                "min": 13.69,
+                "max": 17.07,
+                "mean": 15.13,
+                "median": 14.97,
+                "p95": 16.94,
+                "stddev": 1.06
+            },
+            "json_time_ms": {
+                "min": 0.32,
+                "max": 0.62,
+                "mean": 0.36,
+                "median": 0.34,
+                "p95": 0.5,
+                "stddev": 0.06
+            },
+            "peak_php_mem_mb": {
+                "avg": 12,
+                "max": 12
+            },
+            "process_rss_mb": {
+                "avg": 68.18,
+                "max": 68.18
+            },
+            "payload_size_kb": 74.1
+        },
+        "D_Complete_Kundli_Stability": {
+            "wall_time_ms": {
+                "min": 561.27,
+                "max": 635.28,
+                "mean": 582.83,
+                "median": 576.48,
+                "p95": 617.63,
+                "stddev": 17.3
+            },
+            "cpu_time_ms": {
+                "min": 561.25,
+                "max": 635.14,
+                "mean": 582.75,
+                "median": 576.44,
+                "p95": 617.58,
+                "stddev": 17.29
+            },
+            "json_time_ms": {
+                "min": 0.38,
+                "max": 3.02,
+                "mean": 0.54,
+                "median": 0.43,
+                "p95": 0.86,
+                "stddev": 0.48
+            },
+            "peak_php_mem_mb": {
+                "avg": 12,
+                "max": 12
+            },
+            "process_rss_mb": {
+                "avg": 68.22,
+                "max": 68.22
+            },
+            "payload_size_kb": 78.11
+        }
+    },
+    "profiling": {
+        "total_native_calls_per_complete_kundli": 411,
+        "core_kundli_calls": 11,
+        "stability_service_calls": 400,
+        "moon_sample_calls": 76,
+        "outer_planet_calls_each": 36,
+        "redundant_duplicate_calls": 211,
+        "redundancy_ratio_pct": 51.3
+    },
+    "memory_leak_check": {
+        "panchang_runs": {
+            "1": {
+                "php_alloc_mb": 12,
+                "php_peak_mb": 12,
+                "rss_mb": 68.22
+            },
+            "5": {
+                "php_alloc_mb": 12,
+                "php_peak_mb": 12,
+                "rss_mb": 68.22
+            },
+            "10": {
+                "php_alloc_mb": 12,
+                "php_peak_mb": 12,
+                "rss_mb": 68.22
+            },
+            "20": {
+                "php_alloc_mb": 12,
+                "php_peak_mb": 12,
+                "rss_mb": 68.22
+            },
+            "30": {
+                "php_alloc_mb": 12,
+                "php_peak_mb": 12,
+                "rss_mb": 68.22
+            }
+        },
+        "kundli_runs": {
+            "1": {
+                "php_alloc_mb": 12,
+                "php_peak_mb": 12,
+                "rss_mb": 68.22
+            },
+            "5": {
+                "php_alloc_mb": 12,
+                "php_peak_mb": 12,
+                "rss_mb": 68.22
+            },
+            "10": {
+                "php_alloc_mb": 12,
+                "php_peak_mb": 12,
+                "rss_mb": 68.22
+            },
+            "20": {
+                "php_alloc_mb": 12,
+                "php_peak_mb": 12,
+                "rss_mb": 68.22
+            },
+            "30": {
+                "php_alloc_mb": 12,
+                "php_peak_mb": 12,
+                "rss_mb": 68.22
+            }
+        },
+        "panchang_growth_mb": 0,
+        "kundli_growth_mb": 0,
+        "status": "stable_plateau"
+    },
+    "concurrency": {
+        "worker_1": {
+            "total_time_ms": 313.97,
+            "throughput_rps": 63.7,
+            "stats_ms": {
+                "min": 14,
+                "max": 21.53,
+                "mean": 15.7,
+                "median": 14.93,
+                "p95": 19.61,
+                "stddev": 2.01
+            },
+            "peak_rss_mb": 68.22
+        },
+        "worker_2": {
+            "total_time_ms": 349.79,
+            "throughput_rps": 57.18,
+            "stats_ms": {
+                "min": 14.44,
+                "max": 70.25,
+                "mean": 33.75,
+                "median": 19.68,
+                "p95": 66.84,
+                "stddev": 23
+            },
+            "peak_rss_mb": 68.22,
+            "total_workers_rss_mb": 136.44,
+            "scaling_factor": 0.9
+        }
+    },
+    "disk_footprint_mb": {
+        "docker_image": 187,
+        "app_code": 14.5,
+        "vendor": 88.2,
+        "native_lib": 0.42,
+        "total_mb": 290.12,
+        "disk_utilization_pct_of_10gb": 2.83
+    }
+}

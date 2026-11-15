@@ -7,6 +7,8 @@ namespace App\Services\Astrology\Calculation\Handlers;
 use App\Models\AstrologyCalculationJob;
 use App\Models\DailyPanchangCache;
 use App\Services\Astrology\Calculation\CalculationHandlerInterface;
+use App\Services\Astrology\Calculation\Drivers\CalculationDriverInterface;
+use App\Services\Astrology\Calculation\Drivers\RemoteHttpCalculationDriver;
 use App\Services\Astrology\CanonicalPanchangCacheKey;
 use App\Services\Astrology\DailyPanchangService;
 use Illuminate\Support\Facades\Cache;
@@ -23,15 +25,24 @@ class DailyPanchangCalculationHandler implements CalculationHandlerInterface
      * MUST NOT be instantiated in web SAPI processes where native FFI is restricted.
      */
     protected ?DailyPanchangService $panchangService = null;
+    protected ?CalculationDriverInterface $driver = null;
 
-    public function __construct(?DailyPanchangService $panchangService = null)
-    {
+    public function __construct(
+        ?DailyPanchangService $panchangService = null,
+        ?CalculationDriverInterface $driver = null
+    ) {
         $this->panchangService = $panchangService;
+        $this->driver = $driver;
     }
 
     public function setPanchangService(DailyPanchangService $panchangService): void
     {
         $this->panchangService = $panchangService;
+    }
+
+    public function setDriver(CalculationDriverInterface $driver): void
+    {
+        $this->driver = $driver;
     }
 
     public function getCalculationType(): string
@@ -95,6 +106,11 @@ class DailyPanchangCalculationHandler implements CalculationHandlerInterface
     public function calculate(array $payload): array
     {
         $normalized = self::normalizePayload($payload);
+        $driver = $this->driver ?? (app()->bound(CalculationDriverInterface::class) ? app(CalculationDriverInterface::class) : null);
+
+        if ($driver !== null && (config('astrology.driver') === 'remote' || $this->driver instanceof RemoteHttpCalculationDriver)) {
+            return $driver->calculateDailyPanchang($normalized);
+        }
 
         return $this->getService()->getDailyPanchang(
             date: $normalized['date'],

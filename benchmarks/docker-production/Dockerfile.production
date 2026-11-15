@@ -1,0 +1,50 @@
+FROM php:8.4-cli-bookworm
+
+LABEL maintainer="Astro Setu Engineering Team"
+LABEL description="Debian 12 Bookworm PHP 8.4 CLI Dedicated Astrology Calculation Service"
+
+# Install runtime dependencies for FFI and process inspection
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libffi-dev \
+    procps \
+    && docker-php-ext-install ffi pcntl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Production PHP configuration enforcing heap limit under 256MB container ceiling
+RUN { \
+        echo 'memory_limit = 192M'; \
+        echo 'ffi.enable = 1'; \
+        echo 'opcache.enable_cli = 1'; \
+        echo 'opcache.memory_consumption = 64'; \
+        echo 'opcache.interned_strings_buffer = 16'; \
+        echo 'opcache.max_accelerated_files = 10000'; \
+        echo 'opcache.validate_timestamps = 0'; \
+    } > /usr/local/etc/php/conf.d/astrology-service.ini
+
+WORKDIR /app
+
+# Create non-root service user
+RUN groupadd -g 1000 astro && useradd -u 1000 -g astro -m astro
+
+# Copy required application directories and native dependencies
+COPY --chown=astro:astro packages/ /app/packages/
+COPY --chown=astro:astro app/ /app/app/
+COPY --chown=astro:astro bootstrap/ /app/bootstrap/
+COPY --chown=astro:astro config/ /app/config/
+COPY --chown=astro:astro routes/ /app/routes/
+COPY --chown=astro:astro vendor/ /app/vendor/
+COPY --chown=astro:astro composer.json /app/
+COPY --chown=astro:astro benchmarks/docker-production/http_server.php /app/server.php
+
+# Create runtime storage directories
+RUN mkdir -p /app/storage/framework/cache /app/storage/framework/sessions /app/storage/framework/views /app/storage/logs \
+    && chown -R astro:astro /app/storage
+
+USER astro
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD php -r "file_get_contents('http://127.0.0.1:8080/health') ? exit(0) : exit(1);"
+
+ENTRYPOINT ["php", "/app/server.php"]

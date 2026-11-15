@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  astro-calc-service:
+    build:
+      context: ../..
+      dockerfile: benchmarks/docker-production/Dockerfile
+    image: astro-calc-benchmark:debian-php84
+    container_name: astro-calc-service-debian
+    ports:
+      - "8080:8080"
+    volumes:
+      - ../..:/app
+    environment:
+      - APP_ENV=production
+      - DB_CONNECTION=sqlite
+      - DB_DATABASE=:memory:
+      - CACHE_STORE=array
+      - SESSION_DRIVER=array
+      - QUEUE_CONNECTION=sync
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 256M
+          memory_swap: 512M
+    command: ["-S", "0.0.0.0:8080", "/app/benchmarks/docker-production/http_server.php"]

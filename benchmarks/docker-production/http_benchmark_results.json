@@ -1,0 +1,70 @@
+{
+    "timestamp": "2026-11-15T13:48:01+00:00",
+    "container_limit_mb": 256,
+    "container_peak_mb": 51.38,
+    "container_current_mb": 50.69,
+    "process_vmrss_mb": 68.45,
+    "php_peak_mb": 12,
+    "oom_kills": 0,
+    "safety_headroom_mb": 204.62,
+    "safety_headroom_pct": 79.93,
+    "requests_handled": 104,
+    "workloads": {
+        "Workload_A_Planetary_Positions": {
+            "requests": 20,
+            "success": 20,
+            "latency_ms": {
+                "min": 20.03,
+                "max": 46.43,
+                "mean": 21.91,
+                "median": 20.64,
+                "p95": 21.38
+            },
+            "container_mem_current_mb": 40.89,
+            "container_mem_peak_mb": 41.01,
+            "process_vmrss_mb": 58.28
+        },
+        "Workload_B_Daily_Panchang": {
+            "requests": 20,
+            "success": 20,
+            "latency_ms": {
+                "min": 107.89,
+                "max": 132.57,
+                "mean": 122.19,
+                "median": 123.63,
+                "p95": 132.48
+            },
+            "container_mem_current_mb": 51.23,
+            "container_mem_peak_mb": 51.38,
+            "process_vmrss_mb": 68.3
+        },
+        "Workload_C_Core_Kundli_Dasha": {
+            "requests": 20,
+            "success": 20,
+            "latency_ms": {
+                "min": 18.45,
+                "max": 41.3,
+                "mean": 22.81,
+                "median": 19.44,
+                "p95": 38.42
+            },
+            "container_mem_current_mb": 50.58,
+            "container_mem_peak_mb": 50.77,
+            "process_vmrss_mb": 68.41
+        },
+        "Workload_D_Complete_Kundli_Stability": {
+            "requests": 20,
+            "success": 20,
+            "latency_ms": {
+                "min": 517.71,
+                "max": 608.56,
+                "mean": 529.91,
+                "median": 524.01,
+                "p95": 545.49
+            },
+            "container_mem_current_mb": 50.62,
+            "container_mem_peak_mb": 50.71,
+            "process_vmrss_mb": 68.45
+        }
+    }
+}

@@ -1,0 +1,100 @@
+================================================================================
+   ASTRO SETU — DOCKER PRODUCTION BENCHMARK CONSOLIDATED RUNNER (DEBIAN 12)     
+================================================================================
+
+>>> SECTION 1: ENVIRONMENT & RESOURCE CONSTRAINTS
+OS:                    Debian GNU/Linux 12 (bookworm) [MEASURED]
+Architecture:          x86_64 [MEASURED]
+PHP Version:           8.4.27 (CLI) [MEASURED]
+FFI Extension:         Active [MEASURED]
+OPcache CLI:           Active (enable_cli=1) [MEASURED]
+Cgroup CPU Quota:      1.00 vCPUs (100000 / 100000) [MEASURED]
+Cgroup Memory Max:     512.00 MB (536870912 bytes) [MEASURED]
+Cgroup Swap Max:       512.00 MB (536870912 bytes) [MEASURED]
+Active Native Library: /app/packages/astrology/jpl-moshier-ephemeris-php/libs/jme-linux-x64-glibc228/libjme.so [MEASURED]
+Initial Process VmRSS: 55.09 MB [MEASURED]
+
+>>> SECTION 2: ASTRONOMICAL ACCURACY VERIFICATION
+  [1] Julian Day J2000.0 UT: PASS (Measured: 2451545)
+  [2] True Citra Ayanamsha at J2000.0: PASS (Measured: 23.841357829112)
+  [3] Tropical Sun Longitude at J2000.0: PASS (Measured: 280.3705)
+  [4] Panchanga Core 5 Limbs (2026-11-01): PASS (Measured: Sunday, Tithi=Seventh Lunar Day of Dark Half, Nakshatra=Pushya)
+  [5] Kundli Ascendant & 12 Houses (Delhi): PASS (Measured: Lagna=Virgo (1.9202°), Houses=12)
+  [6] Vimshottari Dasha Cycle: PASS (Measured: Mahadashas=9)
+Accuracy Result: 6 / 6 Tests Passed (100% Core Verification) [MEASURED]
+
+>>> SECTION 3: SEQUENTIAL WORKLOAD PERFORMANCE (30 MEASURED RUNS)
+--- Benchmarking Workload: A_Planetary_Positions ---
+  Wall Time (ms):  Mean=17.6 | Median=16.97 | P95=20.44 | Min=16.09 | Max=22.5 [MEASURED]
+  CPU Time (ms):   Mean=17.61 | P95=20.45 [MEASURED]
+  JSON Serial(ms): Mean=0.03 | Payload=0.66 KB [MEASURED]
+  Memory (MB):     Peak PHP=12 MB (Max 12 MB) | RSS=67.25 MB (Max 67.25 MB) [MEASURED]
+
+--- Benchmarking Workload: B_Daily_Panchang ---
+  Wall Time (ms):  Mean=138.04 | Median=135.41 | P95=151.74 | Min=128.35 | Max=168.16 [MEASURED]
+  CPU Time (ms):   Mean=50.67 | P95=55.45 [MEASURED]
+  JSON Serial(ms): Mean=0.04 | Payload=2.78 KB [MEASURED]
+  Memory (MB):     Peak PHP=12 MB (Max 12 MB) | RSS=68.18 MB (Max 68.18 MB) [MEASURED]
+
+--- Benchmarking Workload: C_Core_Kundli_Dasha ---
+  Wall Time (ms):  Mean=15.12 | Median=14.94 | P95=16.93 | Min=13.67 | Max=17.05 [MEASURED]
+  CPU Time (ms):   Mean=15.13 | P95=16.94 [MEASURED]
+  JSON Serial(ms): Mean=0.36 | Payload=74.1 KB [MEASURED]
+  Memory (MB):     Peak PHP=12 MB (Max 12 MB) | RSS=68.18 MB (Max 68.18 MB) [MEASURED]
+
+--- Benchmarking Workload: D_Complete_Kundli_Stability ---
+  Wall Time (ms):  Mean=582.83 | Median=576.48 | P95=617.63 | Min=561.27 | Max=635.28 [MEASURED]
+  CPU Time (ms):   Mean=582.75 | P95=617.58 [MEASURED]
+  JSON Serial(ms): Mean=0.54 | Payload=78.11 KB [MEASURED]
+  Memory (MB):     Peak PHP=12 MB (Max 12 MB) | RSS=68.22 MB (Max 68.22 MB) [MEASURED]
+
+>>> SECTION 4: PLANETARY STABILITY & NAVAMSHA FFI PROFILING
+Total jme_calc_ut calls per Complete Kundli:  411 calls [MEASURED]
+  - Core Kundli (9 bodies + Ayanamsha + MC):  11 calls (2.7%) [MEASURED]
+  - Navamsha Stability Service:               400 calls (97.3%) [MEASURED]
+  - Redundant Angle/Velocity Duplicate Calls: 211 calls (51.3% redundancy) [MEASURED]
+  - Potential Post-Deduplication Call Count:  200 calls (48.7% reduction potential) [ESTIMATED]
+
+>>> SECTION 5: REPEATED RUNS & MEMORY LEAK VERIFICATION
+Testing 30 Sequential Panchang Calculations:
+  Run #1: PHP Alloc=12 MB, Peak=12 MB, VmRSS=68.22 MB [MEASURED]
+  Run #5: PHP Alloc=12 MB, Peak=12 MB, VmRSS=68.22 MB [MEASURED]
+  Run #10: PHP Alloc=12 MB, Peak=12 MB, VmRSS=68.22 MB [MEASURED]
+  Run #20: PHP Alloc=12 MB, Peak=12 MB, VmRSS=68.22 MB [MEASURED]
+  Run #30: PHP Alloc=12 MB, Peak=12 MB, VmRSS=68.22 MB [MEASURED]
+Testing 30 Sequential Complete Kundli Calculations:
+  Run #1: PHP Alloc=12 MB, Peak=12 MB, VmRSS=68.22 MB [MEASURED]
+  Run #5: PHP Alloc=12 MB, Peak=12 MB, VmRSS=68.22 MB [MEASURED]
+  Run #10: PHP Alloc=12 MB, Peak=12 MB, VmRSS=68.22 MB [MEASURED]
+  Run #20: PHP Alloc=12 MB, Peak=12 MB, VmRSS=68.22 MB [MEASURED]
+  Run #30: PHP Alloc=12 MB, Peak=12 MB, VmRSS=68.22 MB [MEASURED]
+Memory Growth Run 5 -> Run 30:
+  - Panchang VmRSS Growth: 0 MB (Stable Plateau) [MEASURED]
+  - Kundli VmRSS Growth:   0 MB (Stable Plateau) [MEASURED]
+Memory Leak Status: ZERO UNCONTROLLED LEAKS DETECTED [MEASURED]
+
+>>> SECTION 6: CONTROLLED CONCURRENCY BENCHMARK (1.0 vCPU, 512 MB LIMIT)
+--- Testing Concurrency = 1 Worker (20 Requests) ---
+  1 Worker Elapsed:    313.97 ms [MEASURED]
+  1 Worker Throughput: 63.7 req/sec [MEASURED]
+  1 Worker Avg Lat:    15.7 ms (P95: 19.61 ms) [MEASURED]
+  1 Worker Peak VmRSS: 68.22 MB [MEASURED]
+
+--- Testing Concurrency = 2 Concurrent Workers (20 Requests Total) ---
+  2 Workers Elapsed:    349.79 ms [MEASURED]
+  2 Workers Throughput: 57.18 req/sec [MEASURED]
+  2 Workers Avg Lat:    33.75 ms (P95: 66.84 ms) [MEASURED]
+  2 Workers RSS:        68.22 MB per worker (Total ~136.44 MB) [MEASURED]
+  Speedup / Scaling:    0.9x throughput [MEASURED]
+
+>>> SECTION 7: DISK FOOTPRINT ANALYSIS
+Base PHP 8.4 Debian Image:   ~187 MB [MEASURED]
+Application Source Code:     ~14.5 MB [MEASURED]
+Composer Vendor Dir:         ~88.2 MB [MEASURED]
+Native Library (libjme.so):  431 KB (0.42 MB) [MEASURED]
+Total Production Disk:       ~290 MB (< 3% of 10 GB SSD) [MEASURED]
+
+Consolidated benchmark results saved to /app/benchmarks/docker-production/benchmark_results.json [MEASURED]
+================================================================================
+   BENCHMARK COMPLETED SUCCESSFULLY IN CONSTRAINED DEBIAN DOCKER CONTAINER      
+================================================================================
