@@ -4,25 +4,25 @@ declare(strict_types=1);
 
 namespace App\Services\Chat;
 
-use Ably\AblyRest;
 use App\Models\Chat;
 use App\Models\ChatBroadcastOutbox;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
 class ChatBroadcaster
 {
-    protected ?AblyRest $ablyClient;
+    protected mixed $ablyClient;
 
-    public function __construct(?AblyRest $client = null)
+    public function __construct(mixed $client = null)
     {
         $this->ablyClient = $client;
     }
 
     /**
-     * Resolve the Ably REST client instance.
+     * Resolve the Ably REST client instance if available.
      */
-    protected function getAblyClient(): ?AblyRest
+    protected function getAblyClient(): mixed
     {
         if ($this->ablyClient !== null) {
             return $this->ablyClient;
@@ -37,16 +37,20 @@ class ChatBroadcaster
             return null;
         }
 
-        try {
-            $this->ablyClient = new AblyRest([
-                'key' => $apiKey,
-                'httpRequestTimeout' => 2500, // 2.5 seconds timeout
-            ]);
-            return $this->ablyClient;
-        } catch (Throwable $e) {
-            Log::error('Could not initialize AblyRest: ' . $e->getMessage());
-            return null;
+        if (class_exists(\Ably\AblyRest::class)) {
+            try {
+                $this->ablyClient = new \Ably\AblyRest([
+                    'key' => $apiKey,
+                    'httpRequestTimeout' => 2500, // 2.5 seconds timeout
+                ]);
+                return $this->ablyClient;
+            } catch (Throwable $e) {
+                Log::error('Could not initialize AblyRest: ' . $e->getMessage());
+                return null;
+            }
         }
+
+        return null;
     }
 
     /**
@@ -103,9 +107,12 @@ class ChatBroadcaster
         $payload = $this->formatPayload($chat);
         $channelName = 'chat:session:' . $chat->chat_session_id;
 
-        $client = $this->getAblyClient();
-        if ($client === null) {
-            Log::warning("[ABLY-DIAG-LARAVEL] Publish skipped: Ably client is null", [
+        $apiKey = config('broadcasting.connections.ably.key') 
+            ?: config('services.ably.key') 
+            ?: env('ABLY_KEY');
+
+        if (empty($apiKey) || !str_contains($apiKey, ':')) {
+            Log::warning("[ABLY-DIAG-LARAVEL] Publish skipped: ABLY_KEY is missing or invalid", [
                 'session_id' => (int) $chat->chat_session_id,
                 'chat_id' => (int) $chat->id,
                 'channel' => $channelName,
@@ -125,15 +132,45 @@ class ChatBroadcaster
                 'sender' => $chat->sender,
             ]);
 
-            $channel = $client->channels->get($channelName);
-            $res = $channel->publish('message.created', $payload);
+            $published = false;
+
+            if ($this->ablyClient !== null && isset($this->ablyClient->channels)) {
+                $channel = $this->ablyClient->channels->get($channelName);
+                $res = $channel->publish('message.created', $payload);
+                $published = true;
+            } elseif (class_exists(\Ably\AblyRest::class)) {
+                try {
+                    $client = $this->getAblyClient();
+                    if ($client !== null && isset($client->channels)) {
+                        $channel = $client->channels->get($channelName);
+                        $res = $channel->publish('message.created', $payload);
+                        $published = true;
+                    }
+                } catch (\Throwable $sdkError) {
+                    Log::warning("[ABLY-DIAG-LARAVEL] Ably SDK publish fallback: " . $sdkError->getMessage());
+                }
+            }
+
+            if (!$published) {
+                // Direct Ably REST API publish via HTTP
+                [$keyName, $keySecret] = explode(':', $apiKey, 2);
+                $response = Http::withBasicAuth($keyName, $keySecret)
+                    ->timeout(3)
+                    ->post("https://rest.ably.io/channels/{$channelName}/messages", [
+                        'name' => 'message.created',
+                        'data' => $payload,
+                    ]);
+
+                if (!$response->successful()) {
+                    throw new \RuntimeException('Ably HTTP publish returned status ' . $response->status() . ': ' . $response->body());
+                }
+            }
 
             Log::info("[ABLY-DIAG-LARAVEL] Publish SUCCESS", [
                 'session_id' => (int) $chat->chat_session_id,
                 'chat_id' => (int) $chat->id,
                 'channel' => $channelName,
                 'event' => 'message.created',
-                'result' => $res,
             ]);
 
             return true;

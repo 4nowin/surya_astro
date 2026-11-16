@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace App\Services\Chat;
 
-use Ably\AblyRest;
 use App\Models\Admin;
 use App\Models\ChatSession;
 use App\Models\User;
@@ -18,9 +17,9 @@ use Symfony\Component\HttpKernel\Exception\UnprocessableEntityHttpException;
 class AblyAuthService
 {
     protected ?string $apiKey;
-    protected ?AblyRest $ablyClient = null;
+    protected mixed $ablyClient = null;
 
-    public function __construct(?string $apiKey = null, ?AblyRest $client = null)
+    public function __construct(?string $apiKey = null, mixed $client = null)
     {
         $this->apiKey = $apiKey 
             ?: config('broadcasting.connections.ably.key') 
@@ -31,9 +30,9 @@ class AblyAuthService
     }
 
     /**
-     * Resolve the active AblyRest client.
+     * Resolve the active AblyRest client if available.
      */
-    public function getAblyClient(): AblyRest
+    public function getAblyClient(): mixed
     {
         if ($this->ablyClient !== null) {
             return $this->ablyClient;
@@ -43,12 +42,69 @@ class AblyAuthService
             throw new InvalidArgumentException('ABLY_KEY is missing or invalid in server configuration.');
         }
 
-        $this->ablyClient = new AblyRest([
-            'key' => $this->apiKey,
-            'httpRequestTimeout' => 3000,
-        ]);
+        if (class_exists(\Ably\AblyRest::class)) {
+            try {
+                $this->ablyClient = new \Ably\AblyRest([
+                    'key' => $this->apiKey,
+                    'httpRequestTimeout' => 3000,
+                ]);
+                return $this->ablyClient;
+            } catch (\Throwable $e) {
+                Log::warning('AblyRest initialization failed: ' . $e->getMessage());
+            }
+        }
 
-        return $this->ablyClient;
+        return null;
+    }
+
+    /**
+     * Generate an Ably TokenRequest using native HMAC-SHA256 signing.
+     *
+     * @param string $key The Ably API key (keyName:keySecret)
+     * @param array<string, mixed> $tokenParams Token parameters (ttl, capability, clientId, timestamp, nonce)
+     * @return array<string, mixed> Signed TokenRequest structure
+     */
+    public function generateTokenRequest(string $key, array $tokenParams): array
+    {
+        if (empty($key) || !str_contains($key, ':')) {
+            throw new InvalidArgumentException('ABLY_KEY is missing or invalid in server configuration.');
+        }
+
+        [$keyName, $keySecret] = explode(':', $key, 2);
+
+        $ttl = (int) ($tokenParams['ttl'] ?? (3600 * 1000));
+        $capability = $tokenParams['capability'] ?? [];
+        if (is_array($capability)) {
+            ksort($capability);
+            $capabilityJson = json_encode($capability);
+        } else {
+            $capabilityJson = (string) $capability;
+        }
+
+        $clientId = (string) ($tokenParams['clientId'] ?? '');
+        $timestamp = (int) ($tokenParams['timestamp'] ?? round(microtime(true) * 1000));
+        $nonce = (string) ($tokenParams['nonce'] ?? bin2hex(random_bytes(16)));
+
+        $signText = implode("\n", [
+            $keyName,
+            $ttl,
+            $capabilityJson,
+            $clientId,
+            $timestamp,
+            $nonce,
+        ]) . "\n";
+
+        $mac = base64_encode(hash_hmac('sha256', $signText, $keySecret, true));
+
+        return [
+            'keyName' => $keyName,
+            'ttl' => $ttl,
+            'capability' => $capabilityJson,
+            'clientId' => $clientId,
+            'timestamp' => $timestamp,
+            'nonce' => $nonce,
+            'mac' => $mac,
+        ];
     }
 
     /**
@@ -84,7 +140,9 @@ class AblyAuthService
             : 'astrologer_' . $user->getAuthIdentifier();
 
         try {
-            $ably = $this->getAblyClient();
+            if (empty($this->apiKey) || !str_contains($this->apiKey, ':')) {
+                throw new InvalidArgumentException('ABLY_KEY is missing or invalid in server configuration.');
+            }
 
             // Scope token to subscribe permission only on this specific channel
             $tokenParams = [
@@ -103,14 +161,30 @@ class AblyAuthService
                 'capabilities' => $tokenParams['capability'],
             ]);
 
-            $tokenRequest = $ably->auth->createTokenRequest($tokenParams);
+            $tokenRequest = null;
+            if ($this->ablyClient !== null && isset($this->ablyClient->auth)) {
+                $tokenRequest = $this->ablyClient->auth->createTokenRequest($tokenParams);
+            } elseif (class_exists(\Ably\AblyRest::class)) {
+                try {
+                    $client = $this->getAblyClient();
+                    if ($client !== null && isset($client->auth)) {
+                        $tokenRequest = $client->auth->createTokenRequest($tokenParams);
+                    }
+                } catch (\Throwable $sdkError) {
+                    Log::warning("[ABLY-DIAG-LARAVEL] Ably SDK TokenRequest generation fallback: " . $sdkError->getMessage());
+                }
+            }
+
+            if ($tokenRequest === null) {
+                $tokenRequest = $this->generateTokenRequest($this->apiKey, $tokenParams);
+            }
 
             Log::info("[ABLY-DIAG-LARAVEL] TokenRequest generated successfully", [
                 'session_id' => $session->id,
                 'channel' => $channelName,
                 'client_id' => $clientId,
-                'key_name' => $tokenRequest->keyName ?? 'set',
-                'timestamp' => $tokenRequest->timestamp ?? null,
+                'key_name' => is_array($tokenRequest) ? ($tokenRequest['keyName'] ?? 'set') : ($tokenRequest->keyName ?? 'set'),
+                'timestamp' => is_array($tokenRequest) ? ($tokenRequest['timestamp'] ?? null) : ($tokenRequest->timestamp ?? null),
             ]);
 
             return [

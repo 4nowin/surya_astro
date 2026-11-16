@@ -140,10 +140,12 @@ class ChatApiController extends Controller
         $session = $authData['session'];
         $senderType = $authData['sender_type']; // 'user' or 'astrologer'
 
-        // Auto-reactivate session if an authorized participant sends a message
+        // Check if session has ended
         if ($session->ended_at !== null) {
-            $session->ended_at = null;
-            $session->save();
+            return response()->json([
+                'success' => false,
+                'message' => 'This chat session has already ended.',
+            ], 422);
         }
 
         $clientNonce = $request->input('client_nonce');
