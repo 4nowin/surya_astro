@@ -105,22 +105,47 @@ class ChatBroadcaster
 
         $client = $this->getAblyClient();
         if ($client === null) {
+            Log::warning("[ABLY-DIAG-LARAVEL] Publish skipped: Ably client is null", [
+                'session_id' => (int) $chat->chat_session_id,
+                'chat_id' => (int) $chat->id,
+                'channel' => $channelName,
+                'event' => 'message.created',
+                'sender' => $chat->sender,
+            ]);
             $this->queueOutbox($chat, $payload, 'Ably client unavailable (missing or invalid API key)');
             return false;
         }
 
         try {
-            $channel = $client->channels->get($channelName);
-            $channel->publish('message.created', $payload);
+            Log::info("[ABLY-DIAG-LARAVEL] Initiating publish HTTP request to Ably", [
+                'session_id' => (int) $chat->chat_session_id,
+                'chat_id' => (int) $chat->id,
+                'channel' => $channelName,
+                'event' => 'message.created',
+                'sender' => $chat->sender,
+            ]);
 
-            Log::info("Ably message.created published successfully to {$channelName}", [
-                'chat_id' => $chat->id,
-                'chat_session_id' => $chat->chat_session_id,
+            $channel = $client->channels->get($channelName);
+            $res = $channel->publish('message.created', $payload);
+
+            Log::info("[ABLY-DIAG-LARAVEL] Publish SUCCESS", [
+                'session_id' => (int) $chat->chat_session_id,
+                'chat_id' => (int) $chat->id,
+                'channel' => $channelName,
+                'event' => 'message.created',
+                'result' => $res,
             ]);
 
             return true;
         } catch (Throwable $e) {
-            Log::warning("Ably publish failed for chat {$chat->id} on {$channelName}: " . $e->getMessage());
+            Log::error("[ABLY-DIAG-LARAVEL] Publish FAILED", [
+                'session_id' => (int) $chat->chat_session_id,
+                'chat_id' => (int) $chat->id,
+                'channel' => $channelName,
+                'event' => 'message.created',
+                'error_code' => $e->getCode(),
+                'error_message' => $e->getMessage(),
+            ]);
             $this->queueOutbox($chat, $payload, $e->getMessage());
             return false;
         }

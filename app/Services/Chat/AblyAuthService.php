@@ -95,7 +95,23 @@ class AblyAuthService
                 'ttl' => 3600 * 1000, // 1 hour in ms
             ];
 
+            Log::info("[ABLY-DIAG-LARAVEL] Generating TokenRequest", [
+                'session_id' => $session->id,
+                'channel' => $channelName,
+                'client_id' => $clientId,
+                'participant_type' => $participantType,
+                'capabilities' => $tokenParams['capability'],
+            ]);
+
             $tokenRequest = $ably->auth->createTokenRequest($tokenParams);
+
+            Log::info("[ABLY-DIAG-LARAVEL] TokenRequest generated successfully", [
+                'session_id' => $session->id,
+                'channel' => $channelName,
+                'client_id' => $clientId,
+                'key_name' => $tokenRequest->keyName ?? 'set',
+                'timestamp' => $tokenRequest->timestamp ?? null,
+            ]);
 
             return [
                 'token_request' => $tokenRequest,
@@ -105,10 +121,11 @@ class AblyAuthService
                 'session_id' => $session->id,
             ];
         } catch (\Throwable $e) {
-            Log::error('Failed to create Ably TokenRequest: ' . $e->getMessage(), [
+            Log::error('[ABLY-DIAG-LARAVEL] Failed to create Ably TokenRequest: ' . $e->getMessage(), [
                 'session_id' => $session->id,
                 'user_id' => $user->getAuthIdentifier(),
                 'type' => $participantType,
+                'error_code' => $e->getCode(),
             ]);
             throw $e;
         }
