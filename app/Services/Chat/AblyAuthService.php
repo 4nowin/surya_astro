@@ -71,9 +71,11 @@ class AblyAuthService
             throw new AccessDeniedHttpException('You are not an authorized participant of this chat session.');
         }
 
-        // Verify session is active
+        // Auto-reactivate session if an authorized participant connects to it
         if ($session->ended_at !== null) {
-            throw new UnprocessableEntityHttpException('Cannot generate Ably token for a terminated chat session.');
+            $session->ended_at = null;
+            $session->save();
+            Log::info("Session {$session->id} auto-reactivated for Ably token request by {$participantType}");
         }
 
         $channelName = 'chat:session:' . $session->id;

@@ -29,7 +29,9 @@ class ConsultationApiController extends Controller
         ])
             ->whereIn('astrologer_id', $astrologerIds)
             ->orderByDesc('updated_at')
-            ->get();
+            ->get()
+            ->unique('user_id')
+            ->values();
 
         // Get all Jajmans associated with this professional
         $jajmans = Jajman::whereHas('professionals', function ($q) use ($admin) {

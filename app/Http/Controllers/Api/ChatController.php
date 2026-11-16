@@ -52,12 +52,11 @@ class ChatController extends Controller
         'astrologer_id' => $astrologerId,
       ]);
 
-      // First, check for existing active session in the database
+      // Check for existing session between this user, admin, and astrologer
       $existingSession = ChatSession::where('user_id', $user->id)
         ->where('admin_id', $adminId)
         ->where('astrologer_id', $astrologerId)
-        ->whereNull('ended_at')
-        ->latest()
+        ->latest('id')
         ->first();
 
       // Debug: Log if we found an existing session
@@ -75,8 +74,13 @@ class ChatController extends Controller
       $isNew = false;
 
       if ($existingSession) {
-        // Found existing session in database
+        // Reuse existing session and reactivate it if it was previously closed
         $chatSession = $existingSession;
+        if ($chatSession->ended_at !== null) {
+          $chatSession->ended_at = null;
+          $chatSession->save();
+          Log::info('Reactivated existing session', ['session_id' => $chatSession->id]);
+        }
         $isNew = false;
       } else {
         // No existing session, create new one

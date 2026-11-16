@@ -132,12 +132,10 @@ class ChatApiController extends Controller
         $session = $authData['session'];
         $senderType = $authData['sender_type']; // 'user' or 'astrologer'
 
-        // Check if session has ended
+        // Auto-reactivate session if an authorized participant sends a message
         if ($session->ended_at !== null) {
-            return response()->json([
-                'success' => false,
-                'message' => 'This chat session has already ended.',
-            ], 422);
+            $session->ended_at = null;
+            $session->save();
         }
 
         $clientNonce = $request->input('client_nonce');
@@ -229,7 +227,13 @@ class ChatApiController extends Controller
         $afterId = $request->query('after_id');
 
         $query = Chat::with(['user:id,name', 'astrologer:id,name'])
-            ->where('chat_session_id', $session->id);
+            ->where(function ($q) use ($session) {
+                $q->where('chat_session_id', $session->id)
+                  ->orWhere(function ($sub) use ($session) {
+                      $sub->where('user_id', $session->user_id)
+                          ->where('astrologer_id', $session->astrologer_id);
+                  });
+            });
 
         if (!empty($afterId)) {
             // Catch-up mode: fetch newest messages after the last known ID in ascending order
