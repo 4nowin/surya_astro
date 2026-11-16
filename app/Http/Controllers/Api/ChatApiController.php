@@ -98,10 +98,18 @@ class ChatApiController extends Controller
                 'message' => $e->getMessage(),
             ], $e->getStatusCode());
         } catch (Throwable $e) {
-            Log::error('Ably token generation error: ' . $e->getMessage());
+            Log::error('Ably token generation error: ' . $e->getMessage(), [
+                'exception' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString(),
+            ]);
             return response()->json([
                 'success' => false,
-                'message' => 'Unable to generate real-time token. Please verify server configuration.',
+                'message' => 'Unable to generate real-time token: ' . $e->getMessage(),
+                'exception' => get_class($e),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
             ], 500);
         }
     }
