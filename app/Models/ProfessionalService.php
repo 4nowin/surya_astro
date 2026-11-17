@@ -28,6 +28,8 @@ class ProfessionalService extends Model
         'public_description',
         'preparation_instructions',
         'additional_info',
+        'is_free_chat',
+        'max_message_characters',
     ];
 
     protected $casts = [
@@ -36,6 +38,8 @@ class ProfessionalService extends Model
         'delivery_methods' => 'array',
         'is_active' => 'boolean',
         'is_public' => 'boolean',
+        'is_free_chat' => 'boolean',
+        'max_message_characters' => 'integer',
     ];
 
     /**
@@ -102,6 +106,8 @@ class ProfessionalService extends Model
             'currency' => $this->currency,
             'duration_minutes' => $this->duration_minutes,
             'delivery_methods' => $this->delivery_methods ?? ['online'],
+            'is_free_chat' => (bool) $this->is_free_chat,
+            'max_message_characters' => (int) ($this->max_message_characters ?? 1000),
         ];
     }
 

@@ -121,43 +121,19 @@ class ChatController extends Controller
     }
   }
 
+  /**
+   * Deprecated: Legacy per-minute fee deduction.
+   * Chat is now monetized atomically per message with a 20% platform markup and 5 free introductory messages.
+   * Returns HTTP 410 Gone to prevent older clients from continuing deduction timers.
+   */
   public function deductFee(Request $request)
   {
-    $request->validate([
-      'chat_session_id' => 'required|exists:chat_sessions,id'
-    ]);
-
-    $user = User::findOrFail(Auth::id());
-    $session = ChatSession::findOrFail($request->chat_session_id);
-
-    $lastFeeLog = $session->updated_at; // use last updated as approximation
-    if ($lastFeeLog && now()->diffInSeconds($lastFeeLog) < 50) {
-      return response()->json(['message' => 'Fee already deducted recently.'], 429);
-    }
-
-    $astrologer = Astrologer::findOrFail($session->astrologer_id);
-    $fee = $astrologer->price;
-
-    if ($user->wallet_balance < $fee) {
-      return response()->json(['error' => 'Insufficient balance'], 402);
-    }
-
-    $user->wallet_balance -= $fee;
-    $user->save();
-
-    ChatPayment::create([
-      'chat_session_id' => $session->id,
-      'user_id' => $user->id,
-      'admin_id' => $astrologer->admin_id,
-      'astrologer_id' => $astrologer->id,
-      'amount' => $fee,
-      'deducted_at' => now(),
-    ]);
-
-    $session->increment('total_minutes');
-    $session->increment('total_fee', $fee);
-
-    return response()->json(['message' => 'Fee deducted']);
+    return response()->json([
+      'success' => false,
+      'deprecated' => true,
+      'error' => 'per_minute_billing_retired',
+      'message' => 'Per-minute billing is retired. Chat is now billed on a per-message basis.',
+    ], 410);
   }
 
   public function endChatSession(Request $request)

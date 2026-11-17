@@ -15,14 +15,21 @@ class ProfessionalTransaction extends Model
     protected $fillable = [
         'admin_id',
         'jajman_id',
+        'user_id',
         'appointment_id',
         'consultation_id',
+        'service_id',
+        'chat_session_id',
+        'chat_id',
         'invoice_id',
         'parent_transaction_id',
         'transaction_type',
         'payment_method',
         'payment_status',
         'amount',
+        'gross_amount',
+        'platform_fee',
+        'net_amount',
         'currency',
         'transaction_at',
         'reference_id',
@@ -32,6 +39,9 @@ class ProfessionalTransaction extends Model
 
     protected $casts = [
         'amount' => 'float',
+        'gross_amount' => 'float',
+        'platform_fee' => 'float',
+        'net_amount' => 'float',
         'transaction_at' => 'datetime',
     ];
 
@@ -49,6 +59,38 @@ class ProfessionalTransaction extends Model
     public function jajman()
     {
         return $this->belongsTo(Jajman::class, 'jajman_id');
+    }
+
+    /**
+     * Linked consumer user (for wallet chat payments).
+     */
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * Linked professional service.
+     */
+    public function service()
+    {
+        return $this->belongsTo(ProfessionalService::class, 'service_id');
+    }
+
+    /**
+     * Linked chat session.
+     */
+    public function chatSession()
+    {
+        return $this->belongsTo(ChatSession::class, 'chat_session_id');
+    }
+
+    /**
+     * Linked chat message.
+     */
+    public function chat()
+    {
+        return $this->belongsTo(Chat::class, 'chat_id');
     }
 
     /**

@@ -60,7 +60,11 @@ class AstrologerController extends Controller
             'active' => $request->active,
         ];
 
-        Astrologer::create($data);
+        $astrologer = Astrologer::create($data);
+
+        if (!empty($request->admin_id)) {
+            app(\App\Services\Chat\ChatServiceProvisioner::class)->provisionForAdmin((int) $request->admin_id);
+        }
 
         return redirect()->route('astrologer.index')
             ->withSuccess(__('Astrologer created successfully.'));

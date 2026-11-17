@@ -34,7 +34,40 @@ class Astrologer extends Model
 
     protected $appends = [
         'image_url',
+        'customer_price',
+        'is_free_chat',
     ];
+
+    public function getCustomerPriceAttribute(): float
+    {
+        if (array_key_exists('customer_price', $this->attributes)) {
+            return (float) $this->attributes['customer_price'];
+        }
+
+        if ($this->relationLoaded('chatService') && $this->chatService) {
+            $service = $this->chatService;
+            $breakdown = app(\App\Services\Pricing\PricingService::class)->calculateServicePrice($service->price, (bool) $service->is_free_chat);
+            return $breakdown['customer_price'];
+        }
+
+        if (isset($this->attributes['price'])) {
+            $breakdown = app(\App\Services\Pricing\PricingService::class)->calculateServicePrice((float) $this->attributes['price'], false);
+            return $breakdown['customer_price'];
+        }
+
+        return 0.12;
+    }
+
+    public function getIsFreeChatAttribute(): bool
+    {
+        if (array_key_exists('is_free_chat', $this->attributes)) {
+            return (bool) $this->attributes['is_free_chat'];
+        }
+        if ($this->relationLoaded('chatService') && $this->chatService) {
+            return (bool) $this->chatService->is_free_chat;
+        }
+        return false;
+    }
 
     public function getImageUrlAttribute(): ?string
     {
@@ -78,5 +111,19 @@ class Astrologer extends Model
     public function chatPayments()
     {
         return $this->hasMany(ChatPayment::class);
+    }
+
+    public function chatService()
+    {
+        return $this->hasOne(ProfessionalService::class, 'admin_id', 'admin_id')
+            ->where(function ($q) {
+                $q->where('pricing_model', 'per_message')
+                  ->orWhereJsonContains('delivery_methods', 'chat');
+            });
+    }
+
+    public function professionalServices()
+    {
+        return $this->hasMany(ProfessionalService::class, 'admin_id', 'admin_id');
     }
 }

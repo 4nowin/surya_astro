@@ -92,6 +92,8 @@ class ChatBroadcaster
             'astrologer_id' => (int) $chat->astrologer_id,
             'message' => (string) $chat->message,
             'client_nonce' => $chat->client_nonce,
+            'billing_type' => (string) ($chat->billing_type ?? 'free'),
+            'customer_price' => (float) ($chat->customer_price ?? 0.0),
             'sent_at' => $sentAt,
         ];
     }

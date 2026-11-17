@@ -9,13 +9,13 @@ use App\Models\Chat;
 use App\Models\Consultation;
 use App\Models\Jajman;
 use App\Models\User;
-use Illuminate\Foundation\Testing\DatabaseMigrations;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 
 class ConsultationApiTest extends TestCase
 {
-    use DatabaseMigrations;
+    use RefreshDatabase;
 
     public function test_consultations_and_conversations_api_lifecycle_and_isolation()
     {
@@ -138,5 +138,119 @@ class ConsultationApiTest extends TestCase
             'status' => 'completed',
         ]);
         $failResponseB->assertStatus(404);
+    }
+
+    public function test_conversations_api_resolves_client_avatar_url_with_precedence()
+    {
+        Role::firstOrCreate(['name' => 'Astrologer', 'guard_name' => 'admin']);
+
+        $admin = Admin::create([
+            'name' => 'Acharya Avatar Tester',
+            'email' => 'avatar_tester_' . uniqid() . '@example.com',
+            'password' => bcrypt('secret123'),
+        ]);
+        $admin->assignRole('Astrologer');
+
+        $astrologer = Astrologer::create([
+            'admin_id' => $admin->id,
+            'name' => 'Acharya Avatar Tester',
+            'language' => 'en',
+            'astrologer_language' => 'Hindi, English',
+            'expertise' => 'Vedic Astrology',
+            'experience' => '5 years',
+            'price' => 20,
+            'status' => 'online',
+            'active' => 1,
+        ]);
+
+        // Case 1: User has OAuth profile image (https://...)
+        $oauthUser = User::create([
+            'name' => 'OAuth User',
+            'email' => 'oauth_' . uniqid() . '@example.com',
+            'password' => bcrypt('secret123'),
+            'profile_image' => 'https://lh3.googleusercontent.com/a/oauth_user_photo.jpg',
+        ]);
+        $session1 = ChatSession::create([
+            'admin_id' => $admin->id,
+            'astrologer_id' => $astrologer->id,
+            'user_id' => $oauthUser->id,
+            'status' => 'ACTIVE',
+        ]);
+
+        // Case 2: User has local storage profile image
+        $localUser = User::create([
+            'name' => 'Local Image User',
+            'email' => 'local_' . uniqid() . '@example.com',
+            'password' => bcrypt('secret123'),
+            'profile_image' => 'profile_images/user_avatar_456.jpg',
+        ]);
+        $session2 = ChatSession::create([
+            'admin_id' => $admin->id,
+            'astrologer_id' => $astrologer->id,
+            'user_id' => $localUser->id,
+            'status' => 'ACTIVE',
+        ]);
+
+        // Case 3: User has NO profile image, but linked Jajman has profile_photo
+        $jajmanUser = User::create([
+            'name' => 'Jajman Photo User',
+            'email' => 'jajman_user_' . uniqid() . '@example.com',
+            'password' => bcrypt('secret123'),
+            'profile_image' => null,
+        ]);
+        $session3 = ChatSession::create([
+            'admin_id' => $admin->id,
+            'astrologer_id' => $astrologer->id,
+            'user_id' => $jajmanUser->id,
+            'status' => 'ACTIVE',
+        ]);
+        $jajman = Jajman::create([
+            'name' => 'Jajman Photo User',
+            'phone' => '9123456789',
+            'user_id' => $jajmanUser->id,
+            'profile_photo' => 'jajmans/photos/client_photo.jpg',
+        ]);
+        $jajman->professionals()->attach($admin->id, ['status' => 'active', 'source' => 'manual']);
+
+        // Case 4: Neither user nor jajman has an image
+        $noImageUser = User::create([
+            'name' => 'No Image User',
+            'email' => 'no_image_' . uniqid() . '@example.com',
+            'password' => bcrypt('secret123'),
+            'profile_image' => null,
+        ]);
+        $session4 = ChatSession::create([
+            'admin_id' => $admin->id,
+            'astrologer_id' => $astrologer->id,
+            'user_id' => $noImageUser->id,
+            'status' => 'ACTIVE',
+        ]);
+
+        // Fetch conversations
+        $response = $this->actingAs($admin, 'sanctum')->getJson('/api/astrologer/conversations');
+        $response->assertStatus(200);
+
+        $data = collect($response->json('data'))->keyBy('session_id');
+
+        // Check Case 1: OAuth preserved
+        $this->assertEquals(
+            'https://lh3.googleusercontent.com/a/oauth_user_photo.jpg',
+            $data[$session1->id]['client_avatar_url']
+        );
+
+        // Check Case 2: Local storage resolved to public URL
+        $this->assertStringContainsString(
+            'storage/profile_images/user_avatar_456.jpg',
+            $data[$session2->id]['client_avatar_url']
+        );
+
+        // Check Case 3: Fallback to Jajman photo
+        $this->assertStringContainsString(
+            'storage/jajmans/photos/client_photo.jpg',
+            $data[$session3->id]['client_avatar_url']
+        );
+
+        // Check Case 4: Null when neither exists
+        $this->assertNull($data[$session4->id]['client_avatar_url']);
     }
 }

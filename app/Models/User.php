@@ -68,6 +68,33 @@ class User extends Authenticatable implements JWTSubject
         'email_verified_at' => 'datetime',
     ];
 
+    /**
+     * Resolve the public avatar URL from OAuth or local public storage.
+     */
+    public function getAvatarUrlAttribute(): ?string
+    {
+        if (empty($this->profile_image)) {
+            return null;
+        }
+
+        $trimmed = trim((string) $this->profile_image);
+        if (empty($trimmed)) {
+            return null;
+        }
+
+        if (str_starts_with($trimmed, 'http://') || str_starts_with($trimmed, 'https://')) {
+            return $trimmed;
+        }
+
+        $cleanPath = ltrim(preg_replace('#^/?storage/#', '', $trimmed), '/');
+        return \Illuminate\Support\Facades\Storage::disk('public')->url($cleanPath);
+    }
+
+    public function getWalletAttribute(): float
+    {
+        return (float) ($this->attributes['wallet_balance'] ?? 0.0);
+    }
+
     public function getJWTIdentifier()
     {
         return $this->getKey();
@@ -95,6 +122,16 @@ class User extends Authenticatable implements JWTSubject
     public function chatPayments()
     {
         return $this->hasMany(ChatPayment::class);
+    }
+
+    public function walletTransactions()
+    {
+        return $this->hasMany(UserWalletTransaction::class);
+    }
+
+    public function chatAllowances()
+    {
+        return $this->hasMany(UserAstrologerChatAllowance::class);
     }
 
     public function astrologyProfiles()

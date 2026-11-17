@@ -115,18 +115,20 @@ class ProfessionalServiceApiController extends Controller
             'description' => 'nullable|string',
             'category' => 'required|string|max:64',
             'specialization' => 'nullable|string|max:191',
-            'pricing_model' => ['required', Rule::in(['fixed', 'hourly', 'starting_from', 'custom'])],
+            'pricing_model' => ['required', Rule::in(['fixed', 'hourly', 'starting_from', 'custom', 'per_message'])],
             'price' => [
-                Rule::requiredIf(fn () => in_array($request->input('pricing_model'), ['fixed', 'hourly', 'starting_from'])),
+                Rule::requiredIf(fn () => in_array($request->input('pricing_model'), ['fixed', 'hourly', 'starting_from', 'per_message']) && !$request->boolean('is_free_chat')),
                 'nullable',
                 'numeric',
                 'min:0',
             ],
             'currency' => 'nullable|string|max:8',
-            'duration_minutes' => 'required|integer|min:5|max:1440',
+            'duration_minutes' => 'nullable|integer|min:0|max:1440',
             'delivery_methods' => 'required|array|min:1',
-            'delivery_methods.*' => ['string', Rule::in(['online', 'phone_call', 'in_person', 'home_visit', 'at_location', 'custom'])],
+            'delivery_methods.*' => ['string', Rule::in(['online', 'phone_call', 'in_person', 'home_visit', 'at_location', 'custom', 'chat'])],
             'is_active' => 'nullable|boolean',
+            'is_free_chat' => 'nullable|boolean',
+            'max_message_characters' => 'nullable|integer|min:100|max:5000',
             'preparation_instructions' => 'nullable|string',
             'additional_info' => 'nullable|string',
         ]);
@@ -140,9 +142,11 @@ class ProfessionalServiceApiController extends Controller
             'pricing_model' => $validated['pricing_model'],
             'price' => $validated['pricing_model'] === 'custom' ? null : ($validated['price'] ?? null),
             'currency' => $validated['currency'] ?? 'INR',
-            'duration_minutes' => $validated['duration_minutes'],
+            'duration_minutes' => $validated['duration_minutes'] ?? 30,
             'delivery_methods' => $validated['delivery_methods'],
             'is_active' => $validated['is_active'] ?? true,
+            'is_free_chat' => $validated['is_free_chat'] ?? false,
+            'max_message_characters' => $validated['max_message_characters'] ?? 1000,
             'preparation_instructions' => $validated['preparation_instructions'] ?? null,
             'additional_info' => $validated['additional_info'] ?? null,
         ]);
@@ -201,23 +205,27 @@ class ProfessionalServiceApiController extends Controller
             'description' => 'nullable|string',
             'category' => 'sometimes|required|string|max:64',
             'specialization' => 'nullable|string|max:191',
-            'pricing_model' => ['sometimes', 'required', Rule::in(['fixed', 'hourly', 'starting_from', 'custom'])],
+            'pricing_model' => ['sometimes', 'required', Rule::in(['fixed', 'hourly', 'starting_from', 'custom', 'per_message'])],
             'price' => [
                 'nullable',
                 'numeric',
                 'min:0',
             ],
             'currency' => 'nullable|string|max:8',
-            'duration_minutes' => 'sometimes|required|integer|min:5|max:1440',
+            'duration_minutes' => 'sometimes|nullable|integer|min:0|max:1440',
             'delivery_methods' => 'sometimes|required|array|min:1',
-            'delivery_methods.*' => ['string', Rule::in(['online', 'phone_call', 'in_person', 'home_visit', 'at_location', 'custom'])],
+            'delivery_methods.*' => ['string', Rule::in(['online', 'phone_call', 'in_person', 'home_visit', 'at_location', 'custom', 'chat'])],
             'is_active' => 'nullable|boolean',
+            'is_free_chat' => 'nullable|boolean',
+            'max_message_characters' => 'nullable|integer|min:100|max:5000',
             'preparation_instructions' => 'nullable|string',
             'additional_info' => 'nullable|string',
         ]);
 
         $pricingModel = $validated['pricing_model'] ?? $service->pricing_model;
-        if (in_array($pricingModel, ['fixed', 'hourly', 'starting_from']) && !array_key_exists('price', $validated) && $service->price === null) {
+        $isFreeChat = array_key_exists('is_free_chat', $validated) ? (bool)$validated['is_free_chat'] : (bool)$service->is_free_chat;
+
+        if (in_array($pricingModel, ['fixed', 'hourly', 'starting_from', 'per_message']) && !$isFreeChat && !array_key_exists('price', $validated) && $service->price === null) {
             return response()->json([
                 'success' => false,
                 'message' => "A price amount is required for {$pricingModel} pricing model.",
@@ -232,9 +240,11 @@ class ProfessionalServiceApiController extends Controller
             'pricing_model' => $pricingModel,
             'price' => $pricingModel === 'custom' ? null : (array_key_exists('price', $validated) ? $validated['price'] : $service->price),
             'currency' => $validated['currency'] ?? $service->currency,
-            'duration_minutes' => $validated['duration_minutes'] ?? $service->duration_minutes,
+            'duration_minutes' => array_key_exists('duration_minutes', $validated) ? ($validated['duration_minutes'] ?? 30) : $service->duration_minutes,
             'delivery_methods' => $validated['delivery_methods'] ?? $service->delivery_methods,
             'is_active' => array_key_exists('is_active', $validated) ? (bool)$validated['is_active'] : $service->is_active,
+            'is_free_chat' => $isFreeChat,
+            'max_message_characters' => array_key_exists('max_message_characters', $validated) ? ($validated['max_message_characters'] ?? 1000) : $service->max_message_characters,
             'preparation_instructions' => array_key_exists('preparation_instructions', $validated) ? $validated['preparation_instructions'] : $service->preparation_instructions,
             'additional_info' => array_key_exists('additional_info', $validated) ? $validated['additional_info'] : $service->additional_info,
         ]);

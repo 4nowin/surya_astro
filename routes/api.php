@@ -92,6 +92,7 @@ Route::prefix('astrologer')->group(function () {
         Route::post('/chat/ably-token', [ChatApiController::class, 'createAblyToken']);
         Route::post('/chat/message/send', [ChatApiController::class, 'sendMessage']);
         Route::get('/chat/sessions/{sessionId}/messages', [ChatApiController::class, 'getMessages']);
+        Route::get('/chat/sessions/{sessionId}/pricing', [ChatApiController::class, 'getSessionPricing']);
         Route::post('/chat/session/end', [ChatApiController::class, 'endSession']);
         Route::get('/booked-poojas', [AstrologerController::class, 'getBookedPoojas']);
         Route::get('/donations', [AstrologerController::class, 'getDonations']);
@@ -223,6 +224,20 @@ Route::get('/fcm-token', [NotificationController::class, 'getAccessToken']);
 Route::post('send-to-astrologer', [NotificationController::class, 'sendToAstrologer']);
 
 
+// Non-localized direct chat routes
+Route::group(['middleware' => ['auth:sanctum']], function () {
+    Route::post('/chat/start-session', [ChatController::class, 'startSession']);
+    Route::post('/chat/end-session', [ChatController::class, 'endChatSession']);
+    Route::post('/chat/ably-token', [ChatApiController::class, 'createAblyToken']);
+    Route::post('/chat/message/send', [ChatApiController::class, 'sendMessage']);
+    Route::get('/chat/sessions/{sessionId}/messages', [ChatApiController::class, 'getMessages']);
+    Route::get('/chat/sessions/{sessionId}/pricing', [ChatApiController::class, 'getSessionPricing']);
+    Route::get('/chat/astrologers/{astrologerId}/pricing', [ChatApiController::class, 'getChatPricing']);
+    Route::get('/chat/pricing/{astrologerId}', [ChatApiController::class, 'getChatPricing']);
+    Route::post('/chat/session/end', [ChatApiController::class, 'endSession']);
+    Route::post('/chat/deduct-fee', [ChatController::class, 'deductFee']);
+});
+
 Route::group(['middleware' => ['auth:sanctum'], 'prefix' => "/{lang?}"], function () {
     Route::post('/razorpay/create-donation-order', [PaymentController::class, 'createDonationOrder']);
     Route::post('/razorpay/add-wallet-money', [PaymentController::class, 'addWalletMoney']);
@@ -238,6 +253,9 @@ Route::group(['middleware' => ['auth:sanctum'], 'prefix' => "/{lang?}"], functio
     Route::post('/chat/ably-token', [ChatApiController::class, 'createAblyToken']);
     Route::post('/chat/message/send', [ChatApiController::class, 'sendMessage']);
     Route::get('/chat/sessions/{sessionId}/messages', [ChatApiController::class, 'getMessages']);
+    Route::get('/chat/sessions/{sessionId}/pricing', [ChatApiController::class, 'getSessionPricing']);
+    Route::get('/chat/astrologers/{astrologerId}/pricing', [ChatApiController::class, 'getChatPricing']);
+    Route::get('/chat/pricing/{astrologerId}', [ChatApiController::class, 'getChatPricing']);
     Route::post('/chat/session/end', [ChatApiController::class, 'endSession']);
 
     Route::post('/update-user-fcm-token', [UserController::class, 'updateFcmToken']);

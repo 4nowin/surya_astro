@@ -25,6 +25,8 @@ class ProfessionalPaymentApiController extends Controller
         $query = ProfessionalTransaction::where('admin_id', $admin->id)
             ->with([
                 'jajman:id,name,phone,city',
+                'user:id,name,phone,profile_image',
+                'service:id,name,pricing_model',
                 'appointment:id,title,start_at,appointment_type',
                 'consultation:id,client_name,type,consultation_date',
             ]);
@@ -120,11 +122,12 @@ class ProfessionalPaymentApiController extends Controller
                     'consultation_payment',
                     'general_payment',
                     'adjustment',
+                    'chat_message',
                 ]),
             ],
             'payment_method' => [
                 'required',
-                Rule::in(['cash', 'upi', 'bank_transfer', 'card', 'cheque', 'other']),
+                Rule::in(['cash', 'upi', 'bank_transfer', 'card', 'cheque', 'other', 'wallet']),
             ],
             'payment_status' => [
                 'nullable',
@@ -458,6 +461,16 @@ class ProfessionalPaymentApiController extends Controller
             ->groupBy('payment_method')
             ->map(fn ($group) => round($group->sum('amount'), 2));
 
+        $chatEarnings = (float) $transactions
+            ->where('transaction_type', 'chat_message')
+            ->where('payment_status', 'completed')
+            ->sum('amount');
+
+        $chatCount = $transactions
+            ->where('transaction_type', 'chat_message')
+            ->where('payment_status', 'completed')
+            ->count();
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -465,6 +478,8 @@ class ProfessionalPaymentApiController extends Controller
                 'total_received' => round($totalReceived, 2),
                 'total_refunded' => round($totalRefunded, 2),
                 'net_received' => $netReceived,
+                'chat_earnings' => round($chatEarnings, 2),
+                'chat_messages_count' => $chatCount,
                 'total_pending' => round($totalPending, 2),
                 'total_outstanding' => $totalOutstanding,
                 'transactions_count' => $transactions->count(),

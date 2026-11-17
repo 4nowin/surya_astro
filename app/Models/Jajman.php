@@ -28,6 +28,28 @@ class Jajman extends Model
     ];
 
     /**
+     * Resolve the public avatar URL from OAuth or local public storage.
+     */
+    public function getAvatarUrlAttribute(): ?string
+    {
+        if (empty($this->profile_photo)) {
+            return null;
+        }
+
+        $trimmed = trim((string) $this->profile_photo);
+        if (empty($trimmed)) {
+            return null;
+        }
+
+        if (str_starts_with($trimmed, 'http://') || str_starts_with($trimmed, 'https://')) {
+            return $trimmed;
+        }
+
+        $cleanPath = ltrim(preg_replace('#^/?storage/#', '', $trimmed), '/');
+        return \Illuminate\Support\Facades\Storage::disk('public')->url($cleanPath);
+    }
+
+    /**
      * Relationship to professionals managing this Jajman.
      */
     public function professionals()

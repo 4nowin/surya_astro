@@ -57,10 +57,17 @@ class ConsultationApiController extends Controller
                 }
             }
 
+            // Avatar resolution:
+            // 1. Prefer user's actual Astro Setu account profile image (users.profile_image)
+            // 2. If unavailable, use linked Jajman's profile_photo
+            // 3. If neither exists, return null
+            $avatarUrl = $user?->avatar_url ?? $matchedJajman?->avatar_url ?? null;
+
             return [
                 'session_id' => $session->id,
                 'status' => $session->ended_at ? 'ended' : 'active',
                 'client_name' => $matchedJajman ? $matchedJajman->name : ($user->name ?? 'Astro Setu Client'),
+                'client_avatar_url' => $avatarUrl,
                 'client_phone' => ($user->phone ?? $user->mobile ?? null) ?? ($matchedJajman->phone ?? null),
                 'client_email' => $user->email ?? null,
                 'jajman_id' => $matchedJajman?->id,

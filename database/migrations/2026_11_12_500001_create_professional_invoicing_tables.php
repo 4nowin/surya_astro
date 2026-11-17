@@ -156,7 +156,11 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('professional_transactions', function (Blueprint $table) {
-            $table->dropForeign(['invoice_id']);
+            if (DB::getDriverName() !== 'sqlite') {
+                $table->dropForeign(['invoice_id']);
+            }
+            $table->dropIndex(['invoice_id']);
+            $table->dropIndex(['admin_id', 'receipt_number']);
             $table->dropColumn(['invoice_id', 'receipt_number']);
         });
 

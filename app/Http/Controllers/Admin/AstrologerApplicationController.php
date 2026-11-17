@@ -120,7 +120,10 @@ class AstrologerApplicationController extends Controller
                 ]
             );
 
-            // 3. Mark application as approved with audit trail
+            // 3. Provision default Chat Consultation service if not present
+            app(\App\Services\Chat\ChatServiceProvisioner::class)->provisionForAdmin($adminId);
+
+            // 4. Mark application as approved with audit trail
             $astrologerApplication->update([
                 'status' => 'approved',
                 'reviewed_by' => Auth::guard('admin')->id(),
