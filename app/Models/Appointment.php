@@ -14,6 +14,7 @@ class Appointment extends Model
 
     protected $fillable = [
         'admin_id',
+        'user_id',
         'jajman_id',
         'title',
         'description',
@@ -22,24 +23,51 @@ class Appointment extends Model
         'status',
         'start_at',
         'end_at',
+        'acceptance_deadline_at',
+        'accepted_at',
+        'rejected_at',
+        'rejection_reason',
+        'cancelled_by',
+        'cancelled_at',
+        'no_show_reported_at',
+        'no_show_reported_by',
+        'no_show_notes',
+        'no_show_review_status',
         'timezone',
         'location',
         'meeting_link',
         'service_id',
         'service_name_snapshot',
         'agreed_price_snapshot',
+        'base_price',
+        'platform_markup',
+        'customer_price',
         'currency_snapshot',
         'duration_minutes_snapshot',
         'delivery_method_snapshot',
         'payment_status',
+        'escrow_transaction_id',
+        'client_nonce',
         'consultation_id',
         'cancellation_reason',
+        'cancellation_review_status',
+        'resolved_by_admin_id',
+        'resolution_notes',
+        'resolved_at',
     ];
 
     protected $casts = [
         'start_at' => 'datetime',
         'end_at' => 'datetime',
+        'acceptance_deadline_at' => 'datetime',
+        'accepted_at' => 'datetime',
+        'rejected_at' => 'datetime',
+        'cancelled_at' => 'datetime',
+        'no_show_reported_at' => 'datetime',
         'agreed_price_snapshot' => 'float',
+        'base_price' => 'decimal:2',
+        'platform_markup' => 'decimal:2',
+        'customer_price' => 'decimal:2',
         'duration_minutes_snapshot' => 'integer',
     ];
 
@@ -49,6 +77,14 @@ class Appointment extends Model
     public function professional()
     {
         return $this->belongsTo(Admin::class, 'admin_id');
+    }
+
+    /**
+     * Consumer user who booked this appointment.
+     */
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     /**
@@ -73,6 +109,68 @@ class Appointment extends Model
     public function transactions()
     {
         return $this->hasMany(ProfessionalTransaction::class, 'appointment_id');
+    }
+
+    /**
+     * Escrow transaction linked to this appointment.
+     */
+    public function escrowTransaction()
+    {
+        return $this->belongsTo(ProfessionalTransaction::class, 'escrow_transaction_id');
+    }
+
+    /**
+     * User wallet transactions linked to this appointment.
+     */
+    public function walletTransactions()
+    {
+        return $this->hasMany(UserWalletTransaction::class, 'appointment_id');
+    }
+
+    /**
+     * Check if appointment is pending practitioner acceptance.
+     */
+    public function isPendingAcceptance(): bool
+    {
+        return in_array($this->status, ['pending', 'pending_confirmation'], true);
+    }
+
+    /**
+     * Check if 24-hour practitioner acceptance deadline has expired.
+     */
+    public function isAcceptanceExpired(): bool
+    {
+        return $this->isPendingAcceptance()
+            && $this->acceptance_deadline_at !== null
+            && now()->greaterThan($this->acceptance_deadline_at);
+    }
+
+    /**
+     * Check if cancellation is outside the 12-hour cutoff (free / allowed cancel).
+     */
+    public function isCancellationAllowed(int $cutoffHours = 12): bool
+    {
+        if (!$this->start_at) {
+            return true;
+        }
+
+        return now()->diffInHours($this->start_at, false) >= $cutoffHours;
+    }
+
+    /**
+     * Check if cancellation is inside the 12-hour cutoff (requires admin review / penalty policy).
+     */
+    public function isInsideCancellationCutoff(int $cutoffHours = 12): bool
+    {
+        return !$this->isCancellationAllowed($cutoffHours);
+    }
+
+    /**
+     * Check if appointment has an unresolved no-show reported.
+     */
+    public function isNoShowPendingReview(): bool
+    {
+        return $this->no_show_review_status === 'pending_review';
     }
 
     /**

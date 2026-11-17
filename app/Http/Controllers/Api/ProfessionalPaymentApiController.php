@@ -26,7 +26,7 @@ class ProfessionalPaymentApiController extends Controller
             ->with([
                 'jajman:id,name,phone,city',
                 'user:id,name,phone,profile_image',
-                'service:id,name,pricing_model',
+                'service:id,name,pricing_model,category',
                 'appointment:id,title,start_at,appointment_type',
                 'consultation:id,client_name,type,consultation_date',
             ]);
@@ -382,7 +382,7 @@ class ProfessionalPaymentApiController extends Controller
         $admin = $request->user();
         $period = $request->query('period', 'all_time');
 
-        $query = ProfessionalTransaction::where('admin_id', $admin->id);
+        $query = ProfessionalTransaction::where('admin_id', $admin->id)->with('service');
 
         $now = Carbon::now();
         switch ($period) {
@@ -471,6 +471,41 @@ class ProfessionalPaymentApiController extends Controller
             ->where('payment_status', 'completed')
             ->count();
 
+        // Categorized Service Breakdown
+        $completedTransactions = $transactions
+            ->where('transaction_type', '!=', 'refund')
+            ->where('payment_status', 'completed');
+
+        $kundliEarnings = 0.0;
+        $vastuEarnings = 0.0;
+        $pujaEarnings = 0.0;
+        $otherServiceEarnings = 0.0;
+
+        foreach ($completedTransactions as $tx) {
+            if ($tx->transaction_type === 'chat_message') {
+                continue;
+            }
+            $cat = strtolower((string) ($tx->service?->category ?? 'other'));
+            $amt = (float) $tx->amount;
+            if (str_contains($cat, 'kundli')) {
+                $kundliEarnings += $amt;
+            } elseif (str_contains($cat, 'vastu')) {
+                $vastuEarnings += $amt;
+            } elseif (str_contains($cat, 'puja') || str_contains($cat, 'ritual')) {
+                $pujaEarnings += $amt;
+            } else {
+                $otherServiceEarnings += $amt;
+            }
+        }
+
+        $serviceOrdersEarnings = (float) $completedTransactions
+            ->whereNotNull('service_order_id')
+            ->sum('amount');
+
+        $appointmentsEarnings = (float) $completedTransactions
+            ->whereNotNull('appointment_id')
+            ->sum('amount');
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -480,6 +515,15 @@ class ProfessionalPaymentApiController extends Controller
                 'net_received' => $netReceived,
                 'chat_earnings' => round($chatEarnings, 2),
                 'chat_messages_count' => $chatCount,
+                'service_orders_earnings' => round($serviceOrdersEarnings, 2),
+                'appointments_earnings' => round($appointmentsEarnings, 2),
+                'category_breakdown' => [
+                    'chat' => round($chatEarnings, 2),
+                    'kundli' => round($kundliEarnings, 2),
+                    'vastu' => round($vastuEarnings, 2),
+                    'puja' => round($pujaEarnings, 2),
+                    'other' => round($otherServiceEarnings, 2),
+                ],
                 'total_pending' => round($totalPending, 2),
                 'total_outstanding' => $totalOutstanding,
                 'transactions_count' => $transactions->count(),

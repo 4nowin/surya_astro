@@ -19,8 +19,12 @@ class UserWalletTransaction extends Model
         'balance_after',
         'chat_id',
         'chat_session_id',
+        'appointment_id',
+        'service_order_id',
+        'service_id',
         'astrologer_id',
         'reference_id',
+        'description',
         'status',
     ];
 
@@ -43,6 +47,21 @@ class UserWalletTransaction extends Model
     public function chatSession()
     {
         return $this->belongsTo(ChatSession::class, 'chat_session_id');
+    }
+
+    public function appointment()
+    {
+        return $this->belongsTo(Appointment::class, 'appointment_id');
+    }
+
+    public function serviceOrder()
+    {
+        return $this->belongsTo(ProfessionalServiceOrder::class, 'service_order_id');
+    }
+
+    public function service()
+    {
+        return $this->belongsTo(ProfessionalService::class, 'service_id');
     }
 
     public function astrologer()

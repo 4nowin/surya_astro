@@ -19,10 +19,14 @@ use Illuminate\Validation\Rule;
 class AppointmentApiController extends Controller
 {
     protected AppointmentConflictService $conflictService;
+    protected \App\Services\Services\ServiceOrderService $serviceOrderService;
 
-    public function __construct(AppointmentConflictService $conflictService)
-    {
+    public function __construct(
+        AppointmentConflictService $conflictService,
+        \App\Services\Services\ServiceOrderService $serviceOrderService
+    ) {
         $this->conflictService = $conflictService;
+        $this->serviceOrderService = $serviceOrderService;
     }
 
     /**
@@ -243,8 +247,7 @@ class AppointmentApiController extends Controller
     {
         $admin = $request->user();
 
-        $appointment = Appointment::where('admin_id', $admin->id)
-            ->with([
+        $appointment = Appointment::with([
                 'jajman',
                 'service',
                 'consultation',
@@ -254,8 +257,15 @@ class AppointmentApiController extends Controller
         if (!$appointment) {
             return response()->json([
                 'success' => false,
-                'message' => 'Appointment not found or unauthorized.',
+                'message' => 'Appointment not found.',
             ], 404);
+        }
+
+        if ((int) $appointment->admin_id !== (int) $admin->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized: You are not assigned to this appointment.',
+            ], 403);
         }
 
         return response()->json([
@@ -272,9 +282,16 @@ class AppointmentApiController extends Controller
     {
         $admin = $request->user();
 
-        $appointment = Appointment::where('admin_id', $admin->id)->find($id);
+        $appointment = Appointment::find($id);
         if (!$appointment) {
             return response()->json(['success' => false, 'message' => 'Appointment not found.'], 404);
+        }
+
+        if ((int) $appointment->admin_id !== (int) $admin->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized: You are not assigned to this appointment.',
+            ], 403);
         }
 
         if (in_array($appointment->status, ['completed', 'cancelled'])) {
@@ -389,9 +406,16 @@ class AppointmentApiController extends Controller
     {
         $admin = $request->user();
 
-        $appointment = Appointment::where('admin_id', $admin->id)->find($id);
+        $appointment = Appointment::find($id);
         if (!$appointment) {
             return response()->json(['success' => false, 'message' => 'Appointment not found.'], 404);
+        }
+
+        if ((int) $appointment->admin_id !== (int) $admin->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized: You are not assigned to this appointment.',
+            ], 403);
         }
 
         if (in_array($appointment->status, ['completed', 'cancelled'])) {
@@ -465,6 +489,110 @@ class AppointmentApiController extends Controller
     }
 
     /**
+     * POST /api/astrologer/appointments/{id}/accept
+     * Astrologer accepts a pending appointment within the 24-hour deadline.
+     */
+    public function accept(Request $request, $id)
+    {
+        $admin = $request->user();
+
+        $existing = Appointment::find($id);
+        if (!$existing) {
+            return response()->json(['success' => false, 'message' => 'Appointment not found.'], 404);
+        }
+        if ((int) $existing->admin_id !== (int) $admin->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized: You are not assigned to this appointment.',
+            ], 403);
+        }
+
+        try {
+            $appointment = $this->serviceOrderService->acceptAppointment((int) $id, $admin->id);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Appointment accepted successfully.',
+                'data' => $appointment->fresh()->load(['jajman', 'service', 'user']),
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Appointment not found.',
+            ], 404);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 403);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unable to accept appointment: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
+     * POST /api/astrologer/appointments/{id}/reject
+     * Astrologer rejects a pending appointment.
+     */
+    public function reject(Request $request, $id)
+    {
+        $admin = $request->user();
+
+        $existing = Appointment::find($id);
+        if (!$existing) {
+            return response()->json(['success' => false, 'message' => 'Appointment not found.'], 404);
+        }
+        if ((int) $existing->admin_id !== (int) $admin->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized: You are not assigned to this appointment.',
+            ], 403);
+        }
+
+        $validated = $request->validate([
+            'reason' => 'required|string|max:500',
+        ]);
+
+        try {
+            $appointment = $this->serviceOrderService->rejectAppointment((int) $id, $admin->id, $validated['reason']);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Appointment rejected and user refunded.',
+                'data' => $appointment->fresh()->load(['jajman', 'service', 'user']),
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Appointment not found.',
+            ], 404);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 403);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unable to reject appointment: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
      * 6. POST /api/astrologer/appointments/{id}/cancel
      * Cancel appointment with optional reason.
      */
@@ -472,9 +600,16 @@ class AppointmentApiController extends Controller
     {
         $admin = $request->user();
 
-        $appointment = Appointment::where('admin_id', $admin->id)->find($id);
+        $appointment = Appointment::find($id);
         if (!$appointment) {
             return response()->json(['success' => false, 'message' => 'Appointment not found.'], 404);
+        }
+
+        if ((int) $appointment->admin_id !== (int) $admin->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized: You are not assigned to this appointment.',
+            ], 403);
         }
 
         if ($appointment->status === 'cancelled') {
@@ -485,23 +620,41 @@ class AppointmentApiController extends Controller
             'cancellation_reason' => 'nullable|string|max:500',
         ]);
 
-        $appointment->update([
-            'status' => 'cancelled',
-            'cancellation_reason' => $validated['cancellation_reason'] ?? null,
-        ]);
+        $reason = $validated['cancellation_reason'] ?? 'Cancelled by practitioner';
 
-        $this->sendFCMNotification(
-            $admin,
-            "Appointment Cancelled: {$appointment->title}",
-            $validated['cancellation_reason'] ?? "Appointment has been cancelled.",
-            ['appointment_id' => (string) $appointment->id, 'type' => 'appointment_cancelled']
-        );
+        try {
+            if ($appointment->user_id && $appointment->escrow_transaction_id) {
+                $appointment = $this->serviceOrderService->cancelAppointment($appointment->id, $admin->id, $reason, 'astrologer');
+            } else {
+                $appointment->update([
+                    'status' => 'cancelled',
+                    'cancellation_reason' => $reason,
+                    'cancelled_by' => 'astrologer',
+                    'cancelled_at' => \Carbon\Carbon::now(),
+                ]);
+            }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Appointment cancelled successfully.',
-            'data' => $appointment->fresh(),
-        ]);
+            $this->sendFCMNotification(
+                $admin,
+                "Appointment Cancelled: {$appointment->title}",
+                $reason,
+                ['appointment_id' => (string) $appointment->id, 'type' => 'appointment_cancelled']
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Appointment cancelled successfully.',
+                'data' => $appointment->fresh(),
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json(['success' => false, 'message' => 'Appointment not found.'], 404);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 403);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Unable to cancel appointment: ' . $e->getMessage()], 500);
+        }
     }
 
     /**
@@ -512,9 +665,16 @@ class AppointmentApiController extends Controller
     {
         $admin = $request->user();
 
-        $appointment = Appointment::where('admin_id', $admin->id)->with('jajman')->find($id);
+        $appointment = Appointment::with('jajman')->find($id);
         if (!$appointment) {
             return response()->json(['success' => false, 'message' => 'Appointment not found.'], 404);
+        }
+
+        if ((int) $appointment->admin_id !== (int) $admin->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized: You are not assigned to this appointment.',
+            ], 403);
         }
 
         $validated = $request->validate([
@@ -523,48 +683,62 @@ class AppointmentApiController extends Controller
             'summary' => 'nullable|string',
         ]);
 
-        return DB::transaction(function () use ($admin, $appointment, $validated) {
-            $appointment->status = 'completed';
+        try {
+            return DB::transaction(function () use ($admin, $appointment, $validated) {
+                $appointment->status = 'completed';
 
-            // Check if consultation should be generated
-            if (!empty($validated['create_consultation']) && !$appointment->consultation_id) {
-                $clientName = $appointment->jajman ? $appointment->jajman->name : $appointment->title;
-                $duration = max(15, (int) $appointment->start_at->diffInMinutes($appointment->end_at));
+                // Check if consultation should be generated
+                if (!empty($validated['create_consultation']) && !$appointment->consultation_id) {
+                    $clientName = $appointment->jajman ? $appointment->jajman->name : $appointment->title;
+                    $duration = max(15, (int) $appointment->start_at->diffInMinutes($appointment->end_at));
 
-                // Map appointment type to consultation type
-                $typeMap = [
-                    'online' => 'online_chat',
-                    'in_person' => 'in_person',
-                    'phone_call' => 'phone_call',
-                    'puja' => 'ritual_puja',
-                    'vastu_visit' => 'vastu_visit',
-                    'other' => 'in_person',
-                ];
-                $consultType = $typeMap[$appointment->appointment_type] ?? 'in_person';
+                    // Map appointment type to consultation type
+                    $typeMap = [
+                        'online' => 'online_chat',
+                        'in_person' => 'in_person',
+                        'phone_call' => 'phone_call',
+                        'puja' => 'ritual_puja',
+                        'vastu_visit' => 'vastu_visit',
+                        'other' => 'in_person',
+                    ];
+                    $consultType = $typeMap[$appointment->appointment_type] ?? 'in_person';
 
-                $consultation = Consultation::create([
-                    'admin_id' => $admin->id,
-                    'jajman_id' => $appointment->jajman_id,
-                    'client_name' => $clientName,
-                    'type' => $consultType,
-                    'status' => 'completed',
-                    'consultation_date' => $appointment->start_at,
-                    'duration_minutes' => $duration,
-                    'fee_charged' => $validated['fee_charged'] ?? null,
-                    'summary' => $validated['summary'] ?? $appointment->description,
+                    $consultation = Consultation::create([
+                        'admin_id' => $admin->id,
+                        'jajman_id' => $appointment->jajman_id,
+                        'client_name' => $clientName,
+                        'type' => $consultType,
+                        'status' => 'completed',
+                        'consultation_date' => $appointment->start_at,
+                        'duration_minutes' => $duration,
+                        'fee_charged' => $validated['fee_charged'] ?? null,
+                        'summary' => $validated['summary'] ?? $appointment->description,
+                    ]);
+
+                    $appointment->consultation_id = $consultation->id;
+                }
+
+                $appointment->save();
+
+                if ($appointment->user_id && $appointment->escrow_transaction_id) {
+                    $this->serviceOrderService->completeAppointment($appointment->id, $admin->id);
+                }
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Appointment marked as completed.',
+                    'data' => $appointment->fresh()->load(['jajman', 'consultation']),
                 ]);
-
-                $appointment->consultation_id = $consultation->id;
-            }
-
-            $appointment->save();
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Appointment marked as completed.',
-                'data' => $appointment->fresh()->load(['jajman', 'consultation']),
-            ]);
-        });
+            });
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json(['success' => false, 'message' => 'Appointment not found.'], 404);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 403);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Unable to complete appointment: ' . $e->getMessage()], 500);
+        }
     }
 
     /**
@@ -574,18 +748,46 @@ class AppointmentApiController extends Controller
     {
         $admin = $request->user();
 
-        $appointment = Appointment::where('admin_id', $admin->id)->find($id);
+        $appointment = Appointment::find($id);
         if (!$appointment) {
             return response()->json(['success' => false, 'message' => 'Appointment not found.'], 404);
         }
 
-        $appointment->update(['status' => 'no_show']);
+        if ((int) $appointment->admin_id !== (int) $admin->id) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized: You are not assigned to this appointment.',
+            ], 403);
+        }
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Appointment marked as no-show.',
-            'data' => $appointment->fresh(),
-        ]);
+        $notes = $request->input('notes', 'Reported no-show by practitioner');
+
+        try {
+            if ($appointment->user_id && $appointment->escrow_transaction_id) {
+                $appointment = $this->serviceOrderService->reportNoShow($appointment->id, 'astrologer', $notes, $admin->id);
+            } else {
+                $appointment->update([
+                    'status' => 'no_show',
+                    'no_show_reported_at' => \Carbon\Carbon::now(),
+                    'no_show_reported_by' => 'astrologer',
+                    'no_show_notes' => $notes,
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Appointment marked as no-show.',
+                'data' => $appointment->fresh(),
+            ]);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json(['success' => false, 'message' => 'Appointment not found.'], 404);
+        } catch (\Illuminate\Auth\Access\AuthorizationException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 403);
+        } catch (\InvalidArgumentException $e) {
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+        } catch (\Exception $e) {
+            return response()->json(['success' => false, 'message' => 'Unable to report no-show: ' . $e->getMessage()], 500);
+        }
     }
 
     /**

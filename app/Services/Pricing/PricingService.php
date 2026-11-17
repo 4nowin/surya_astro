@@ -88,7 +88,16 @@ class PricingService
             'base_price' => $baseInr,
             'platform_markup' => $markupInr,
             'customer_price' => $customerInr,
+            'astrologer_base_price' => $baseInr,
             'astrologer_earning' => $baseInr,
         ];
+    }
+
+    /**
+     * Alias for calculateServicePrice for consistent naming.
+     */
+    public function calculateCommercialPricing(float|int|string $basePriceInr, bool $isFree = false): array
+    {
+        return $this->calculateServicePrice($basePriceInr, $isFree);
     }
 }

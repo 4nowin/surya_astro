@@ -30,6 +30,7 @@ class ProfessionalService extends Model
         'additional_info',
         'is_free_chat',
         'max_message_characters',
+        'delivery_timeframe_days',
     ];
 
     protected $casts = [
@@ -40,6 +41,7 @@ class ProfessionalService extends Model
         'is_public' => 'boolean',
         'is_free_chat' => 'boolean',
         'max_message_characters' => 'integer',
+        'delivery_timeframe_days' => 'integer',
     ];
 
     /**
@@ -56,6 +58,14 @@ class ProfessionalService extends Model
     public function appointments()
     {
         return $this->hasMany(Appointment::class, 'service_id');
+    }
+
+    /**
+     * Orders fulfilled using this deliverable service.
+     */
+    public function orders()
+    {
+        return $this->hasMany(ProfessionalServiceOrder::class, 'service_id');
     }
 
     /**
@@ -95,6 +105,10 @@ class ProfessionalService extends Model
      */
     public function toPublicArray(): array
     {
+        $basePrice = (float) $this->price;
+        $pricing = app(\App\Services\Pricing\PricingService::class)->calculateCommercialPricing($basePrice);
+        $astro = $this->relationLoaded('professional') ? $this->professional?->astrologer : null;
+
         return [
             'id' => $this->id,
             'name' => $this->name,
@@ -102,12 +116,25 @@ class ProfessionalService extends Model
             'category' => $this->category,
             'specialization' => $this->specialization,
             'pricing_model' => $this->pricing_model,
-            'price' => $this->price,
+            'price' => $basePrice,
+            'base_price' => $pricing['astrologer_base_price'],
+            'platform_markup' => $pricing['platform_markup'],
+            'customer_price' => $pricing['customer_price'],
+            'pricing' => $pricing,
             'currency' => $this->currency,
             'duration_minutes' => $this->duration_minutes,
+            'delivery_timeframe_days' => (int) ($this->delivery_timeframe_days ?? 3),
             'delivery_methods' => $this->delivery_methods ?? ['online'],
             'is_free_chat' => (bool) $this->is_free_chat,
             'max_message_characters' => (int) ($this->max_message_characters ?? 1000),
+            'astrologer' => $astro ? [
+                'id' => $astro->id,
+                'name' => $astro->name,
+                'image' => $astro->image_url,
+                'expertise' => $astro->expertise,
+                'experience' => $astro->experience,
+                'rating' => (float) ($astro->rating ?? 5.0),
+            ] : null,
         ];
     }
 

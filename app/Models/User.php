@@ -129,6 +129,16 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(UserWalletTransaction::class);
     }
 
+    public function serviceOrders()
+    {
+        return $this->hasMany(ProfessionalServiceOrder::class);
+    }
+
+    public function appointments()
+    {
+        return $this->hasMany(Appointment::class);
+    }
+
     public function chatAllowances()
     {
         return $this->hasMany(UserAstrologerChatAllowance::class);

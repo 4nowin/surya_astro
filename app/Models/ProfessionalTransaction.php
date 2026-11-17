@@ -19,6 +19,7 @@ class ProfessionalTransaction extends Model
         'appointment_id',
         'consultation_id',
         'service_id',
+        'service_order_id',
         'chat_session_id',
         'chat_id',
         'invoice_id',
@@ -75,6 +76,14 @@ class ProfessionalTransaction extends Model
     public function service()
     {
         return $this->belongsTo(ProfessionalService::class, 'service_id');
+    }
+
+    /**
+     * Linked asynchronous service order.
+     */
+    public function serviceOrder()
+    {
+        return $this->belongsTo(ProfessionalServiceOrder::class, 'service_order_id');
     }
 
     /**

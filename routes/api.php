@@ -33,6 +33,9 @@ use App\Http\Controllers\Api\DailyPanchangController;
 use App\Http\Controllers\Api\DailyHoroscopeApiController;
 use App\Http\Controllers\Api\KundliApiController;
 use App\Http\Controllers\Api\KundliReportDeliveryController;
+use App\Http\Controllers\Api\ConsumerServiceApiController;
+use App\Http\Controllers\Api\ServiceOrderAttachmentController;
+use App\Http\Controllers\Api\ProfessionalServiceOrderApiController;
 use App\Http\Controllers\Api\PersonalizedInsightsApiController;
 use App\Http\Controllers\Api\GeoController;
 use Carbon\Carbon;
@@ -70,6 +73,20 @@ Route::get('{lang?}/home-horoscopes', [HoroscopeController::class, 'homeHoroscop
 
 Route::get('{lang?}/astrologers', [AstrologerController::class, 'index']);
 Route::get('/astrologers/{id}/reviews', [ReviewController::class, 'index']);
+
+// 🌟 Public Service Monetization Discovery
+Route::get('{lang?}/services', [ConsumerServiceApiController::class, 'getAllServices']);
+Route::get('/services', [ConsumerServiceApiController::class, 'getAllServices']);
+Route::get('{lang?}/services/categories', [ConsumerServiceApiController::class, 'getCategories']);
+Route::get('/services/categories', [ConsumerServiceApiController::class, 'getCategories']);
+Route::get('{lang?}/services/providers', [ConsumerServiceApiController::class, 'getProviders']);
+Route::get('/services/providers', [ConsumerServiceApiController::class, 'getProviders']);
+Route::get('{lang?}/services/{id}', [ConsumerServiceApiController::class, 'getServiceDetail'])->where('id', '[0-9]+');
+Route::get('/services/{id}', [ConsumerServiceApiController::class, 'getServiceDetail'])->where('id', '[0-9]+');
+Route::get('{lang?}/astrologers/{id}/services', [ConsumerServiceApiController::class, 'getAstrologerServices']);
+Route::get('/astrologers/{id}/services', [ConsumerServiceApiController::class, 'getAstrologerServices']);
+Route::get('{lang?}/astrologers/{id}/availability', [ConsumerServiceApiController::class, 'getAstrologerAvailability']);
+Route::get('/astrologers/{id}/availability', [ConsumerServiceApiController::class, 'getAstrologerAvailability']);
 
 
 Route::prefix('astrologer')->group(function () {
@@ -125,9 +142,17 @@ Route::prefix('astrologer')->group(function () {
         Route::put('/appointments/{id}', [AppointmentApiController::class, 'update']);
         Route::post('/appointments/{id}/reschedule', [AppointmentApiController::class, 'reschedule']);
         Route::post('/appointments/{id}/cancel', [AppointmentApiController::class, 'cancel']);
+        Route::post('/appointments/{id}/accept', [AppointmentApiController::class, 'accept']);
+        Route::post('/appointments/{id}/reject', [AppointmentApiController::class, 'reject']);
         Route::post('/appointments/{id}/complete', [AppointmentApiController::class, 'complete']);
         Route::post('/appointments/{id}/no-show', [AppointmentApiController::class, 'noShow']);
         Route::get('/calendar', [AppointmentApiController::class, 'calendar']);
+
+        // 📦 Pandit Setu - Asynchronous Service Orders
+        Route::get('/service-orders', [ProfessionalServiceOrderApiController::class, 'index']);
+        Route::get('/service-orders/{id}', [ProfessionalServiceOrderApiController::class, 'show']);
+        Route::post('/service-orders/{id}/start', [ProfessionalServiceOrderApiController::class, 'start']);
+        Route::post('/service-orders/{id}/deliver', [ProfessionalServiceOrderApiController::class, 'deliver']);
 
         // ⏰ Pandit Setu - Practitioner Availability
         Route::get('/availability', [AvailabilityApiController::class, 'getWeekly']);
@@ -236,6 +261,29 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::get('/chat/pricing/{astrologerId}', [ChatApiController::class, 'getChatPricing']);
     Route::post('/chat/session/end', [ChatApiController::class, 'endSession']);
     Route::post('/chat/deduct-fee', [ChatController::class, 'deductFee']);
+
+    // 🛍️ Service Monetization Consumer Endpoints
+    Route::post('/services/{id}/book-appointment', [ConsumerServiceApiController::class, 'bookAppointment']);
+    Route::post('/services/{id}/order-deliverable', [ConsumerServiceApiController::class, 'orderDeliverable']);
+    Route::get('/user/service-orders', [ConsumerServiceApiController::class, 'getUserServiceOrders']);
+    Route::get('/user/service-orders/{id}', [ConsumerServiceApiController::class, 'getUserServiceOrder']);
+    Route::post('/user/service-orders/{id}/confirm-completed', [ConsumerServiceApiController::class, 'confirmDeliverableCompletion']);
+    Route::post('/user/service-orders/{id}/dispute', [ConsumerServiceApiController::class, 'disputeOrder']);
+    Route::get('/user/appointments', [ConsumerServiceApiController::class, 'getUserAppointments']);
+    Route::post('/user/appointments/{id}/cancel', [ConsumerServiceApiController::class, 'cancelUserAppointment']);
+    Route::post('/user/appointments/{id}/report-no-show', [ConsumerServiceApiController::class, 'reportAppointmentNoShow']);
+
+    // 📎 Private & Secure Service Order Attachments
+    Route::post('/service-orders/{id}/attachments', [ServiceOrderAttachmentController::class, 'upload']);
+    Route::get('/service-orders/{id}/attachments/{filename}', [ServiceOrderAttachmentController::class, 'download']);
+
+    // ⚖️ Service Monetization Administrative Dispute & Exception Resolution
+    Route::prefix('admin/monetization')->group(function () {
+        Route::get('/review-queue', [\App\Http\Controllers\Admin\ServiceMonetizationAdminController::class, 'reviewQueue']);
+        Route::post('/orders/{id}/resolve-dispute', [\App\Http\Controllers\Admin\ServiceMonetizationAdminController::class, 'resolveDispute']);
+        Route::post('/appointments/{id}/resolve-cancellation', [\App\Http\Controllers\Admin\ServiceMonetizationAdminController::class, 'resolveCancellation']);
+        Route::post('/appointments/{id}/resolve-no-show', [\App\Http\Controllers\Admin\ServiceMonetizationAdminController::class, 'resolveNoShow']);
+    });
 });
 
 Route::group(['middleware' => ['auth:sanctum'], 'prefix' => "/{lang?}"], function () {
@@ -257,6 +305,29 @@ Route::group(['middleware' => ['auth:sanctum'], 'prefix' => "/{lang?}"], functio
     Route::get('/chat/astrologers/{astrologerId}/pricing', [ChatApiController::class, 'getChatPricing']);
     Route::get('/chat/pricing/{astrologerId}', [ChatApiController::class, 'getChatPricing']);
     Route::post('/chat/session/end', [ChatApiController::class, 'endSession']);
+
+    // 🛍️ Service Monetization Consumer Endpoints
+    Route::post('/services/{id}/book-appointment', [ConsumerServiceApiController::class, 'bookAppointment']);
+    Route::post('/services/{id}/order-deliverable', [ConsumerServiceApiController::class, 'orderDeliverable']);
+    Route::get('/user/service-orders', [ConsumerServiceApiController::class, 'getUserServiceOrders']);
+    Route::get('/user/service-orders/{id}', [ConsumerServiceApiController::class, 'getUserServiceOrder']);
+    Route::post('/user/service-orders/{id}/confirm-completed', [ConsumerServiceApiController::class, 'confirmDeliverableCompletion']);
+    Route::post('/user/service-orders/{id}/dispute', [ConsumerServiceApiController::class, 'disputeOrder']);
+    Route::get('/user/appointments', [ConsumerServiceApiController::class, 'getUserAppointments']);
+    Route::post('/user/appointments/{id}/cancel', [ConsumerServiceApiController::class, 'cancelUserAppointment']);
+    Route::post('/user/appointments/{id}/report-no-show', [ConsumerServiceApiController::class, 'reportAppointmentNoShow']);
+
+    // 📎 Private & Secure Service Order Attachments
+    Route::post('/service-orders/{id}/attachments', [ServiceOrderAttachmentController::class, 'upload']);
+    Route::get('/service-orders/{id}/attachments/{filename}', [ServiceOrderAttachmentController::class, 'download']);
+
+    // ⚖️ Service Monetization Administrative Dispute & Exception Resolution
+    Route::prefix('admin/monetization')->group(function () {
+        Route::get('/review-queue', [\App\Http\Controllers\Admin\ServiceMonetizationAdminController::class, 'reviewQueue']);
+        Route::post('/orders/{id}/resolve-dispute', [\App\Http\Controllers\Admin\ServiceMonetizationAdminController::class, 'resolveDispute']);
+        Route::post('/appointments/{id}/resolve-cancellation', [\App\Http\Controllers\Admin\ServiceMonetizationAdminController::class, 'resolveCancellation']);
+        Route::post('/appointments/{id}/resolve-no-show', [\App\Http\Controllers\Admin\ServiceMonetizationAdminController::class, 'resolveNoShow']);
+    });
 
     Route::post('/update-user-fcm-token', [UserController::class, 'updateFcmToken']);
 
