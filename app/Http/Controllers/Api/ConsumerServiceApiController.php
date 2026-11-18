@@ -388,6 +388,31 @@ class ConsumerServiceApiController extends Controller
                 'success' => false,
                 'message' => $e->getMessage(),
             ], 422);
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Handle database unique constraint collisions gracefully without HTTP 500
+            if ($e->getCode() == 23000 || str_contains($e->getMessage(), 'Duplicate entry')) {
+                $nonce = $request->input('client_nonce');
+                if (!empty($nonce)) {
+                    $existing = Appointment::where('client_nonce', $nonce)->first();
+                    if ($existing && (int) $existing->user_id === (int) $user->id) {
+                        return response()->json([
+                            'success' => true,
+                            'idempotent' => true,
+                            'message' => 'Appointment retrieved via idempotent client nonce.',
+                            'data' => new AppointmentBookingResource($existing),
+                            'pricing' => $this->pricingService->calculateCommercialPricing($existing->base_price),
+                        ], 200);
+                    }
+                }
+                return response()->json([
+                    'success' => false,
+                    'message' => 'A transaction with this request key is already being processed. Please refresh.',
+                ], 409);
+            }
+            return response()->json([
+                'success' => false,
+                'message' => 'Database error encountered during booking: ' . $e->getMessage(),
+            ], 422);
         } catch (Exception $e) {
             return response()->json([
                 'success' => false,
@@ -440,6 +465,31 @@ class ConsumerServiceApiController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
+            ], 422);
+        } catch (\Illuminate\Database\QueryException $e) {
+            // Handle database unique constraint collisions gracefully without HTTP 500
+            if ($e->getCode() == 23000 || str_contains($e->getMessage(), 'Duplicate entry')) {
+                $nonce = $request->input('client_nonce');
+                if (!empty($nonce)) {
+                    $existing = ProfessionalServiceOrder::where('client_nonce', $nonce)->first();
+                    if ($existing && (int) $existing->user_id === (int) $user->id) {
+                        return response()->json([
+                            'success' => true,
+                            'idempotent' => true,
+                            'message' => 'Service order retrieved via idempotent client nonce.',
+                            'data' => new ProfessionalServiceOrderResource($existing),
+                            'pricing' => $this->pricingService->calculateCommercialPricing($existing->base_price),
+                        ], 200);
+                    }
+                }
+                return response()->json([
+                    'success' => false,
+                    'message' => 'A transaction with this request key is already being processed. Please refresh.',
+                ], 409);
+            }
+            return response()->json([
+                'success' => false,
+                'message' => 'Database error encountered during order placement: ' . $e->getMessage(),
             ], 422);
         } catch (Exception $e) {
             return response()->json([

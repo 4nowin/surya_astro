@@ -128,6 +128,14 @@ class Appointment extends Model
     }
 
     /**
+     * Admin who resolved this cancellation or no-show.
+     */
+    public function resolver()
+    {
+        return $this->belongsTo(Admin::class, 'resolved_by_admin_id');
+    }
+
+    /**
      * Check if appointment is pending practitioner acceptance.
      */
     public function isPendingAcceptance(): bool

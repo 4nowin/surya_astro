@@ -78,6 +78,21 @@
                                 <span class="menu-title">Platform Dashboard</span>
                             </a>
                         </li>
+                        <li class="menu-item">
+                            <a href="{{ route('admin.monetization.index') }}">
+                                <span class="menu-icon"><i class="fas fa-scale-balanced"></i></span>
+                                <span class="menu-title">Service Monetization</span>
+                                @php
+                                    $pendingMonetizationReviews = \App\Models\ProfessionalServiceOrder::where('status', 'disputed')->count()
+                                        + \App\Models\Appointment::whereIn('status', ['cancelled_pending_review', 'no_show_pending_review'])->count();
+                                @endphp
+                                @if($pendingMonetizationReviews > 0)
+                                    <span class="menu-suffix">
+                                        <span class="badge bg-danger">{{ $pendingMonetizationReviews }}</span>
+                                    </span>
+                                @endif
+                            </a>
+                        </li>
                         <li class="menu-item sub-menu">
                             <a href="#">
                                 <span class="menu-icon">

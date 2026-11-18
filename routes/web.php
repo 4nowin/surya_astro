@@ -135,6 +135,14 @@ Route::group([
         Route::post('/astrologer-applications/{astrologerApplication}/approve', [\App\Http\Controllers\Admin\AstrologerApplicationController::class, 'approve'])->name('admin.astrologer-applications.approve');
         Route::post('/astrologer-applications/{astrologerApplication}/reject', [\App\Http\Controllers\Admin\AstrologerApplicationController::class, 'reject'])->name('admin.astrologer-applications.reject');
 
+        // Service Monetization Review & Financial Adjudication
+        Route::get('/monetization', [\App\Http\Controllers\Admin\ServiceMonetizationAdminWebController::class, 'index'])->name('admin.monetization.index');
+        Route::get('/monetization/orders/{order}', [\App\Http\Controllers\Admin\ServiceMonetizationAdminWebController::class, 'showOrder'])->name('admin.monetization.orders.show');
+        Route::post('/monetization/orders/{order}/resolve', [\App\Http\Controllers\Admin\ServiceMonetizationAdminWebController::class, 'resolveOrderDispute'])->name('admin.monetization.orders.resolve');
+        Route::get('/monetization/appointments/{appointment}', [\App\Http\Controllers\Admin\ServiceMonetizationAdminWebController::class, 'showAppointment'])->name('admin.monetization.appointments.show');
+        Route::post('/monetization/appointments/{appointment}/resolve-cancellation', [\App\Http\Controllers\Admin\ServiceMonetizationAdminWebController::class, 'resolveCancellation'])->name('admin.monetization.appointments.resolve-cancellation');
+        Route::post('/monetization/appointments/{appointment}/resolve-noshow', [\App\Http\Controllers\Admin\ServiceMonetizationAdminWebController::class, 'resolveNoShow'])->name('admin.monetization.appointments.resolve-noshow');
+
         Route::resource('promoters', PromotersController::class);
         Route::resource('locations', LocationsController::class);
         Route::resource('coupon', CouponController::class);

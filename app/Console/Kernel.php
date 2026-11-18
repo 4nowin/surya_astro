@@ -16,6 +16,11 @@ class Kernel extends ConsoleKernel
         $schedule->command('astro:calculate-worker --max-jobs=20 --max-time=50')
             ->everyMinute()
             ->withoutOverlapping();
+
+        // Expire unconfirmed appointments past 24-hour acceptance deadline and issue automatic wallet refunds
+        $schedule->command('monetization:expire-appointments')
+            ->everyFiveMinutes()
+            ->withoutOverlapping();
     }
 
     /**

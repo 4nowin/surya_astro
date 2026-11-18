@@ -115,6 +115,14 @@ class ProfessionalServiceOrder extends Model
         return $this->hasMany(UserWalletTransaction::class, 'service_order_id');
     }
 
+    /**
+     * Admin who resolved this order dispute.
+     */
+    public function resolver()
+    {
+        return $this->belongsTo(Admin::class, 'resolved_by_admin_id');
+    }
+
     /* ---------------- Scopes ---------------- */
 
     public function scopeSubmitted($query)

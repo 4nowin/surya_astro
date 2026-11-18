@@ -59,6 +59,9 @@ class ServiceOrderService
                 if ((int) $existing->user_id !== (int) $user->id) {
                     throw new AuthorizationException("Unauthorized: Client nonce already associated with another user's appointment.");
                 }
+                if ((int) $existing->service_id !== (int) $service->id) {
+                    throw new InvalidArgumentException("Idempotency conflict: Client nonce has already been used for a different appointment booking.");
+                }
                 return [
                     'appointment' => $existing,
                     'wallet_transaction' => $existing->walletTransactions()->latest()->first(),
@@ -96,6 +99,9 @@ class ServiceOrderService
                 if ($existing) {
                     if ((int) $existing->user_id !== (int) $user->id) {
                         throw new AuthorizationException("Unauthorized: Client nonce already associated with another user's appointment.");
+                    }
+                    if ((int) $existing->service_id !== (int) $service->id) {
+                        throw new InvalidArgumentException("Idempotency conflict: Client nonce has already been used for a different appointment booking.");
                     }
                     return [
                         'appointment' => $existing,
@@ -221,6 +227,9 @@ class ServiceOrderService
                 if ((int) $existing->user_id !== (int) $user->id) {
                     throw new AuthorizationException("Unauthorized: Client nonce already associated with another user's order.");
                 }
+                if ((int) $existing->service_id !== (int) $service->id || ($existing->order_type !== ($data['order_type'] ?? 'custom'))) {
+                    throw new InvalidArgumentException("Idempotency conflict: Client nonce has already been used for a different service order.");
+                }
                 return [
                     'order' => $existing,
                     'wallet_transaction' => $existing->walletTransactions()->latest()->first(),
@@ -248,6 +257,9 @@ class ServiceOrderService
                 if ($existing) {
                     if ((int) $existing->user_id !== (int) $user->id) {
                         throw new AuthorizationException("Unauthorized: Client nonce already associated with another user's order.");
+                    }
+                    if ((int) $existing->service_id !== (int) $service->id || ($existing->order_type !== ($data['order_type'] ?? 'custom'))) {
+                        throw new InvalidArgumentException("Idempotency conflict: Client nonce has already been used for a different service order.");
                     }
                     return [
                         'order' => $existing,
@@ -915,11 +927,58 @@ class ServiceOrderService
     }
 
     /**
+     * Automatically find and expire pending appointments past their 24-hour acceptance deadline.
+     * Atomically marks them expired, issues a full wallet refund to the customer,
+     * updates the escrow transaction to refunded, and records the refund in the wallet ledger.
+     *
+     * @return int Number of appointments expired and refunded
+     */
+    public function expirePendingAppointments(): int
+    {
+        $expiredCount = 0;
+        $now = Carbon::now();
+
+        // Find candidate appointments that have passed the acceptance deadline
+        $candidates = Appointment::whereIn('status', ['pending', 'pending_confirmation'])
+            ->whereNotNull('acceptance_deadline_at')
+            ->where('acceptance_deadline_at', '<=', $now)
+            ->get();
+
+        foreach ($candidates as $candidate) {
+            $processed = DB::transaction(function () use ($candidate) {
+                // Lock row to prevent race conditions with astrologer accepting concurrently
+                $appointment = Appointment::where('id', $candidate->id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$appointment || !$appointment->isAcceptanceExpired()) {
+                    return false; // Already accepted or cancelled concurrently
+                }
+
+                $this->refundAppointmentInternally(
+                    $appointment,
+                    'system',
+                    'Appointment acceptance deadline (24 hours) expired without practitioner confirmation.',
+                    'expired'
+                );
+
+                return true;
+            });
+
+            if ($processed) {
+                $expiredCount++;
+            }
+        }
+
+        return $expiredCount;
+    }
+
+    /**
      * Internal helper to refund an appointment and update escrow status atomically.
      */
-    protected function refundAppointmentInternally(Appointment $appointment, string $actorType, string $reason): void
+    protected function refundAppointmentInternally(Appointment $appointment, string $actorType, string $reason, string $targetStatus = 'cancelled'): void
     {
-        $appointment->status = 'cancelled';
+        $appointment->status = $targetStatus;
         $appointment->cancelled_by = $actorType;
         $appointment->cancelled_at = Carbon::now();
         $appointment->cancellation_reason = $reason;
