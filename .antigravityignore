@@ -41,3 +41,5 @@ Thumbs.db
 .phpunit.cache/
 .phpunit.result.cache
 /tests/coverage/
+*.jks
+*.keystore
