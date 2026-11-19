@@ -66,26 +66,26 @@ Route::middleware(['auth:sanctum'])->group(function () {
 
 Route::get('/enquiry', [ApiController::class, "inquiry"]);
 Route::get('{id}/products', [ApiController::class, "products"]);
-Route::get('{lang?}/poojas', [PoojaController::class, "index"]);
-Route::get('{lang?}/home-poojas', [PoojaController::class, 'homePoojas']);
-Route::get('{lang?}/horoscopes', [HoroscopeController::class, 'index']);
-Route::get('{lang?}/home-horoscopes', [HoroscopeController::class, 'homeHoroscope']);
+Route::get('{lang?}/poojas', [PoojaController::class, "index"])->where('lang', 'en|hi');
+Route::get('{lang?}/home-poojas', [PoojaController::class, 'homePoojas'])->where('lang', 'en|hi');
+Route::get('{lang?}/horoscopes', [HoroscopeController::class, 'index'])->where('lang', 'en|hi');
+Route::get('{lang?}/home-horoscopes', [HoroscopeController::class, 'homeHoroscope'])->where('lang', 'en|hi');
 
-Route::get('{lang?}/astrologers', [AstrologerController::class, 'index']);
+Route::get('{lang?}/astrologers', [AstrologerController::class, 'index'])->where('lang', 'en|hi');
 Route::get('/astrologers/{id}/reviews', [ReviewController::class, 'index']);
 
 // 🌟 Public Service Monetization Discovery
-Route::get('{lang?}/services', [ConsumerServiceApiController::class, 'getAllServices']);
+Route::get('{lang?}/services', [ConsumerServiceApiController::class, 'getAllServices'])->where('lang', 'en|hi');
 Route::get('/services', [ConsumerServiceApiController::class, 'getAllServices']);
-Route::get('{lang?}/services/categories', [ConsumerServiceApiController::class, 'getCategories']);
+Route::get('{lang?}/services/categories', [ConsumerServiceApiController::class, 'getCategories'])->where('lang', 'en|hi');
 Route::get('/services/categories', [ConsumerServiceApiController::class, 'getCategories']);
-Route::get('{lang?}/services/providers', [ConsumerServiceApiController::class, 'getProviders']);
+Route::get('{lang?}/services/providers', [ConsumerServiceApiController::class, 'getProviders'])->where('lang', 'en|hi');
 Route::get('/services/providers', [ConsumerServiceApiController::class, 'getProviders']);
-Route::get('{lang?}/services/{id}', [ConsumerServiceApiController::class, 'getServiceDetail'])->where('id', '[0-9]+');
+Route::get('{lang?}/services/{id}', [ConsumerServiceApiController::class, 'getServiceDetail'])->where('id', '[0-9]+')->where('lang', 'en|hi');
 Route::get('/services/{id}', [ConsumerServiceApiController::class, 'getServiceDetail'])->where('id', '[0-9]+');
-Route::get('{lang?}/astrologers/{id}/services', [ConsumerServiceApiController::class, 'getAstrologerServices']);
+Route::get('{lang?}/astrologers/{id}/services', [ConsumerServiceApiController::class, 'getAstrologerServices'])->where('lang', 'en|hi');
 Route::get('/astrologers/{id}/services', [ConsumerServiceApiController::class, 'getAstrologerServices']);
-Route::get('{lang?}/astrologers/{id}/availability', [ConsumerServiceApiController::class, 'getAstrologerAvailability']);
+Route::get('{lang?}/astrologers/{id}/availability', [ConsumerServiceApiController::class, 'getAstrologerAvailability'])->where('lang', 'en|hi');
 Route::get('/astrologers/{id}/availability', [ConsumerServiceApiController::class, 'getAstrologerAvailability']);
 
 

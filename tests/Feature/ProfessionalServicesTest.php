@@ -408,4 +408,127 @@ class ProfessionalServicesTest extends TestCase
         $resList->assertOk();
         $this->assertCount(0, $resList->json('data'));
     }
+
+    /**
+     * Regression Test for Pandit Setu Service Activation Defect:
+     * Create (inactive by default) -> activate -> verify persisted & active -> deactivate -> reactivate.
+     */
+    public function test_service_creation_defaults_to_inactive_and_supports_repeated_activation_cycles(): void
+    {
+        $this->actingAs($this->practitionerA, 'sanctum');
+
+        // 1. Create a new service without specifying is_active
+        $payload = [
+            'name' => 'Tarot & Past Life Consultation',
+            'description' => 'Detailed 3-card spread reading with remedial gemstones.',
+            'category' => 'spiritual_consultant',
+            'specialization' => 'Karmic Patterns',
+            'pricing_model' => 'fixed',
+            'price' => 2100,
+            'currency' => 'INR',
+            'duration_minutes' => 60,
+            'delivery_timeframe_days' => 2,
+            'delivery_methods' => ['online', 'chat'],
+            'preparation_instructions' => 'Meditate 5 minutes prior to session.',
+            'additional_info' => 'Bring specific questions.',
+        ];
+
+        $resCreate = $this->postJson('/api/astrologer/services', $payload);
+        $resCreate->assertCreated();
+        $serviceId = $resCreate->json('data.id');
+        $this->assertNotNull($serviceId);
+
+        // 2. Verify it is inactive by default in both API response and database
+        $this->assertFalse($resCreate->json('data.is_active'), 'Newly created service must be inactive by default in API response');
+        $this->assertDatabaseHas('professional_services', [
+            'id' => $serviceId,
+            'admin_id' => $this->practitionerA->id,
+            'name' => 'Tarot & Past Life Consultation',
+            'is_active' => false,
+            'deleted_at' => null,
+        ]);
+
+        // Verify it appears in the practitioner's service catalogue as inactive
+        $resList1 = $this->getJson('/api/astrologer/services');
+        $resList1->assertOk();
+        $this->assertCount(1, $resList1->json('data'));
+        $this->assertEquals($serviceId, $resList1->json('data.0.id'));
+        $this->assertFalse($resList1->json('data.0.is_active'));
+
+        // 3. Activate the service
+        $resActivate = $this->postJson("/api/astrologer/services/{$serviceId}/toggle-active");
+        $resActivate->assertOk();
+        $this->assertTrue($resActivate->json('data.is_active'), 'Activation must set is_active to true');
+
+        // 4. Verify it remains present in database (deleted_at is NULL, is_active is true)
+        $this->assertDatabaseHas('professional_services', [
+            'id' => $serviceId,
+            'is_active' => true,
+            'deleted_at' => null,
+        ]);
+
+        // 5. Verify it appears as active in service catalogue list
+        $resList2 = $this->getJson('/api/astrologer/services');
+        $resList2->assertOk();
+        $this->assertCount(1, $resList2->json('data'));
+        $this->assertEquals($serviceId, $resList2->json('data.0.id'));
+        $this->assertTrue($resList2->json('data.0.is_active'));
+
+        // 6. Deactivate the service
+        $resDeactivate = $this->postJson("/api/astrologer/services/{$serviceId}/toggle-active");
+        $resDeactivate->assertOk();
+        $this->assertFalse($resDeactivate->json('data.is_active'), 'Deactivation must set is_active to false');
+
+        // 7. Verify it remains in database and appears as inactive in service list
+        $this->assertDatabaseHas('professional_services', [
+            'id' => $serviceId,
+            'is_active' => false,
+            'deleted_at' => null,
+        ]);
+        $resList3 = $this->getJson('/api/astrologer/services');
+        $resList3->assertOk();
+        $this->assertCount(1, $resList3->json('data'));
+        $this->assertFalse($resList3->json('data.0.is_active'));
+
+        // 8. Reactivate the service
+        $resReactivate = $this->postJson("/api/astrologer/services/{$serviceId}/toggle-active");
+        $resReactivate->assertOk();
+        $this->assertTrue($resReactivate->json('data.is_active'), 'Reactivation must set is_active to true');
+
+        // 9. Verify it remains present in database and appears as active in service list
+        $this->assertDatabaseHas('professional_services', [
+            'id' => $serviceId,
+            'is_active' => true,
+            'deleted_at' => null,
+        ]);
+        $resList4 = $this->getJson('/api/astrologer/services');
+        $resList4->assertOk();
+        $this->assertCount(1, $resList4->json('data'));
+        $this->assertTrue($resList4->json('data.0.is_active'));
+
+        // 10. Confirm all other properties are completely unchanged across all transitions
+        $resDetail = $this->getJson("/api/astrologer/services/{$serviceId}");
+        $resDetail->assertOk();
+        $this->assertEquals('Tarot & Past Life Consultation', $resDetail->json('data.name'));
+        $this->assertEquals('Detailed 3-card spread reading with remedial gemstones.', $resDetail->json('data.description'));
+        $this->assertEquals('spiritual_consultant', $resDetail->json('data.category'));
+        $this->assertEquals('Karmic Patterns', $resDetail->json('data.specialization'));
+        $this->assertEquals('fixed', $resDetail->json('data.pricing_model'));
+        $this->assertEquals(2100, $resDetail->json('data.price'));
+        $this->assertEquals(60, $resDetail->json('data.duration_minutes'));
+        $this->assertEquals(2, $resDetail->json('data.delivery_timeframe_days'));
+        $this->assertEquals(['online', 'chat'], $resDetail->json('data.delivery_methods'));
+
+        // 11. Confirm unrelated service actions (editing, show, explicit delete) continue to work
+        $resUpdate = $this->putJson("/api/astrologer/services/{$serviceId}", [
+            'price' => 2500,
+        ]);
+        $resUpdate->assertOk();
+        $this->assertEquals(2500, $resUpdate->json('data.price'));
+        $this->assertTrue($resUpdate->json('data.is_active'));
+
+        $resDelete = $this->deleteJson("/api/astrologer/services/{$serviceId}");
+        $resDelete->assertOk();
+        $this->assertSoftDeleted('professional_services', ['id' => $serviceId]);
+    }
 }

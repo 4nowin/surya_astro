@@ -125,6 +125,8 @@ class ProfessionalService extends Model
             'duration_minutes' => $this->duration_minutes,
             'delivery_timeframe_days' => (int) ($this->delivery_timeframe_days ?? 3),
             'delivery_methods' => $this->delivery_methods ?? ['online'],
+            'is_active' => (bool) $this->is_active,
+            'is_public' => (bool) $this->is_public,
             'is_free_chat' => (bool) $this->is_free_chat,
             'max_message_characters' => (int) ($this->max_message_characters ?? 1000),
             'astrologer' => $astro ? [
