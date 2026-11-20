@@ -27,36 +27,75 @@ class PremiumKundliPdfService
      *
      * @param array<string, mixed> $reportData Output of DetailedKundliReportService::buildReportData
      * @param string $locale 'en' or 'hi'
+     * @param array<string, mixed>|null $branding Optional practitioner branding snapshot
      * @return string Raw PDF binary string
      */
-    public function generatePdf(array $reportData, string $locale = 'en'): string
+    public function generatePdf(array $reportData, string $locale = 'en', ?array $branding = null): string
     {
+        $resolvedBranding = $branding ?? ($reportData['branding'] ?? null);
+
         // 1. Try Chromium renderer for native HarfBuzz complex-script shaping
-        $chromiumPdf = $this->tryRenderChromium($reportData, $locale);
+        $chromiumPdf = $this->tryRenderChromium($reportData, $locale, $resolvedBranding);
         if ($chromiumPdf !== null && $chromiumPdf !== '') {
             return $chromiumPdf;
         }
 
         // 2. Deterministic zero-dependency fallback: Dompdf with embedded Noto fonts
-        return $this->renderDompdf($reportData, $locale);
+        return $this->renderDompdf($reportData, $locale, $resolvedBranding);
+    }
+
+    /**
+     * Resolve branding logo to base64 data URI if available.
+     *
+     * @param array<string, mixed>|null $branding
+     */
+    protected function resolveLogoBase64(?array $branding = null): ?string
+    {
+        if (!empty($branding['logo_url'])) {
+            $customLogo = (string) $branding['logo_url'];
+            if (str_starts_with($customLogo, 'data:image/')) {
+                return $customLogo;
+            }
+
+            if (file_exists($customLogo)) {
+                $logoData = @file_get_contents($customLogo);
+                if ($logoData !== false) {
+                    $ext = strtolower(pathinfo($customLogo, PATHINFO_EXTENSION));
+                    $mime = $ext === 'png' ? 'image/png' : ($ext === 'svg' ? 'image/svg+xml' : 'image/jpeg');
+                    return 'data:' . $mime . ';base64,' . base64_encode($logoData);
+                }
+            }
+
+            if (\Illuminate\Support\Facades\Storage::disk('public')->exists($customLogo)) {
+                $logoData = \Illuminate\Support\Facades\Storage::disk('public')->get($customLogo);
+                if ($logoData !== null) {
+                    $ext = strtolower(pathinfo($customLogo, PATHINFO_EXTENSION));
+                    $mime = $ext === 'png' ? 'image/png' : ($ext === 'svg' ? 'image/svg+xml' : 'image/jpeg');
+                    return 'data:' . $mime . ';base64,' . base64_encode($logoData);
+                }
+            }
+        }
+
+        $logoPath = public_path('images/header/logo.png');
+        if (file_exists($logoPath)) {
+            $logoData = @file_get_contents($logoPath);
+            if ($logoData !== false) {
+                return 'data:image/png;base64,' . base64_encode($logoData);
+            }
+        }
+
+        return null;
     }
 
     /**
      * Render PDF using headless Chromium for native HarfBuzz complex-script shaping.
      */
-    protected function tryRenderChromium(array $reportData, string $locale): ?string
+    protected function tryRenderChromium(array $reportData, string $locale, ?array $branding = null): ?string
     {
         $fontRegular = 'file:///' . str_replace('\\', '/', resource_path('fonts/NotoSansDevanagari-Regular.ttf'));
         $fontBold = 'file:///' . str_replace('\\', '/', resource_path('fonts/NotoSansDevanagari-Bold.ttf'));
 
-        $logoPath = public_path('images/header/logo.png');
-        $logoBase64 = null;
-        if (file_exists($logoPath)) {
-            $logoData = file_get_contents($logoPath);
-            if ($logoData !== false) {
-                $logoBase64 = 'data:image/png;base64,' . base64_encode($logoData);
-            }
-        }
+        $logoBase64 = $this->resolveLogoBase64($branding);
 
         $html = View::make('pdf.detailed_kundli_report', [
             'report' => $reportData,
@@ -64,6 +103,7 @@ class PremiumKundliPdfService
             'fontRegular' => $fontRegular,
             'fontBold' => $fontBold,
             'logoBase64' => $logoBase64,
+            'branding' => $branding,
         ])->render();
 
         return $this->renderHtmlViaChromium($html, 'detailed_report_');
@@ -174,7 +214,7 @@ class PremiumKundliPdfService
     /**
      * Render PDF using Dompdf with embedded Noto Sans Devanagari fonts.
      */
-    public function renderDompdf(array $reportData, string $locale = 'en'): string
+    public function renderDompdf(array $reportData, string $locale = 'en', ?array $branding = null): string
     {
         $fontDir = storage_path('fonts');
         if (!is_dir($fontDir)) {
@@ -197,15 +237,7 @@ class PremiumKundliPdfService
 
         $dompdf = new Dompdf($options);
 
-        // Logo image base64 encoded for seamless embedding
-        $logoPath = public_path('images/header/logo.png');
-        $logoBase64 = null;
-        if (file_exists($logoPath)) {
-            $logoData = file_get_contents($logoPath);
-            if ($logoData !== false) {
-                $logoBase64 = 'data:image/png;base64,' . base64_encode($logoData);
-            }
-        }
+        $logoBase64 = $this->resolveLogoBase64($branding);
 
         $html = View::make('pdf.detailed_kundli_report', [
             'report' => $reportData,
@@ -213,6 +245,7 @@ class PremiumKundliPdfService
             'fontRegular' => $fontRegular,
             'fontBold' => $fontBold,
             'logoBase64' => $logoBase64,
+            'branding' => $branding,
         ])->render();
 
         $dompdf->loadHtml($html, 'UTF-8');

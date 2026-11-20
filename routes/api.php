@@ -11,6 +11,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\AvailabilityApiController;
 use App\Http\Controllers\Api\ConsultationApiController;
 use App\Http\Controllers\Api\JajmanApiController;
+use App\Http\Controllers\Api\JajmanKundliReportApiController;
 use App\Http\Controllers\Api\ProfessionalInvoiceApiController;
 use App\Http\Controllers\Api\ProfessionalPaymentApiController;
 use App\Http\Controllers\Api\ProfessionalPublicProfileApiController;
@@ -111,10 +112,18 @@ Route::prefix('astrologer')->group(function () {
         Route::get('/chat/sessions/{sessionId}/messages', [ChatApiController::class, 'getMessages']);
         Route::get('/chat/sessions/{sessionId}/pricing', [ChatApiController::class, 'getSessionPricing']);
         Route::post('/chat/session/end', [ChatApiController::class, 'endSession']);
+
+    // 🔐 Customer Personal Data Sharing Consent
+    Route::get('/customer/consent/{adminId}', [\App\Http\Controllers\Api\CustomerConsentApiController::class, 'getConsent']);
+    Route::post('/customer/consent', [\App\Http\Controllers\Api\CustomerConsentApiController::class, 'recordConsent']);
+    Route::get('/customer/consents', [\App\Http\Controllers\Api\CustomerConsentApiController::class, 'listConsents']);
+    Route::post('/customer/consent/withdraw', [\App\Http\Controllers\Api\CustomerConsentApiController::class, 'withdrawConsent']);
         Route::get('/booked-poojas', [AstrologerController::class, 'getBookedPoojas']);
         Route::get('/donations', [AstrologerController::class, 'getDonations']);
 
         // 📇 Pandit Setu - Jajman CRM Routes
+        Route::get('/jajmans/merge/compare', [JajmanApiController::class, 'compareForMerge']);
+        Route::post('/jajmans/merge', [JajmanApiController::class, 'merge']);
         Route::apiResource('/jajmans', JajmanApiController::class);
         Route::get('/jajmans/{id}/birth-details', [JajmanApiController::class, 'getBirthDetails']);
         Route::post('/jajmans/{id}/birth-details', [JajmanApiController::class, 'storeBirthDetail']);
@@ -163,8 +172,28 @@ Route::prefix('astrologer')->group(function () {
         Route::delete('/availability/exceptions/{id}', [AvailabilityApiController::class, 'destroyException']);
 
         // 🔮 Pandit Setu - Professional Astrology Engine & Jajman Kundli
+        Route::get('/branding', [JajmanKundliReportApiController::class, 'getBranding']);
+        Route::post('/branding', [JajmanKundliReportApiController::class, 'updateBranding']);
+        Route::get('/reports/branding', [JajmanKundliReportApiController::class, 'getBranding']);
+        Route::post('/reports/branding', [JajmanKundliReportApiController::class, 'updateBranding']);
+        Route::post('/kundli/reports/new-person', [JajmanKundliReportApiController::class, 'generateForNewPerson']);
+        Route::post('/jajmans/kundli/reports/new-person', [JajmanKundliReportApiController::class, 'generateForNewPerson']);
         Route::get('/jajmans/{id}/kundli', [AstrologyApiController::class, 'jajmanKundli']);
         Route::post('/jajmans/{id}/kundli/calculate', [AstrologyApiController::class, 'recalculateJajmanKundli']);
+        Route::post('/jajmans/{id}/kundli/reports', [JajmanKundliReportApiController::class, 'generate']);
+        Route::post('/jajmans/{id}/kundli/pdf', [JajmanKundliReportApiController::class, 'generate']);
+        Route::post('/jajmans/{id}/panchang/reports', [JajmanKundliReportApiController::class, 'generatePanchang']);
+        Route::post('/jajmans/{id}/panchang-report', [JajmanKundliReportApiController::class, 'generatePanchang']);
+        Route::post('/jajmans/{id}/daily-insights/reports', [JajmanKundliReportApiController::class, 'generateDailyInsights']);
+        Route::post('/jajmans/{id}/daily-insights-report', [JajmanKundliReportApiController::class, 'generateDailyInsights']);
+        Route::get('/reports', [JajmanKundliReportApiController::class, 'unifiedReports']);
+        Route::get('/jajmans/reports', [JajmanKundliReportApiController::class, 'unifiedReports']);
+        Route::get('/jajmans/{id}/reports', [JajmanKundliReportApiController::class, 'index']);
+        Route::get('/jajmans/{id}/kundli/reports', [JajmanKundliReportApiController::class, 'index']);
+        Route::get('/jajmans/{id}/kundli/pdf', [JajmanKundliReportApiController::class, 'index']);
+        Route::get('/jajmans/{id}/kundli/reports/{reportId}', [JajmanKundliReportApiController::class, 'show']);
+        Route::get('/jajmans/{id}/kundli/reports/{reportId}/download', [JajmanKundliReportApiController::class, 'download']);
+        Route::get('/jajmans/{id}/kundli/pdf/{reportId}', [JajmanKundliReportApiController::class, 'download']);
         Route::post('/astrology/kundli/calculate', [AstrologyApiController::class, 'calculateKundli']);
         Route::get('/astrology/panchang/daily', [AstrologyApiController::class, 'dailyPanchang']);
         Route::get('/astrology/cities', [AstrologyApiController::class, 'cities']);
@@ -184,6 +213,7 @@ Route::prefix('astrologer')->group(function () {
         Route::get('/payments', [ProfessionalPaymentApiController::class, 'index']);
         Route::post('/payments', [ProfessionalPaymentApiController::class, 'store']);
         Route::get('/payments/summary', [ProfessionalPaymentApiController::class, 'summary']);
+        Route::get('/payments/chat-earnings', [ProfessionalPaymentApiController::class, 'chatEarnings']);
         Route::get('/payments/{id}', [ProfessionalPaymentApiController::class, 'show']);
         Route::post('/payments/{id}/refund', [ProfessionalPaymentApiController::class, 'refund']);
         Route::get('/jajmans/{id}/financial-summary', [ProfessionalPaymentApiController::class, 'jajmanFinancialSummary']);
@@ -260,7 +290,19 @@ Route::group(['middleware' => ['auth:sanctum']], function () {
     Route::get('/chat/astrologers/{astrologerId}/pricing', [ChatApiController::class, 'getChatPricing']);
     Route::get('/chat/pricing/{astrologerId}', [ChatApiController::class, 'getChatPricing']);
     Route::post('/chat/session/end', [ChatApiController::class, 'endSession']);
+
+    // 🔐 Customer Personal Data Sharing Consent
+    Route::get('/customer/consent/{adminId}', [\App\Http\Controllers\Api\CustomerConsentApiController::class, 'getConsent']);
+    Route::post('/customer/consent', [\App\Http\Controllers\Api\CustomerConsentApiController::class, 'recordConsent']);
+    Route::get('/customer/consents', [\App\Http\Controllers\Api\CustomerConsentApiController::class, 'listConsents']);
+    Route::post('/customer/consent/withdraw', [\App\Http\Controllers\Api\CustomerConsentApiController::class, 'withdrawConsent']);
     Route::post('/chat/deduct-fee', [ChatController::class, 'deductFee']);
+
+    // 🔐 Customer Personal Data Sharing Consent
+    Route::get('/customer/consent/{adminId}', [\App\Http\Controllers\Api\CustomerConsentApiController::class, 'getConsent']);
+    Route::post('/customer/consent', [\App\Http\Controllers\Api\CustomerConsentApiController::class, 'recordConsent']);
+    Route::get('/customer/consents', [\App\Http\Controllers\Api\CustomerConsentApiController::class, 'listConsents']);
+    Route::post('/customer/consent/withdraw', [\App\Http\Controllers\Api\CustomerConsentApiController::class, 'withdrawConsent']);
 
     // 🛍️ Service Monetization Consumer Endpoints
     Route::post('/services/{id}/book-appointment', [ConsumerServiceApiController::class, 'bookAppointment']);
@@ -305,6 +347,12 @@ Route::group(['middleware' => ['auth:sanctum'], 'prefix' => "/{lang?}"], functio
     Route::get('/chat/astrologers/{astrologerId}/pricing', [ChatApiController::class, 'getChatPricing']);
     Route::get('/chat/pricing/{astrologerId}', [ChatApiController::class, 'getChatPricing']);
     Route::post('/chat/session/end', [ChatApiController::class, 'endSession']);
+
+    // 🔐 Customer Personal Data Sharing Consent
+    Route::get('/customer/consent/{adminId}', [\App\Http\Controllers\Api\CustomerConsentApiController::class, 'getConsent']);
+    Route::post('/customer/consent', [\App\Http\Controllers\Api\CustomerConsentApiController::class, 'recordConsent']);
+    Route::get('/customer/consents', [\App\Http\Controllers\Api\CustomerConsentApiController::class, 'listConsents']);
+    Route::post('/customer/consent/withdraw', [\App\Http\Controllers\Api\CustomerConsentApiController::class, 'withdrawConsent']);
 
     // 🛍️ Service Monetization Consumer Endpoints
     Route::post('/services/{id}/book-appointment', [ConsumerServiceApiController::class, 'bookAppointment']);

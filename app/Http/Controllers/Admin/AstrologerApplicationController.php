@@ -130,6 +130,9 @@ class AstrologerApplicationController extends Controller
                 'reviewed_at' => now(),
                 'rejection_reason' => null,
             ]);
+
+            // 5. Harmonize and sync to practitioner's ProfessionalPublicProfile
+            app(\App\Services\Profile\ProfileSyncService::class)->syncFromApplication($astrologerApplication, true);
         });
 
         return redirect()->route('admin.astrologer-applications.show', $astrologerApplication->id)

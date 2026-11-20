@@ -18,11 +18,17 @@ class ProfessionalService extends Model
         'description',
         'category',
         'specialization',
+        'offering_type',
         'pricing_model',
         'price',
         'currency',
         'duration_minutes',
+        'duration_value',
+        'duration_unit',
         'delivery_methods',
+        'has_video_proof',
+        'has_prasad_delivery',
+        'attendance_mode',
         'is_active',
         'is_public',
         'public_description',
@@ -36,6 +42,9 @@ class ProfessionalService extends Model
     protected $casts = [
         'price' => 'float',
         'duration_minutes' => 'integer',
+        'duration_value' => 'integer',
+        'has_video_proof' => 'boolean',
+        'has_prasad_delivery' => 'boolean',
         'delivery_methods' => 'array',
         'is_active' => 'boolean',
         'is_public' => 'boolean',
@@ -93,11 +102,39 @@ class ProfessionalService extends Model
     }
 
     /**
+     * Scope query to a specific offering type (chat, product, puja).
+     */
+    public function scopeByOfferingType($query, string $type)
+    {
+        return $query->where('offering_type', $type);
+    }
+
+    /**
      * Scope query to only active and publicly visible services.
      */
     public function scopePubliclyVisible($query)
     {
         return $query->where('is_active', true)->where('is_public', true);
+    }
+
+    public function getVideoProofAvailableAttribute(): bool
+    {
+        return (bool) $this->has_video_proof;
+    }
+
+    public function setVideoProofAvailableAttribute($value): void
+    {
+        $this->attributes['has_video_proof'] = (bool) $value;
+    }
+
+    public function getPrasadCourierAvailableAttribute(): bool
+    {
+        return (bool) $this->has_prasad_delivery;
+    }
+
+    public function setPrasadCourierAvailableAttribute($value): void
+    {
+        $this->attributes['has_prasad_delivery'] = (bool) $value;
     }
 
     /**
@@ -115,6 +152,7 @@ class ProfessionalService extends Model
             'public_description' => $this->public_description ?: $this->description,
             'category' => $this->category,
             'specialization' => $this->specialization,
+            'offering_type' => $this->offering_type ?? 'product',
             'pricing_model' => $this->pricing_model,
             'price' => $basePrice,
             'base_price' => $pricing['astrologer_base_price'],
@@ -123,6 +161,13 @@ class ProfessionalService extends Model
             'pricing' => $pricing,
             'currency' => $this->currency,
             'duration_minutes' => $this->duration_minutes,
+            'duration_value' => $this->duration_value,
+            'duration_unit' => $this->duration_unit ?? 'minutes',
+            'has_video_proof' => (bool) $this->has_video_proof,
+            'video_proof_available' => (bool) $this->has_video_proof,
+            'has_prasad_delivery' => (bool) $this->has_prasad_delivery,
+            'prasad_courier_available' => (bool) $this->has_prasad_delivery,
+            'attendance_mode' => $this->attendance_mode ?? 'both',
             'delivery_timeframe_days' => (int) ($this->delivery_timeframe_days ?? 3),
             'delivery_methods' => $this->delivery_methods ?? ['online'],
             'is_active' => (bool) $this->is_active,

@@ -65,7 +65,25 @@ class ProfessionalPublicProfileApiController extends Controller
     {
         $admin = $request->user();
 
-        $profile = ProfessionalPublicProfile::firstOrCreate(['admin_id' => $admin->id]);
+        $profile = ProfessionalPublicProfile::firstOrCreate(
+            ['admin_id' => $admin->id],
+            [
+                'display_name' => $admin->name ?? 'Practitioner',
+                'slug' => ProfessionalPublicProfile::generateUniqueSlug($admin->name ?? 'practitioner', $admin->id),
+                'headline' => 'Professional Spiritual & Vedic Consultant',
+                'categories' => ['astrologer'],
+                'specializations' => [],
+                'languages' => ['Hindi', 'English'],
+                'years_of_experience' => 5,
+                'is_online_available' => true,
+                'is_in_person_available' => false,
+                'is_home_visit_available' => false,
+                'is_published' => false,
+                'is_accepting_bookings' => true,
+                'is_email_mandatory' => false,
+                'profile_status' => 'not_published',
+            ]
+        );
 
         $validated = $request->validate([
             'display_name' => 'required|string|max:191',
@@ -122,6 +140,9 @@ class ProfessionalPublicProfileApiController extends Controller
 
         $profile->update($validated);
 
+        // Propagate updates to published Astrologer records if approved/active
+        app(\App\Services\Profile\ProfileSyncService::class)->syncFromPublicProfile($profile);
+
         return response()->json([
             'success' => true,
             'message' => 'Public profile saved successfully.',
@@ -136,7 +157,25 @@ class ProfessionalPublicProfileApiController extends Controller
     public function togglePublish(Request $request)
     {
         $admin = $request->user();
-        $profile = ProfessionalPublicProfile::firstOrCreate(['admin_id' => $admin->id]);
+        $profile = ProfessionalPublicProfile::firstOrCreate(
+            ['admin_id' => $admin->id],
+            [
+                'display_name' => $admin->name ?? 'Practitioner',
+                'slug' => ProfessionalPublicProfile::generateUniqueSlug($admin->name ?? 'practitioner', $admin->id),
+                'headline' => 'Professional Spiritual & Vedic Consultant',
+                'categories' => ['astrologer'],
+                'specializations' => [],
+                'languages' => ['Hindi', 'English'],
+                'years_of_experience' => 5,
+                'is_online_available' => true,
+                'is_in_person_available' => false,
+                'is_home_visit_available' => false,
+                'is_published' => false,
+                'is_accepting_bookings' => true,
+                'is_email_mandatory' => false,
+                'profile_status' => 'not_published',
+            ]
+        );
 
         $validated = $request->validate([
             'is_published' => 'required|boolean',

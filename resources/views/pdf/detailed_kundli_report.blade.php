@@ -250,8 +250,19 @@
         <table>
             <tr>
                 <td style="width: 50%;">
-                    @if($logoBase64)
-                        <img src="{{ $logoBase64 }}" class="logo-img" alt="Astro Setu"/>
+                    @if(!empty($branding['practitioner_name']) && empty($logoBase64))
+                        <div class="brand-title">{{ $branding['practitioner_name'] }}</div>
+                        <div class="brand-sub">{{ $branding['headline'] ?? 'Vedic Astrologer' }}</div>
+                        <div style="font-size: 7.5px; color: #718096; margin-top: 2px;">
+                            @if(!empty($branding['city'])) {{ $branding['city'] }} @endif
+                            @if(!empty($branding['phone'])) &bull; {{ $branding['phone'] }} @endif
+                            @if(!empty($branding['email'])) &bull; {{ $branding['email'] }} @endif
+                        </div>
+                    @elseif($logoBase64)
+                        <img src="{{ $logoBase64 }}" class="logo-img" alt="Branding Logo"/>
+                        @if(!empty($branding['practitioner_name']))
+                            <div class="brand-sub">{{ $branding['practitioner_name'] }} &bull; {{ $branding['headline'] ?? '' }}</div>
+                        @endif
                     @else
                         <div class="brand-title">ASTRO SETU</div>
                         <div class="brand-sub">Vedic Wisdom & Computational Precision</div>
@@ -260,6 +271,11 @@
                 <td style="width: 50%;">
                     <div class="report-type-badge">{{ $sec1['title'] ?? 'Vedic Janam Kundli' }}</div>
                     <div class="report-meta-text">{{ $sec1['report_version'] ?? 'M9.2' }} | {{ $report['meta']['generated_at'] ?? '' }}</div>
+                    @if(!empty($branding['practitioner_name']))
+                        <div class="report-meta-text" style="color: #8C1D40; font-weight: bold; margin-top: 2px;">
+                            {{ $locale === 'hi' ? 'तैयारकर्ता:' : 'Prepared by:' }} {{ $branding['practitioner_name'] }}
+                        </div>
+                    @endif
                 </td>
             </tr>
         </table>
@@ -846,19 +862,51 @@
     <div class="page-break"></div>
 
     {{-- ========================================== --}}
-    {{-- SECTION 14: ASTROLOGER REFERRAL            --}}
+    {{-- SECTION 14: ASTROLOGER REFERRAL / BRANDING --}}
     {{-- ========================================== --}}
     <div class="section-box">
         <div class="section-title">
-            {{ $sec14['title'] ?? 'Verified Astrologer Consultation' }}
+            @if(!empty($branding['practitioner_name']))
+                {{ $locale === 'hi' ? 'प्रमाणित वैदिक ज्योतिषी विवरण' : 'Practitioner Consultation & Practice Details' }}
+            @else
+                {{ $sec14['title'] ?? 'Verified Astrologer Consultation' }}
+            @endif
             <span class="badge badge-certified" style="float: right;">CERTIFIED</span>
         </div>
 
         <p style="font-size: 8.5px; line-height: 1.45; margin-bottom: 8px;">
-            {{ $sec14['summary'] ?? '' }}
+            @if(!empty($branding['practitioner_name']))
+                {{ $locale === 'hi'
+                    ? 'यह विस्तृत जन्म पत्रिका आपके ज्योतिषी द्वारा वैदिक सिद्धांतों व सूक्ष्म गणनाओं के आधार पर तैयार की गई है। व्यक्तिगत परामर्श, उपाय एवं दशा विश्लेषण हेतु विवरण नीचे प्रस्तुत हैं।'
+                    : 'This comprehensive horoscope report has been prepared by your practitioner using classical Vedic principles and high-precision ephemeris calculations.' }}
+            @else
+                {{ $sec14['summary'] ?? '' }}
+            @endif
         </p>
 
-        @if(!empty($sec14['astrologers']))
+        @if(!empty($branding['practitioner_name']))
+            <div style="border: 1px solid #D4AF37; border-radius: 4px; padding: 10px 14px; background-color: #FFFDF8; margin-top: 6px;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="width: 65%; vertical-align: top;">
+                            <div style="font-size: 13px; font-weight: bold; color: #8C1D40;">{{ $branding['practitioner_name'] }}</div>
+                            <div style="font-size: 9px; font-weight: 600; color: #2B6CB0; margin-top: 2px;">{{ $branding['headline'] ?? ($locale === 'hi' ? 'वैदिक ज्योतिषी' : 'Vedic Astrologer') }}</div>
+                            <div style="font-size: 8px; color: #4A5568; margin-top: 4px; line-height: 1.4;">
+                                {{ $locale === 'hi'
+                                    ? 'व्यक्तिगत जन्म पत्रिका विश्लेषण, दशा फल, मुहूर्त एवं सटीक उपचारात्मक मार्गदर्शन हेतु संपर्क करें।'
+                                    : 'For comprehensive horoscope consultations, dasha analysis, muhurta selection, and personalized Vedic remedies.' }}
+                            </div>
+                        </td>
+                        <td style="width: 35%; vertical-align: top; text-align: right; font-size: 8px; color: #718096; line-height: 1.5;">
+                            @if(!empty($branding['city'])) <div><strong>{{ $locale === 'hi' ? 'स्थान:' : 'Location:' }}</strong> {{ $branding['city'] }}</div> @endif
+                            @if(!empty($branding['phone'])) <div><strong>{{ $locale === 'hi' ? 'फ़ोन:' : 'Phone:' }}</strong> {{ $branding['phone'] }}</div> @endif
+                            @if(!empty($branding['email'])) <div><strong>{{ $locale === 'hi' ? 'ईमेल:' : 'Email:' }}</strong> {{ $branding['email'] }}</div> @endif
+                            @if(!empty($branding['website'])) <div><strong>{{ $locale === 'hi' ? 'वेबसाइट:' : 'Web:' }}</strong> {{ $branding['website'] }}</div> @endif
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        @elseif(!empty($sec14['astrologers']))
             <table class="grid-2col">
                 <tr>
                     @foreach($sec14['astrologers'] as $idx => $ast)

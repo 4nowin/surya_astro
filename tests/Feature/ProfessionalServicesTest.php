@@ -531,4 +531,211 @@ class ProfessionalServicesTest extends TestCase
         $resDelete->assertOk();
         $this->assertSoftDeleted('professional_services', ['id' => $serviceId]);
     }
+
+    public function test_offering_types_and_ritual_metadata_creation_and_persistence(): void
+    {
+        $this->actingAs($this->practitionerA, 'sanctum');
+
+        // 1. Create Chat Offering
+        $resChat = $this->postJson('/api/astrologer/services', [
+            'name' => '1-on-1 Vedic Astrology Chat',
+            'category' => 'astrologer',
+            'specialization' => 'Kundli & Prashna',
+            'offering_type' => 'chat',
+            'pricing_model' => 'per_message',
+            'price' => 15,
+            'currency' => 'INR',
+            'delivery_methods' => ['chat'],
+            'max_message_characters' => 1000,
+        ]);
+        $resChat->assertCreated();
+        $chatId = $resChat->json('data.id');
+        $this->assertEquals('chat', $resChat->json('data.offering_type'));
+        $this->assertFalse($resChat->json('data.is_active'));
+
+        // 2. Create Product Offering with custom delivery timeframe & methods
+        $resProduct = $this->postJson('/api/astrologer/services', [
+            'name' => 'Energized Sphatik Mala',
+            'category' => 'spiritual_consultant',
+            'specialization' => 'Gemstones & Yantras',
+            'offering_type' => 'product',
+            'pricing_model' => 'fixed',
+            'price' => 2500,
+            'currency' => 'INR',
+            'delivery_timeframe_days' => 5,
+            'delivery_methods' => ['courier'],
+        ]);
+        $resProduct->assertCreated();
+        $productId = $resProduct->json('data.id');
+        $this->assertEquals('product', $resProduct->json('data.offering_type'));
+        $this->assertEquals(5, $resProduct->json('data.delivery_timeframe_days'));
+        $this->assertEquals(['courier'], $resProduct->json('data.delivery_methods'));
+
+        // 3. Create Puja Offering with duration and remote fulfillment flags
+        $resPuja = $this->postJson('/api/astrologer/services', [
+            'name' => 'Maha Mrityunjaya Jaap & Hawan',
+            'category' => 'pandit_purohit',
+            'specialization' => 'Dosha Nivaran',
+            'offering_type' => 'puja',
+            'pricing_model' => 'starting_from',
+            'price' => 5100,
+            'currency' => 'INR',
+            'duration_value' => 2,
+            'duration_unit' => 'hours',
+            'has_video_proof' => true,
+            'has_prasad_delivery' => true,
+            'attendance_mode' => 'remote',
+            'delivery_methods' => ['online', 'courier'],
+        ]);
+        $resPuja->assertCreated();
+        $pujaId = $resPuja->json('data.id');
+        $this->assertEquals('puja', $resPuja->json('data.offering_type'));
+        $this->assertEquals(2, $resPuja->json('data.duration_value'));
+        $this->assertEquals('hours', $resPuja->json('data.duration_unit'));
+        $this->assertEquals(120, $resPuja->json('data.duration_minutes'));
+        $this->assertTrue($resPuja->json('data.has_video_proof'));
+        $this->assertTrue($resPuja->json('data.has_prasad_delivery'));
+        $this->assertEquals('remote', $resPuja->json('data.attendance_mode'));
+
+        // 4. Test filtering by offering_type on practitioner index
+        $resListPuja = $this->getJson('/api/astrologer/services?offering_type=puja');
+        $resListPuja->assertOk();
+        $this->assertCount(1, $resListPuja->json('data'));
+        $this->assertEquals($pujaId, $resListPuja->json('data.0.id'));
+
+        // 5. Test summary endpoint includes offering_type_counts
+        $resSummary = $this->getJson('/api/astrologer/services/summary');
+        $resSummary->assertOk();
+        $this->assertEquals(1, $resSummary->json('data.offering_type_counts.chat'));
+        $this->assertEquals(1, $resSummary->json('data.offering_type_counts.product'));
+        $this->assertEquals(1, $resSummary->json('data.offering_type_counts.puja'));
+
+        // 6. Test updating offering metadata
+        $resUpdatePuja = $this->putJson("/api/astrologer/services/{$pujaId}", [
+            'has_prasad_delivery' => false,
+            'duration_value' => 3,
+            'duration_unit' => 'hours',
+        ]);
+        $resUpdatePuja->assertOk();
+        $this->assertFalse($resUpdatePuja->json('data.has_prasad_delivery'));
+        $this->assertEquals(3, $resUpdatePuja->json('data.duration_value'));
+        $this->assertEquals(180, $resUpdatePuja->json('data.duration_minutes'));
+    }
+
+    public function test_consumer_services_endpoint_returns_only_active_offerings_and_chat_availability(): void
+    {
+        $this->actingAs($this->practitionerA, 'sanctum');
+
+        // Create Astrologer marketplace profile for practitionerA
+        $astrologer = \App\Models\Astrologer::create([
+            'admin_id' => $this->practitionerA->id,
+            'name' => 'Pandit Dev Sharma',
+            'language' => 'en',
+            'astrologer_language' => 'English, Hindi',
+            'expertise' => 'Vedic Astrology',
+            'experience' => 10,
+            'price' => 15,
+            'active' => 1,
+            'status' => 'online',
+        ]);
+
+        // 1. Create a chat service (inactive)
+        $resChat = $this->postJson('/api/astrologer/services', [
+            'name' => 'Instant Chat Consultation',
+            'category' => 'astrologer',
+            'specialization' => 'Horoscope Reading',
+            'offering_type' => 'chat',
+            'pricing_model' => 'per_message',
+            'price' => 15,
+            'delivery_methods' => ['chat'],
+        ]);
+        $resChat->assertCreated();
+        $chatId = $resChat->json('data.id');
+
+        // 2. Create a puja service and activate it
+        $resPuja = $this->postJson('/api/astrologer/services', [
+            'name' => 'Navgraha Hawan',
+            'category' => 'pandit_purohit',
+            'specialization' => 'Hawan',
+            'offering_type' => 'puja',
+            'pricing_model' => 'fixed',
+            'price' => 3100,
+            'delivery_methods' => ['home_visit'],
+        ]);
+        $resPuja->assertCreated();
+        $pujaId = $resPuja->json('data.id');
+
+        // Activate only the Puja
+        $this->postJson("/api/astrologer/services/{$pujaId}/toggle-active")->assertOk();
+
+        // 3. Query consumer endpoint for practitioner's services
+        $resConsumer = $this->getJson("/api/en/astrologers/{$astrologer->id}/services");
+        $resConsumer->assertOk();
+
+        // Consumer must ONLY see active services (Puja), inactive chat must NOT appear in data list
+        $services = $resConsumer->json('data');
+        $this->assertCount(1, $services);
+        $this->assertEquals($pujaId, $services[0]['id']);
+        $this->assertEquals('puja', $services[0]['offering_type']);
+
+        // Chat availability must be false because chat service is inactive
+        $this->assertFalse($resConsumer->json('has_active_chat'));
+        $this->assertFalse($resConsumer->json('chat_availability.is_available'));
+
+        // 4. Now activate the Chat service
+        $this->postJson("/api/astrologer/services/{$chatId}/toggle-active")->assertOk();
+
+        // 5. Query consumer endpoint again
+        $resConsumer2 = $this->getJson("/api/en/astrologers/{$astrologer->id}/services");
+        $resConsumer2->assertOk();
+
+        // Both active services now returned
+        $this->assertCount(2, $resConsumer2->json('data'));
+        $this->assertTrue($resConsumer2->json('has_active_chat'));
+        $this->assertTrue($resConsumer2->json('chat_availability.is_available'));
+        $this->assertEquals($chatId, $resConsumer2->json('chat_availability.service_id'));
+
+        // 6. Test consumer filtering by ?offering_type=puja
+        $resFiltered = $this->getJson("/api/en/astrologers/{$astrologer->id}/services?offering_type=puja");
+        $resFiltered->assertOk();
+        $this->assertCount(1, $resFiltered->json('data'));
+        $this->assertEquals($pujaId, $resFiltered->json('data.0.id'));
+    }
+
+    public function test_astrologer_bio_fallback_and_public_profile_sync(): void
+    {
+        $this->actingAs($this->practitionerA, 'sanctum');
+
+        // Create Astrologer with NULL description
+        $astrologer = \App\Models\Astrologer::create([
+            'admin_id' => $this->practitionerA->id,
+            'name' => 'Pandit Dev Sharma',
+            'language' => 'en',
+            'astrologer_language' => 'English, Hindi',
+            'expertise' => 'Vedic Astrology',
+            'experience' => 10,
+            'description' => null,
+            'price' => 15,
+            'active' => 1,
+            'status' => 'online',
+        ]);
+
+        // Save public profile with 'about' bio
+        $resProfile = $this->postJson('/api/astrologer/public-profile', [
+            'display_name' => 'Pandit Dev Sharma',
+            'headline' => 'Renowned Vedic Astrologer',
+            'about' => 'Practicing authentic Shukla Yajurvedic astrology for 15+ years in Varanasi.',
+        ]);
+        $resProfile->assertOk();
+
+        // Verify description attribute on Astrologer model falls back to public profile about
+        $astrologer->refresh()->load('admin.publicProfile');
+        $this->assertEquals('Practicing authentic Shukla Yajurvedic astrology for 15+ years in Varanasi.', $astrologer->description);
+
+        // Verify public-profile update synced into astrologers table where description was empty
+        $this->assertDatabaseHas('astrologers', [
+            'id' => $astrologer->id,
+            'description' => 'Practicing authentic Shukla Yajurvedic astrology for 15+ years in Varanasi.',
+        ]);
+    }
 }

@@ -5,10 +5,12 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Appointment;
 use App\Models\Consultation;
+use App\Models\CustomerAstrologerConsent;
 use App\Models\Jajman;
 use App\Models\ProfessionalTransaction;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
@@ -24,7 +26,7 @@ class ProfessionalPaymentApiController extends Controller
 
         $query = ProfessionalTransaction::where('admin_id', $admin->id)
             ->with([
-                'jajman:id,name,phone,city',
+                'jajman:id,name,phone,city,user_id',
                 'user:id,name,phone,profile_image',
                 'service:id,name,pricing_model,category',
                 'appointment:id,title,start_at,appointment_type',
@@ -61,16 +63,14 @@ class ProfessionalPaymentApiController extends Controller
             $query->where('payment_status', $status);
         }
 
-        // Date range filter
-        if ($from = $request->query('from')) {
-            try {
-                $query->where('transaction_at', '>=', Carbon::parse($from)->startOfDay());
-            } catch (\Exception $e) {}
-        }
-        if ($to = $request->query('to')) {
-            try {
-                $query->where('transaction_at', '<=', Carbon::parse($to)->endOfDay());
-            } catch (\Exception $e) {}
+        // Timezone-aware date filter
+        [$startUtc, $endUtc] = $this->resolveDateRange($request);
+        if ($startUtc && $endUtc) {
+            $query->whereBetween('transaction_at', [$startUtc, $endUtc]);
+        } elseif ($startUtc) {
+            $query->where('transaction_at', '>=', $startUtc);
+        } elseif ($endUtc) {
+            $query->where('transaction_at', '<=', $endUtc);
         }
 
         // Search in reference_id, notes, or client name
@@ -87,6 +87,9 @@ class ProfessionalPaymentApiController extends Controller
 
         $perPage = (int) $request->query('per_page', 20);
         $transactions = $query->orderBy('transaction_at', 'desc')->paginate($perPage);
+
+        // Sanitize personal contact details per Task B2 consent
+        $this->sanitizeConsentForTransactions(collect($transactions->items()), $admin->id);
 
         return response()->json([
             'success' => true,
@@ -239,7 +242,10 @@ class ProfessionalPaymentApiController extends Controller
 
         $transaction = ProfessionalTransaction::where('admin_id', $admin->id)
             ->with([
-                'jajman',
+                'jajman:id,name,phone,city,user_id',
+                'user:id,name,phone,profile_image',
+                'service:id,name,pricing_model,category',
+                'chatSession',
                 'appointment',
                 'consultation',
                 'parentTransaction',
@@ -253,6 +259,9 @@ class ProfessionalPaymentApiController extends Controller
                 'message' => 'Transaction not found or unauthorized.',
             ], 404);
         }
+
+        // Sanitize personal contact info per Task B2 consent
+        $this->sanitizeConsentForTransactions(collect([$transaction]), $admin->id);
 
         $data = $transaction->toArray();
         $data['refundable_balance'] = $transaction->refundableBalance();
@@ -325,8 +334,12 @@ class ProfessionalPaymentApiController extends Controller
             $refundTransaction = ProfessionalTransaction::create([
                 'admin_id' => $admin->id,
                 'jajman_id' => $original->jajman_id,
+                'user_id' => $original->user_id,
                 'appointment_id' => $original->appointment_id,
                 'consultation_id' => $original->consultation_id,
+                'service_id' => $original->service_id,
+                'chat_session_id' => $original->chat_session_id,
+                'chat_id' => $original->chat_id,
                 'parent_transaction_id' => $original->id,
                 'transaction_type' => 'refund',
                 'payment_method' => $validated['payment_method'] ?? $original->payment_method,
@@ -384,28 +397,13 @@ class ProfessionalPaymentApiController extends Controller
 
         $query = ProfessionalTransaction::where('admin_id', $admin->id)->with('service');
 
-        $now = Carbon::now();
-        switch ($period) {
-            case 'today':
-                $query->whereBetween('transaction_at', [$now->copy()->startOfDay(), $now->copy()->endOfDay()]);
-                break;
-            case 'this_week':
-                $query->whereBetween('transaction_at', [$now->copy()->startOfWeek(), $now->copy()->endOfWeek()]);
-                break;
-            case 'this_month':
-                $query->whereBetween('transaction_at', [$now->copy()->startOfMonth(), $now->copy()->endOfMonth()]);
-                break;
-            case 'custom':
-                if ($from = $request->query('from')) {
-                    $query->where('transaction_at', '>=', Carbon::parse($from)->startOfDay());
-                }
-                if ($to = $request->query('to')) {
-                    $query->where('transaction_at', '<=', Carbon::parse($to)->endOfDay());
-                }
-                break;
-            case 'all_time':
-            default:
-                break;
+        [$startUtc, $endUtc, $tzName] = $this->resolveDateRange($request);
+        if ($startUtc && $endUtc) {
+            $query->whereBetween('transaction_at', [$startUtc, $endUtc]);
+        } elseif ($startUtc) {
+            $query->where('transaction_at', '>=', $startUtc);
+        } elseif ($endUtc) {
+            $query->where('transaction_at', '<=', $endUtc);
         }
 
         $transactions = $query->get();
@@ -510,6 +508,9 @@ class ProfessionalPaymentApiController extends Controller
             'success' => true,
             'data' => [
                 'period' => $period,
+                'timezone' => $tzName,
+                'start_at' => $startUtc?->toIso8601String(),
+                'end_at' => $endUtc?->toIso8601String(),
                 'total_received' => round($totalReceived, 2),
                 'total_refunded' => round($totalRefunded, 2),
                 'net_received' => $netReceived,
@@ -668,5 +669,403 @@ class ProfessionalPaymentApiController extends Controller
             'success' => true,
             'data' => $financials,
         ]);
+    }
+
+    /**
+     * 9. GET /api/astrologer/payments/chat-earnings
+     * Read-only aggregated chat earnings by session or by customer with drill-down and consent masking.
+     */
+    public function chatEarnings(Request $request)
+    {
+        $admin = $request->user();
+        $groupBy = $request->query('group_by', 'session');
+        if (!in_array($groupBy, ['session', 'customer'])) {
+            $groupBy = 'session';
+        }
+
+        [$startUtc, $endUtc, $tzName] = $this->resolveDateRange($request);
+        $period = $request->query('period', 'all_time');
+
+        // Query chat_message transactions and associated refunds
+        $query = ProfessionalTransaction::where('admin_id', $admin->id)
+            ->where(function ($q) {
+                $q->where('transaction_type', 'chat_message')
+                  ->orWhere(function ($rq) {
+                      $rq->where('transaction_type', 'refund')
+                         ->where(function ($sq) {
+                             $sq->whereNotNull('chat_session_id')
+                                ->orWhereHas('parentTransaction', fn ($pq) => $pq->where('transaction_type', 'chat_message'));
+                         });
+                  });
+            })
+            ->with([
+                'user:id,name,phone,profile_image',
+                'jajman:id,name,phone,city,user_id',
+                'chatSession:id,user_id,admin_id,astrologer_id,started_at,ended_at,total_minutes,total_fee',
+                'parentTransaction:id,chat_session_id,chat_id,user_id,amount,transaction_type',
+                'service:id,name,pricing_model,category',
+            ]);
+
+        // Date boundaries
+        if ($startUtc && $endUtc) {
+            $query->whereBetween('transaction_at', [$startUtc, $endUtc]);
+        } elseif ($startUtc) {
+            $query->where('transaction_at', '>=', $startUtc);
+        } elseif ($endUtc) {
+            $query->where('transaction_at', '<=', $endUtc);
+        }
+
+        // Drill-down filters
+        if ($sessionId = $request->query('chat_session_id')) {
+            $query->where(function ($sq) use ($sessionId) {
+                $sq->where('chat_session_id', $sessionId)
+                   ->orWhereHas('parentTransaction', fn ($pq) => $pq->where('chat_session_id', $sessionId));
+            });
+        }
+        if ($userId = $request->query('user_id')) {
+            $query->where(function ($uq) use ($userId) {
+                $uq->where('user_id', $userId)
+                   ->orWhereHas('parentTransaction', fn ($pq) => $pq->where('user_id', $userId));
+            });
+        }
+        if ($jajmanId = $request->query('jajman_id')) {
+            $query->where(function ($jq) use ($jajmanId) {
+                $jq->where('jajman_id', $jajmanId)
+                   ->orWhereHas('parentTransaction', fn ($pq) => $pq->where('jajman_id', $jajmanId));
+            });
+        }
+
+        $allTx = $query->orderBy('transaction_at', 'desc')->get();
+
+        // Enforce Task B2 consent masking
+        $this->sanitizeConsentForTransactions($allTx, $admin->id);
+
+        $withTransactions = $request->boolean('with_transactions', $request->has('chat_session_id') || $request->has('user_id'));
+
+        // Map any unassociated Jajman IDs for customer accounts
+        $distinctUserIds = $allTx->pluck('user_id')->filter()->unique();
+        $userJajmanMap = DB::table('professional_jajmans')
+            ->join('jajmans', 'jajmans.id', '=', 'professional_jajmans.jajman_id')
+            ->where('professional_jajmans.admin_id', $admin->id)
+            ->whereIn('jajmans.user_id', $distinctUserIds)
+            ->pluck('jajmans.id', 'jajmans.user_id');
+
+        $groupedItems = collect();
+
+        if ($groupBy === 'session') {
+            $bySession = $allTx->groupBy(function ($tx) {
+                return $tx->chat_session_id ?? $tx->parentTransaction?->chat_session_id ?? 0;
+            });
+
+            foreach ($bySession as $sessId => $txList) {
+                $firstChatTx = $txList->firstWhere('transaction_type', 'chat_message') ?? $txList->first();
+                $userId = $firstChatTx->user_id ?? $firstChatTx->parentTransaction?->user_id;
+                $jajmanId = $firstChatTx->jajman_id ?? ($userId ? ($userJajmanMap[$userId] ?? null) : null);
+
+                $customerName = $firstChatTx->jajman?->name
+                    ?? $firstChatTx->user?->name
+                    ?? 'Astro Setu Client';
+
+                $completedTx = $txList->where('transaction_type', 'chat_message')->whereIn('payment_status', ['completed', 'partially_refunded', 'refunded']);
+                $refundedTx = $txList->where('transaction_type', 'refund')->where('payment_status', 'completed');
+                $pendingTx = $txList->where('payment_status', 'pending');
+
+                $completedEarnings = (float) $completedTx->sum('amount');
+                $refundedAmount = (float) $refundedTx->sum('amount');
+                $pendingEarnings = (float) $pendingTx->sum('amount');
+                $netEarnings = round($completedEarnings - $refundedAmount, 2);
+
+                $grossAmount = (float) $completedTx->sum('gross_amount');
+                $platformFee = (float) $completedTx->sum('platform_fee');
+
+                $sessionObj = $firstChatTx->chatSession;
+
+                $item = [
+                    'session_id' => (int) $sessId,
+                    'user_id' => $userId ? (int) $userId : null,
+                    'jajman_id' => $jajmanId ? (int) $jajmanId : null,
+                    'customer_name' => $customerName,
+                    'customer_phone' => $firstChatTx->user?->phone ?? $firstChatTx->jajman?->phone,
+                    'customer_profile_image' => $firstChatTx->user?->profile_image,
+                    'session_started_at' => $sessionObj?->started_at ? Carbon::parse($sessionObj->started_at)->toIso8601String() : null,
+                    'session_ended_at' => $sessionObj?->ended_at ? Carbon::parse($sessionObj->ended_at)->toIso8601String() : null,
+                    'message_count' => $txList->where('transaction_type', 'chat_message')->count(),
+                    'transaction_count' => $txList->count(),
+                    'gross_amount' => round($grossAmount, 2),
+                    'platform_fee' => round($platformFee, 2),
+                    'completed_earnings' => round($completedEarnings, 2),
+                    'pending_earnings' => round($pendingEarnings, 2),
+                    'refunded_amount' => round($refundedAmount, 2),
+                    'net_earnings' => $netEarnings,
+                    'first_transaction_at' => $txList->min('transaction_at') ? Carbon::parse($txList->min('transaction_at'))->toIso8601String() : null,
+                    'last_transaction_at' => $txList->max('transaction_at') ? Carbon::parse($txList->max('transaction_at'))->toIso8601String() : null,
+                    'status_summary' => [
+                        'completed' => $completedTx->count(),
+                        'pending' => $pendingTx->count(),
+                        'refunded' => $txList->where('payment_status', 'refunded')->count(),
+                        'partially_refunded' => $txList->where('payment_status', 'partially_refunded')->count(),
+                    ],
+                ];
+
+                if ($withTransactions) {
+                    $item['transactions'] = $txList->values();
+                }
+
+                $groupedItems->push($item);
+            }
+        } else {
+            // group_by === 'customer'
+            $byUser = $allTx->groupBy(function ($tx) {
+                return $tx->user_id ?? $tx->parentTransaction?->user_id ?? 0;
+            });
+
+            foreach ($byUser as $uId => $txList) {
+                $firstTx = $txList->first();
+                $jajmanId = $firstTx->jajman_id ?? ($uId ? ($userJajmanMap[$uId] ?? null) : null);
+
+                $customerName = $firstTx->jajman?->name
+                    ?? $firstTx->user?->name
+                    ?? 'Astro Setu Client';
+
+                $completedTx = $txList->where('transaction_type', 'chat_message')->whereIn('payment_status', ['completed', 'partially_refunded', 'refunded']);
+                $refundedTx = $txList->where('transaction_type', 'refund')->where('payment_status', 'completed');
+                $pendingTx = $txList->where('payment_status', 'pending');
+
+                $completedEarnings = (float) $completedTx->sum('amount');
+                $refundedAmount = (float) $refundedTx->sum('amount');
+                $pendingEarnings = (float) $pendingTx->sum('amount');
+                $netEarnings = round($completedEarnings - $refundedAmount, 2);
+
+                $grossAmount = (float) $completedTx->sum('gross_amount');
+                $platformFee = (float) $completedTx->sum('platform_fee');
+
+                $distinctSessions = $txList->pluck('chat_session_id')
+                    ->merge($txList->pluck('parentTransaction.chat_session_id'))
+                    ->filter()
+                    ->unique();
+
+                $item = [
+                    'user_id' => $uId ? (int) $uId : null,
+                    'jajman_id' => $jajmanId ? (int) $jajmanId : null,
+                    'customer_name' => $customerName,
+                    'customer_phone' => $firstTx->user?->phone ?? $firstTx->jajman?->phone,
+                    'customer_profile_image' => $firstTx->user?->profile_image,
+                    'session_count' => $distinctSessions->count(),
+                    'session_ids' => $distinctSessions->values(),
+                    'message_count' => $txList->where('transaction_type', 'chat_message')->count(),
+                    'transaction_count' => $txList->count(),
+                    'gross_amount' => round($grossAmount, 2),
+                    'platform_fee' => round($platformFee, 2),
+                    'completed_earnings' => round($completedEarnings, 2),
+                    'pending_earnings' => round($pendingEarnings, 2),
+                    'refunded_amount' => round($refundedAmount, 2),
+                    'net_earnings' => $netEarnings,
+                    'first_transaction_at' => $txList->min('transaction_at') ? Carbon::parse($txList->min('transaction_at'))->toIso8601String() : null,
+                    'last_transaction_at' => $txList->max('transaction_at') ? Carbon::parse($txList->max('transaction_at'))->toIso8601String() : null,
+                    'status_summary' => [
+                        'completed' => $completedTx->count(),
+                        'pending' => $pendingTx->count(),
+                        'refunded' => $txList->where('payment_status', 'refunded')->count(),
+                        'partially_refunded' => $txList->where('payment_status', 'partially_refunded')->count(),
+                    ],
+                ];
+
+                if ($withTransactions) {
+                    $item['transactions'] = $txList->values();
+                }
+
+                $groupedItems->push($item);
+            }
+        }
+
+        // Summary totals across all transactions
+        $allCompletedChat = $allTx->where('transaction_type', 'chat_message')->whereIn('payment_status', ['completed', 'partially_refunded', 'refunded']);
+        $allRefunded = $allTx->where('transaction_type', 'refund')->where('payment_status', 'completed');
+        $allPending = $allTx->where('payment_status', 'pending');
+
+        $totalCompleted = (float) $allCompletedChat->sum('amount');
+        $totalRefunded = (float) $allRefunded->sum('amount');
+        $totalPending = (float) $allPending->sum('amount');
+        $totalGross = (float) $allCompletedChat->sum('gross_amount');
+        $totalPlatformFee = (float) $allCompletedChat->sum('platform_fee');
+        $totalNet = round($totalCompleted - $totalRefunded, 2);
+
+        $perPage = (int) $request->query('per_page', 20);
+        $page = (int) $request->query('page', 1);
+        $total = $groupedItems->count();
+        $paginatedItems = $groupedItems->forPage($page, $perPage)->values();
+
+        return response()->json([
+            'success' => true,
+            'summary' => [
+                'period' => $period,
+                'group_by' => $groupBy,
+                'timezone' => $tzName,
+                'start_at' => $startUtc?->toIso8601String(),
+                'end_at' => $endUtc?->toIso8601String(),
+                'total_gross_amount' => round($totalGross, 2),
+                'total_platform_fee' => round($totalPlatformFee, 2),
+                'total_completed_earnings' => round($totalCompleted, 2),
+                'total_pending_earnings' => round($totalPending, 2),
+                'total_refunded_amount' => round($totalRefunded, 2),
+                'total_net_earnings' => round($totalNet, 2),
+                'total_transactions' => $allTx->count(),
+                'total_sessions' => $allTx->pluck('chat_session_id')->filter()->unique()->count(),
+                'total_customers' => $allTx->pluck('user_id')->filter()->unique()->count(),
+            ],
+            'data' => $paginatedItems,
+            'meta' => [
+                'current_page' => $page,
+                'last_page' => (int) ceil($total / max(1, $perPage)),
+                'total' => $total,
+                'per_page' => $perPage,
+            ],
+        ]);
+    }
+
+    /**
+     * Parse period or custom dates into UTC query boundaries for the given practitioner timezone.
+     *
+     * @return array{0: ?Carbon, 1: ?Carbon, 2: string} [?startUtc, ?endUtc, timezone]
+     */
+    protected function resolveDateRange(Request $request): array
+    {
+        $tzName = $request->query('timezone', 'Asia/Kolkata');
+        try {
+            new \DateTimeZone($tzName);
+        } catch (\Throwable $e) {
+            $tzName = 'Asia/Kolkata';
+        }
+
+        $period = $request->query('period');
+        $nowLocal = Carbon::now($tzName);
+
+        $startUtc = null;
+        $endUtc = null;
+
+        switch ($period) {
+            case 'today':
+                $startUtc = $nowLocal->copy()->startOfDay()->setTimezone('UTC');
+                $endUtc = $nowLocal->copy()->endOfDay()->setTimezone('UTC');
+                break;
+            case 'yesterday':
+                $startUtc = $nowLocal->copy()->subDay()->startOfDay()->setTimezone('UTC');
+                $endUtc = $nowLocal->copy()->subDay()->endOfDay()->setTimezone('UTC');
+                break;
+            case 'this_week':
+                $startUtc = $nowLocal->copy()->startOfWeek()->setTimezone('UTC');
+                $endUtc = $nowLocal->copy()->endOfWeek()->setTimezone('UTC');
+                break;
+            case 'this_month':
+                $startUtc = $nowLocal->copy()->startOfMonth()->setTimezone('UTC');
+                $endUtc = $nowLocal->copy()->endOfMonth()->setTimezone('UTC');
+                break;
+            case 'custom':
+                if ($from = $request->query('from')) {
+                    try {
+                        $startUtc = $this->parseDateBoundary($from, $tzName, false);
+                    } catch (\Throwable $e) {}
+                }
+                if ($to = $request->query('to')) {
+                    try {
+                        $endUtc = $this->parseDateBoundary($to, $tzName, true);
+                    } catch (\Throwable $e) {}
+                }
+                break;
+            case 'all_time':
+            default:
+                if ($from = $request->query('from')) {
+                    try {
+                        $startUtc = $this->parseDateBoundary($from, $tzName, false);
+                    } catch (\Throwable $e) {}
+                }
+                if ($to = $request->query('to')) {
+                    try {
+                        $endUtc = $this->parseDateBoundary($to, $tzName, true);
+                    } catch (\Throwable $e) {}
+                }
+                break;
+        }
+
+        return [$startUtc, $endUtc, $tzName];
+    }
+
+    /**
+     * Safely parse a date boundary string, respecting timezone offsets or local timezone.
+     */
+    protected function parseDateBoundary(string $dateString, string $timezone, bool $isEnd = false): Carbon
+    {
+        if (preg_match('/(Z|[+-]\d{2}:?\d{2})$/i', $dateString)) {
+            $dt = Carbon::parse($dateString);
+            return $isEnd ? $dt->copy()->endOfDay()->setTimezone('UTC') : $dt->copy()->startOfDay()->setTimezone('UTC');
+        }
+        $dt = Carbon::parse($dateString, $timezone);
+        return $isEnd ? $dt->copy()->endOfDay()->setTimezone('UTC') : $dt->copy()->startOfDay()->setTimezone('UTC');
+    }
+
+    /**
+     * Enforce Task B2 personal-data consent privacy on consumer contact details across transactions.
+     * Retains financial auditing fields and manual practitioner Jajman data.
+     */
+    protected function sanitizeConsentForTransactions(Collection $transactions, int $adminId): Collection
+    {
+        if ($transactions->isEmpty()) {
+            return $transactions;
+        }
+
+        $userIds = $transactions->pluck('user_id')
+            ->merge($transactions->pluck('parentTransaction.user_id'))
+            ->merge($transactions->pluck('jajman.user_id'))
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($userIds->isEmpty()) {
+            return $transactions;
+        }
+
+        $grantedUserIds = CustomerAstrologerConsent::where('admin_id', $adminId)
+            ->whereIn('user_id', $userIds)
+            ->where('status', CustomerAstrologerConsent::STATUS_GRANTED)
+            ->pluck('user_id')
+            ->flip();
+
+        foreach ($transactions as $tx) {
+            // Linked consumer user
+            if ($tx->user_id && $tx->relationLoaded('user') && $tx->user) {
+                if (!$grantedUserIds->has($tx->user_id)) {
+                    $tx->user->phone = null;
+                    $tx->user->email = null;
+                }
+            }
+
+            // Linked Jajman with consumer account
+            if ($tx->relationLoaded('jajman') && $tx->jajman && $tx->jajman->user_id) {
+                if (!$grantedUserIds->has($tx->jajman->user_id)) {
+                    $tx->jajman->phone = null;
+                    $tx->jajman->email = null;
+                }
+            }
+
+            // Linked child refunds
+            if ($tx->relationLoaded('refunds') && $tx->refunds) {
+                foreach ($tx->refunds as $refund) {
+                    if ($refund->user_id && $refund->relationLoaded('user') && $refund->user) {
+                        if (!$grantedUserIds->has($refund->user_id)) {
+                            $refund->user->phone = null;
+                            $refund->user->email = null;
+                        }
+                    }
+                    if ($refund->relationLoaded('jajman') && $refund->jajman && $refund->jajman->user_id) {
+                        if (!$grantedUserIds->has($refund->jajman->user_id)) {
+                            $refund->jajman->phone = null;
+                            $refund->jajman->email = null;
+                        }
+                    }
+                }
+            }
+        }
+
+        return $transactions;
     }
 }

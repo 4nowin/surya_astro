@@ -7,9 +7,12 @@ use App\Models\Jajman;
 use App\Models\JajmanBirthDetail;
 use App\Models\JajmanFamilyRelationship;
 use App\Models\JajmanNote;
+use App\Services\Jajman\JajmanMergeService;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
+use InvalidArgumentException;
 
 class JajmanApiController extends Controller
 {
@@ -26,6 +29,72 @@ class JajmanApiController extends Controller
 
         if (! $jajman) {
             abort(404, 'Jajman record not found in your professional practice.');
+        }
+
+        return $jajman;
+    }
+
+    /**
+     * Enforce personal data sharing consent for linked Astro Setu consumer accounts.
+     * Preserves manual offline Jajman records created directly by the astrologer.
+     */
+    protected function filterJajmanConsent(Jajman $jajman, int $adminId): Jajman
+    {
+        $pivot = $jajman->relationLoaded('professionals')
+            ? $jajman->professionals->firstWhere('id', $adminId)?->pivot
+            : null;
+
+        if (!$pivot) {
+            $pivot = DB::table('professional_jajmans')
+                ->where('admin_id', $adminId)
+                ->where('jajman_id', $jajman->id)
+                ->first();
+        }
+
+        if ($pivot) {
+            $jajman->setAttribute('has_possible_duplicates', (bool) ($pivot->has_possible_duplicates ?? false));
+            $candidates = [];
+            if (!empty($pivot->duplicate_candidates)) {
+                $decoded = is_array($pivot->duplicate_candidates)
+                    ? $pivot->duplicate_candidates
+                    : json_decode((string) $pivot->duplicate_candidates, true);
+                if (is_array($decoded)) {
+                    $candidates = array_map('intval', $decoded);
+                }
+            }
+            $jajman->setAttribute('possible_duplicate_ids', $candidates);
+        } else {
+            $jajman->setAttribute('has_possible_duplicates', (bool) ($jajman->has_possible_duplicates ?? false));
+            $jajman->setAttribute('possible_duplicate_ids', $jajman->possible_duplicate_ids ?? []);
+        }
+
+        if ($jajman->user_id === null) {
+            // Manual offline entry created by practitioner
+            $jajman->setAttribute('is_consent_granted', true);
+            $jajman->setAttribute('consent_status', 'manual');
+            return $jajman;
+        }
+
+        $consentGranted = \App\Models\CustomerAstrologerConsent::where('user_id', $jajman->user_id)
+            ->where('admin_id', $adminId)
+            ->where('status', \App\Models\CustomerAstrologerConsent::STATUS_GRANTED)
+            ->exists();
+
+        if (!$consentGranted) {
+            $jajman->phone = null;
+            $jajman->email = null;
+            $jajman->date_of_birth = null;
+            if ($jajman->relationLoaded('birthDetails')) {
+                $jajman->setRelation('birthDetails', collect([]));
+            }
+            if ($jajman->relationLoaded('primaryBirthDetail')) {
+                $jajman->setRelation('primaryBirthDetail', null);
+            }
+            $jajman->setAttribute('is_consent_granted', false);
+            $jajman->setAttribute('consent_status', 'withheld');
+        } else {
+            $jajman->setAttribute('is_consent_granted', true);
+            $jajman->setAttribute('consent_status', 'granted');
         }
 
         return $jajman;
@@ -65,9 +134,13 @@ class JajmanApiController extends Controller
         $perPage = min(max((int) $request->input('per_page', 15), 1), 100);
         $jajmans = $query->paginate($perPage);
 
+        $filteredItems = collect($jajmans->items())->map(function ($j) use ($admin) {
+            return $this->filterJajmanConsent($j, $admin->id);
+        })->values();
+
         return response()->json([
             'status' => 'success',
-            'data' => $jajmans->items(),
+            'data' => $filteredItems,
             'meta' => [
                 'current_page' => $jajmans->currentPage(),
                 'last_page' => $jajmans->lastPage(),
@@ -149,6 +222,7 @@ class JajmanApiController extends Controller
         $jajman = $this->authorizeJajman($request, $id);
 
         $jajman->load(['birthDetails', 'primaryBirthDetail']);
+        $jajman = $this->filterJajmanConsent($jajman, $admin->id);
         $notes = $jajman->notesForProfessional($admin->id)->get();
         $family = $jajman->familyForProfessional($admin->id)->get();
 
@@ -482,5 +556,74 @@ class JajmanApiController extends Controller
             'status' => 'success',
             'message' => 'Note deleted successfully.',
         ]);
+    }
+
+    /**
+     * Retrieve side-by-side comparison of two Jajman records for duplicate merging.
+     */
+    public function compareForMerge(Request $request, JajmanMergeService $mergeService)
+    {
+        $validated = $request->validate([
+            'jajman_a' => 'required|integer',
+            'jajman_b' => 'required|integer',
+        ]);
+
+        $admin = $request->user();
+
+        try {
+            $comparison = $mergeService->getComparison($admin->id, (int)$validated['jajman_a'], (int)$validated['jajman_b']);
+
+            return response()->json([
+                'status' => 'success',
+                'data' => $comparison,
+            ]);
+        } catch (AuthorizationException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 403);
+        } catch (InvalidArgumentException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 422);
+        }
+    }
+
+    /**
+     * Execute manual duplicate merge consolidating all history into the primary record.
+     */
+    public function merge(Request $request, JajmanMergeService $mergeService)
+    {
+        $validated = $request->validate([
+            'primary_jajman_id' => 'required|integer',
+            'secondary_jajman_id' => 'required|integer',
+        ]);
+
+        $admin = $request->user();
+
+        try {
+            $result = $mergeService->merge(
+                $admin->id,
+                (int)$validated['primary_jajman_id'],
+                (int)$validated['secondary_jajman_id']
+            );
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Jajman records merged successfully.',
+                'data' => $result,
+            ]);
+        } catch (AuthorizationException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 403);
+        } catch (InvalidArgumentException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 422);
+        }
     }
 }

@@ -125,19 +125,57 @@ class AstroSetuListingApiController extends Controller
         $publicProfile = ProfessionalPublicProfile::where('admin_id', $admin->id)->first();
         $firstPublished = $publishedEn ?? $publishedListings->first();
 
+        // Check whether public profile is preferred over application (e.g. after practitioner profile updates)
+        $preferPublicProfile = false;
+        if ($publicProfile) {
+            if (!$application || $application->status !== 'pending') {
+                $preferPublicProfile = true;
+            } elseif ($publicProfile->updated_at && $application->updated_at && $publicProfile->updated_at->gt($application->updated_at)) {
+                $preferPublicProfile = true;
+            }
+        }
+
+        $enName = $preferPublicProfile
+            ? ($publicProfile->display_name ?: ($application?->en_name ?: ($firstPublished?->name ?? $admin->name)))
+            : ($application?->en_name ?: ($publicProfile?->display_name ?: ($firstPublished?->name ?? $admin->name)));
+
+        $enExpertise = $preferPublicProfile
+            ? ((is_array($publicProfile->specializations) && !empty($publicProfile->specializations)) ? implode(', ', $publicProfile->specializations) : ($application?->en_expertise ?: ($firstPublished?->expertise ?? 'Vedic Astrology, Kundli')))
+            : ($application?->en_expertise ?: ((is_array($publicProfile?->specializations) && !empty($publicProfile->specializations)) ? implode(', ', $publicProfile->specializations) : ($firstPublished?->expertise ?? 'Vedic Astrology, Kundli')));
+
+        $enLanguages = $preferPublicProfile
+            ? ((is_array($publicProfile->languages) && !empty($publicProfile->languages)) ? implode(', ', $publicProfile->languages) : ($application?->en_languages ?: ($firstPublished?->astrologer_language ?? 'English, Hindi')))
+            : ($application?->en_languages ?: ((is_array($publicProfile?->languages) && !empty($publicProfile->languages)) ? implode(', ', $publicProfile->languages) : ($firstPublished?->astrologer_language ?? 'English, Hindi')));
+
+        $enExcerpt = $preferPublicProfile
+            ? ($publicProfile->headline ?: ($application?->en_excerpt ?: ($firstPublished?->excerpt ?? '')))
+            : ($application?->en_excerpt ?: ($publicProfile?->headline ?: ($firstPublished?->excerpt ?? '')));
+
+        $enDescription = $preferPublicProfile
+            ? ($publicProfile->about ?: ($application?->en_description ?: ($firstPublished?->description ?? '')))
+            : ($application?->en_description ?: ($publicProfile?->about ?: ($firstPublished?->description ?? '')));
+
+        $image = $preferPublicProfile
+            ? ($publicProfile->profile_photo_url ?: ($application?->image ?: ($firstPublished?->image ?? '')))
+            : ($application?->image ?: ($publicProfile?->profile_photo_url ?: ($firstPublished?->image ?? '')));
+
+        $experience = $preferPublicProfile
+            ? (($publicProfile->years_of_experience !== null) ? "{$publicProfile->years_of_experience} years" : ($application?->experience ?: ($firstPublished?->experience ?? '5 years')))
+            : ($application?->experience ?: (($publicProfile?->years_of_experience !== null) ? "{$publicProfile->years_of_experience} years" : ($firstPublished?->experience ?? '5 years')));
+
         $prefill = [
-            'en_name' => $application->en_name ?? $publicProfile->display_name ?? $firstPublished?->name ?? $admin->name,
-            'en_expertise' => $application->en_expertise ?? (is_array($publicProfile?->specializations) ? implode(', ', $publicProfile->specializations) : ($firstPublished?->expertise ?? 'Vedic Astrology, Kundli')),
-            'en_languages' => $application->en_languages ?? (is_array($publicProfile?->languages) ? implode(', ', $publicProfile->languages) : ($firstPublished?->astrologer_language ?? 'English, Hindi')),
-            'en_excerpt' => $application->en_excerpt ?? $publicProfile->headline ?? $firstPublished?->excerpt ?? '',
-            'en_description' => $application->en_description ?? $publicProfile->about ?? $firstPublished?->description ?? '',
-            'hi_name' => $application->hi_name ?? $publishedHi?->name ?? '',
-            'hi_expertise' => $application->hi_expertise ?? $publishedHi?->expertise ?? '',
-            'hi_languages' => $application->hi_languages ?? $publishedHi?->astrologer_language ?? 'हिंदी, अंग्रेजी',
-            'hi_excerpt' => $application->hi_excerpt ?? $publishedHi?->excerpt ?? '',
-            'hi_description' => $application->hi_description ?? $publishedHi?->description ?? '',
-            'image' => $application->image ?? $publicProfile->profile_photo_url ?? $firstPublished?->image ?? '',
-            'experience' => $application->experience ?? ($publicProfile?->years_of_experience ? "{$publicProfile->years_of_experience} years" : ($firstPublished?->experience ?? '5 years')),
+            'en_name' => $enName,
+            'en_expertise' => $enExpertise,
+            'en_languages' => $enLanguages,
+            'en_excerpt' => $enExcerpt,
+            'en_description' => $enDescription,
+            'hi_name' => $application?->hi_name ?? $publishedHi?->name ?? '',
+            'hi_expertise' => $application?->hi_expertise ?? $publishedHi?->expertise ?? '',
+            'hi_languages' => $application?->hi_languages ?? $publishedHi?->astrologer_language ?? 'हिंदी, अंग्रेजी',
+            'hi_excerpt' => $application?->hi_excerpt ?? $publishedHi?->excerpt ?? '',
+            'hi_description' => $application?->hi_description ?? $publishedHi?->description ?? '',
+            'image' => $image,
+            'experience' => $experience,
             'price' => $application->price ?? $firstPublished?->price ?? 15,
             'call_price' => $application->call_price ?? $firstPublished?->call_price ?? 20,
             'original_price' => $application->original_price ?? $firstPublished?->original_price ?? 25,
@@ -222,13 +260,13 @@ class AstroSetuListingApiController extends Controller
                 'en_name' => $validated['en_name'],
                 'en_expertise' => $validated['en_expertise'],
                 'en_languages' => $validated['en_languages'],
-                'en_excerpt' => $validated['en_excerpt'] ?? null,
-                'en_description' => $validated['en_description'] ?? null,
+                'en_excerpt' => (!empty($validated['en_excerpt']) ? $validated['en_excerpt'] : ($existing?->en_excerpt ?? null)),
+                'en_description' => (!empty($validated['en_description']) ? $validated['en_description'] : ($existing?->en_description ?? null)),
                 'hi_name' => $validated['hi_name'],
                 'hi_expertise' => $validated['hi_expertise'],
                 'hi_languages' => $validated['hi_languages'],
-                'hi_excerpt' => $validated['hi_excerpt'] ?? null,
-                'hi_description' => $validated['hi_description'] ?? null,
+                'hi_excerpt' => (!empty($validated['hi_excerpt']) ? $validated['hi_excerpt'] : ($existing?->hi_excerpt ?? null)),
+                'hi_description' => (!empty($validated['hi_description']) ? $validated['hi_description'] : ($existing?->hi_description ?? null)),
                 'reviewed_by' => null,
                 'reviewed_at' => null,
                 'rejection_reason' => null,
@@ -324,13 +362,13 @@ class AstroSetuListingApiController extends Controller
             'en_name' => $validated['en_name'],
             'en_expertise' => $validated['en_expertise'],
             'en_languages' => $validated['en_languages'],
-            'en_excerpt' => $validated['en_excerpt'] ?? null,
-            'en_description' => $validated['en_description'] ?? null,
+            'en_excerpt' => (!empty($validated['en_excerpt']) ? $validated['en_excerpt'] : ($application->en_excerpt ?? null)),
+            'en_description' => (!empty($validated['en_description']) ? $validated['en_description'] : ($application->en_description ?? null)),
             'hi_name' => $validated['hi_name'],
             'hi_expertise' => $validated['hi_expertise'],
             'hi_languages' => $validated['hi_languages'],
-            'hi_excerpt' => $validated['hi_excerpt'] ?? null,
-            'hi_description' => $validated['hi_description'] ?? null,
+            'hi_excerpt' => (!empty($validated['hi_excerpt']) ? $validated['hi_excerpt'] : ($application->hi_excerpt ?? null)),
+            'hi_description' => (!empty($validated['hi_description']) ? $validated['hi_description'] : ($application->hi_description ?? null)),
         ]);
 
         // 5. Clean up old image if replaced with a newly stored file

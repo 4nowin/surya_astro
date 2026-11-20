@@ -38,7 +38,7 @@ class ConsultationApiController extends Controller
             $q->where('admins.id', $admin->id);
         })->get();
 
-        $formatted = $sessions->map(function (ChatSession $session) use ($jajmans) {
+        $formatted = $sessions->map(function (ChatSession $session) use ($jajmans, $admin) {
             $user = $session->user;
             $lastMessage = $session->messages->first();
 
@@ -48,13 +48,33 @@ class ConsultationApiController extends Controller
                 $matchedJajman = $jajmans->firstWhere('user_id', $user->id);
                 $userPhone = $user->phone ?? $user->mobile ?? null;
                 if (!$matchedJajman && !empty($userPhone)) {
-                    $cleanUserPhone = preg_replace('/[^0-9]/', '', $userPhone);
-                    $matchedJajman = $jajmans->first(function ($j) use ($cleanUserPhone) {
-                        if (empty($j->phone)) return false;
-                        $cleanJPhone = preg_replace('/[^0-9]/', '', $j->phone);
-                        return $cleanJPhone === $cleanUserPhone;
-                    });
+                    $cleanUserPhone = \App\Services\Jajman\ContactNormalization::normalizePhone($userPhone);
+                    if ($cleanUserPhone) {
+                        $matchedJajman = $jajmans->first(function ($j) use ($cleanUserPhone) {
+                            if (empty($j->phone)) return false;
+                            $cleanJPhone = \App\Services\Jajman\ContactNormalization::normalizePhone($j->phone);
+                            return $cleanJPhone === $cleanUserPhone;
+                        });
+                    }
                 }
+
+                // If user has chatted (sent messages) but no Jajman is linked yet, auto-link/create safely
+                if (!$matchedJajman && $session->messages->isNotEmpty()) {
+                    try {
+                        $matchedJajman = app(\App\Services\Jajman\JajmanAutoLinkService::class)->ensureJajmanForSession($session);
+                    } catch (\Throwable $e) {
+                        \Illuminate\Support\Facades\Log::warning('Error auto-linking Jajman in getConversations: ' . $e->getMessage());
+                    }
+                }
+            }
+
+            // Check if user has granted personal data sharing consent to this astrologer (admin_id)
+            $consentGranted = false;
+            if ($user) {
+                $consentGranted = \App\Models\CustomerAstrologerConsent::where('user_id', $user->id)
+                    ->where('admin_id', $admin->id)
+                    ->where('status', \App\Models\CustomerAstrologerConsent::STATUS_GRANTED)
+                    ->exists();
             }
 
             // Avatar resolution:
@@ -63,14 +83,29 @@ class ConsultationApiController extends Controller
             // 3. If neither exists, return null
             $avatarUrl = $user?->avatar_url ?? $matchedJajman?->avatar_url ?? null;
 
+            // Enforce consent for phone and email:
+            $clientPhone = null;
+            $clientEmail = null;
+            if ($consentGranted) {
+                $clientPhone = ($user->phone ?? $user->mobile ?? null) ?? ($matchedJajman->phone ?? null);
+                $clientEmail = $user->email ?? ($matchedJajman->email ?? null);
+            } elseif (!$user && $matchedJajman) {
+                // Fully offline manual Jajman created by practitioner
+                $clientPhone = $matchedJajman->phone ?? null;
+                $clientEmail = $matchedJajman->email ?? null;
+            }
+
             return [
                 'session_id' => $session->id,
                 'status' => $session->ended_at ? 'ended' : 'active',
                 'client_name' => $matchedJajman ? $matchedJajman->name : ($user->name ?? 'Astro Setu Client'),
                 'client_avatar_url' => $avatarUrl,
-                'client_phone' => ($user->phone ?? $user->mobile ?? null) ?? ($matchedJajman->phone ?? null),
-                'client_email' => $user->email ?? null,
+                'client_phone' => $clientPhone,
+                'client_email' => $clientEmail,
+                'consent_granted' => $consentGranted,
                 'jajman_id' => $matchedJajman?->id,
+                'has_possible_duplicates' => (bool) ($matchedJajman?->has_possible_duplicates ?? false),
+                'possible_duplicate_ids' => $matchedJajman?->possible_duplicate_ids ?? [],
                 'last_message' => $lastMessage?->message,
                 'last_message_sender' => $lastMessage?->sender,
                 'last_message_at' => $lastMessage?->created_at?->toIso8601String() ?? $session->updated_at->toIso8601String(),

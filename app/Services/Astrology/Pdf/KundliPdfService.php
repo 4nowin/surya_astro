@@ -556,6 +556,178 @@ class KundliPdfService
     }
 
     /**
+     * Generate binary PDF content for a Daily Panchang report.
+     *
+     * @param array<string, mixed> $panchangData Output of DailyPanchangService
+     * @param array<string, mixed> $branding Practitioner & platform branding
+     * @param array<string, mixed> $location Location details (city, lat, lng, timezone)
+     * @param string $locale 'en' or 'hi'
+     * @return string Raw PDF bytes
+     */
+    public function generatePanchangPdf(array $panchangData, array $branding, array $location, string $locale = 'en'): string
+    {
+        $regPath = resource_path('fonts/NotoSansDevanagari-Regular.ttf');
+        $boldPath = resource_path('fonts/NotoSansDevanagari-Bold.ttf');
+
+        $fontRegularChromium = file_exists($regPath)
+            ? 'data:font/truetype;charset=utf-8;base64,' . base64_encode((string) file_get_contents($regPath))
+            : 'file:///' . str_replace('\\', '/', $regPath);
+
+        $fontBoldChromium = file_exists($boldPath)
+            ? 'data:font/truetype;charset=utf-8;base64,' . base64_encode((string) file_get_contents($boldPath))
+            : 'file:///' . str_replace('\\', '/', $boldPath);
+
+        $htmlChromium = View::make('pdf.panchang_report', [
+            'panchang' => $panchangData,
+            'branding' => $branding,
+            'location' => $location,
+            'locale' => $locale,
+            'fontRegular' => $fontRegularChromium,
+            'fontBold' => $fontBoldChromium,
+        ])->render();
+
+        if ($locale === 'hi') {
+            $chromiumPdf = $this->premiumPdfService->renderHtmlViaChromium($htmlChromium, 'panchang_');
+            if ($chromiumPdf !== null && strlen($chromiumPdf) > 1000) {
+                return $chromiumPdf;
+            }
+
+            Log::error("Panchang Hindi PDF generation failed: Headless Chromium required but unavailable.");
+            throw new \RuntimeException(
+                'Hindi Panchang PDF generation requires headless Chromium for natural Devanagari script shaping. Chromium binary was not found or failed to render.'
+            );
+        }
+
+        // English locale: try Chromium first, fall back to Dompdf
+        $chromiumPdf = $this->premiumPdfService->renderHtmlViaChromium($htmlChromium, 'panchang_');
+        if ($chromiumPdf !== null && strlen($chromiumPdf) > 1000) {
+            return $chromiumPdf;
+        }
+
+        // Dompdf fallback
+        $fontDir = storage_path('fonts');
+        if (!is_dir($fontDir)) {
+            @mkdir($fontDir, 0755, true);
+        }
+        $this->premiumPdfService->ensureSvgFontAssets($fontDir);
+
+        $options = new Options();
+        $options->set('isHtml5ParserEnabled', true);
+        $options->set('isRemoteEnabled', true);
+        $options->set('fontDir', $fontDir);
+        $options->set('fontCache', $fontDir);
+        $options->set('chroot', [base_path()]);
+        $options->set('defaultFont', 'DejaVu Sans');
+
+        $dompdf = new Dompdf($options);
+        $htmlDompdf = View::make('pdf.panchang_report', [
+            'panchang' => $panchangData,
+            'branding' => $branding,
+            'location' => $location,
+            'locale' => $locale,
+            'fontRegular' => str_replace('\\', '/', $regPath),
+            'fontBold' => str_replace('\\', '/', $boldPath),
+        ])->render();
+
+        $dompdf->loadHtml($htmlDompdf, 'UTF-8');
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+
+        $output = $dompdf->output();
+        if ($output === null || $output === '') {
+            throw new \RuntimeException('Dompdf failed to produce Panchang PDF output.');
+        }
+
+        return (string) $output;
+    }
+
+    /**
+     * Generate binary PDF content for a Daily Personal Insights report.
+     *
+     * @param array<string, mixed> $insightsData Output of PersonalizedDailyInterpretationService
+     * @param array<string, mixed> $branding Practitioner & platform branding
+     * @param array<string, mixed> $native Native / client information
+     * @param string $locale 'en' or 'hi'
+     * @return string Raw PDF bytes
+     */
+    public function generateDailyInsightsPdf(array $insightsData, array $branding, array $native, string $locale = 'en'): string
+    {
+        $regPath = resource_path('fonts/NotoSansDevanagari-Regular.ttf');
+        $boldPath = resource_path('fonts/NotoSansDevanagari-Bold.ttf');
+
+        $fontRegularChromium = file_exists($regPath)
+            ? 'data:font/truetype;charset=utf-8;base64,' . base64_encode((string) file_get_contents($regPath))
+            : 'file:///' . str_replace('\\', '/', $regPath);
+
+        $fontBoldChromium = file_exists($boldPath)
+            ? 'data:font/truetype;charset=utf-8;base64,' . base64_encode((string) file_get_contents($boldPath))
+            : 'file:///' . str_replace('\\', '/', $boldPath);
+
+        $htmlChromium = View::make('pdf.daily_insights_report', [
+            'insights' => $insightsData,
+            'branding' => $branding,
+            'native' => $native,
+            'locale' => $locale,
+            'fontRegular' => $fontRegularChromium,
+            'fontBold' => $fontBoldChromium,
+        ])->render();
+
+        if ($locale === 'hi') {
+            $chromiumPdf = $this->premiumPdfService->renderHtmlViaChromium($htmlChromium, 'insights_');
+            if ($chromiumPdf !== null && strlen($chromiumPdf) > 1000) {
+                return $chromiumPdf;
+            }
+
+            Log::error("Daily Insights Hindi PDF generation failed: Headless Chromium required but unavailable.");
+            throw new \RuntimeException(
+                'Hindi Daily Insights PDF generation requires headless Chromium for natural Devanagari script shaping. Chromium binary was not found or failed to render.'
+            );
+        }
+
+        // English locale: try Chromium first, fall back to Dompdf
+        $chromiumPdf = $this->premiumPdfService->renderHtmlViaChromium($htmlChromium, 'insights_');
+        if ($chromiumPdf !== null && strlen($chromiumPdf) > 1000) {
+            return $chromiumPdf;
+        }
+
+        // Dompdf fallback
+        $fontDir = storage_path('fonts');
+        if (!is_dir($fontDir)) {
+            @mkdir($fontDir, 0755, true);
+        }
+        $this->premiumPdfService->ensureSvgFontAssets($fontDir);
+
+        $options = new Options();
+        $options->set('isHtml5ParserEnabled', true);
+        $options->set('isRemoteEnabled', true);
+        $options->set('fontDir', $fontDir);
+        $options->set('fontCache', $fontDir);
+        $options->set('chroot', [base_path()]);
+        $options->set('defaultFont', 'DejaVu Sans');
+
+        $dompdf = new Dompdf($options);
+        $htmlDompdf = View::make('pdf.daily_insights_report', [
+            'insights' => $insightsData,
+            'branding' => $branding,
+            'native' => $native,
+            'locale' => $locale,
+            'fontRegular' => str_replace('\\', '/', $regPath),
+            'fontBold' => str_replace('\\', '/', $boldPath),
+        ])->render();
+
+        $dompdf->loadHtml($htmlDompdf, 'UTF-8');
+        $dompdf->setPaper('A4', 'portrait');
+        $dompdf->render();
+
+        $output = $dompdf->output();
+        if ($output === null || $output === '') {
+            throw new \RuntimeException('Dompdf failed to produce Daily Insights PDF output.');
+        }
+
+        return (string) $output;
+    }
+
+    /**
      * Generate vector SVG string representing a traditional North Indian Diamond chart.
      * Delegates to the battle-tested SvgVargaRenderer for authentic geometry and font embedding.
      *

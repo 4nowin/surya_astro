@@ -123,6 +123,22 @@ class AstrologyApiController extends Controller
         $admin = $request->user();
         $jajman = $this->authorizeJajman($request, $id);
 
+        if ($jajman->user_id !== null) {
+            $hasConsent = \App\Models\CustomerAstrologerConsent::where('user_id', $jajman->user_id)
+                ->where('admin_id', $admin->id)
+                ->where('status', \App\Models\CustomerAstrologerConsent::STATUS_GRANTED)
+                ->exists();
+
+            if (!$hasConsent) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 'consent_required',
+                    'message' => 'Client has not granted personal data sharing consent for astrological chart calculation.',
+                    'data' => null,
+                ], 403);
+            }
+        }
+
         $birthDetail = $jajman->primaryBirthDetail
             ?? $jajman->birthDetails()->latest()->first();
 
@@ -164,6 +180,22 @@ class AstrologyApiController extends Controller
     {
         $admin = $request->user();
         $jajman = $this->authorizeJajman($request, $id);
+
+        if ($jajman->user_id !== null) {
+            $hasConsent = \App\Models\CustomerAstrologerConsent::where('user_id', $jajman->user_id)
+                ->where('admin_id', $admin->id)
+                ->where('status', \App\Models\CustomerAstrologerConsent::STATUS_GRANTED)
+                ->exists();
+
+            if (!$hasConsent) {
+                return response()->json([
+                    'success' => false,
+                    'status' => 'consent_required',
+                    'message' => 'Client has not granted personal data sharing consent for astrological chart calculation.',
+                    'data' => null,
+                ], 403);
+            }
+        }
 
         $birthDetail = $jajman->primaryBirthDetail
             ?? $jajman->birthDetails()->latest()->first();

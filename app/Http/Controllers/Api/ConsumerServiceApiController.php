@@ -42,6 +42,10 @@ class ConsumerServiceApiController extends Controller
             $query->where('category', $cat);
         }
 
+        if ($offeringType = $request->query('offering_type')) {
+            $query->where('offering_type', $offeringType);
+        }
+
         if ($search = $request->query('search')) {
             $query->where(function ($q) use ($search) {
                 $q->where('name', 'like', "%{$search}%")
@@ -78,11 +82,13 @@ class ConsumerServiceApiController extends Controller
      * GET /api/{lang?}/services/{id}
      * Returns single service details with transparent pricing and astrologer profile.
      */
-    public function getServiceDetail(Request $request, $id): JsonResponse
+    public function getServiceDetail(Request $request, $langOrId = null, $id = null): JsonResponse
     {
+        $targetId = $request->route('id') ?? ($id !== null ? $id : $langOrId);
+
         $service = ProfessionalService::publiclyVisible()
             ->with(['professional.astrologer'])
-            ->find($id);
+            ->find($targetId);
 
         if (!$service) {
             return response()->json([
@@ -101,10 +107,12 @@ class ConsumerServiceApiController extends Controller
      * GET /api/{lang?}/astrologers/{id}/services
      * Returns publicly available services configured by the astrologer with transparent pricing.
      */
-    public function getAstrologerServices(Request $request, $id): JsonResponse
+    public function getAstrologerServices(Request $request, $langOrId = null, $id = null): JsonResponse
     {
-        $astrologer = Astrologer::where('id', $id)
-            ->orWhere('user_id', $id)
+        $targetId = $request->route('id') ?? ($id !== null ? $id : $langOrId);
+
+        $astrologer = Astrologer::where('id', $targetId)
+            ->orWhere('user_id', $targetId)
             ->first();
 
         if (!$astrologer) {
@@ -116,16 +124,41 @@ class ConsumerServiceApiController extends Controller
 
         $adminId = $astrologer->admin_id ?? $astrologer->user_id;
 
-        $services = ProfessionalService::where('admin_id', $adminId)
+        $servicesQuery = ProfessionalService::where('admin_id', $adminId)
             ->publiclyVisible()
             ->with(['professional.astrologer'])
-            ->orderBy('id', 'asc')
-            ->get();
+            ->orderBy('id', 'asc');
+
+        if ($offeringType = $request->query('offering_type')) {
+            $servicesQuery->where('offering_type', $offeringType);
+        }
+
+        $services = $servicesQuery->get();
 
         $data = $services->map(fn (ProfessionalService $service) => $service->toPublicArray());
 
+        // Find active chat service if configured
+        $activeChat = ProfessionalService::where('admin_id', $adminId)
+            ->where('is_active', true)
+            ->where(function ($q) {
+                $q->where('offering_type', 'chat')
+                  ->orWhere('pricing_model', 'per_message')
+                  ->orWhereJsonContains('delivery_methods', 'chat');
+            })
+            ->first();
+
+        $chatAvailability = [
+            'is_available' => $activeChat !== null,
+            'service_id' => $activeChat?->id,
+            'is_free_chat' => (bool) ($activeChat?->is_free_chat ?? false),
+            'price' => $activeChat ? (float) $activeChat->price : null,
+            'customer_price' => $activeChat ? $activeChat->toPublicArray()['customer_price'] : null,
+        ];
+
         return response()->json([
             'success' => true,
+            'has_active_chat' => $activeChat !== null,
+            'chat_availability' => $chatAvailability,
             'data' => $data,
         ]);
     }
@@ -134,10 +167,12 @@ class ConsumerServiceApiController extends Controller
      * GET /api/{lang?}/astrologers/{id}/availability
      * Get available booking slots for a selected date.
      */
-    public function getAstrologerAvailability(Request $request, $id): JsonResponse
+    public function getAstrologerAvailability(Request $request, $langOrId = null, $id = null): JsonResponse
     {
-        $astrologer = Astrologer::where('id', $id)
-            ->orWhere('user_id', $id)
+        $targetId = $request->route('id') ?? ($id !== null ? $id : $langOrId);
+
+        $astrologer = Astrologer::where('id', $targetId)
+            ->orWhere('user_id', $targetId)
             ->first();
 
         if (!$astrologer) {

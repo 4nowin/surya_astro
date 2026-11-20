@@ -46,6 +46,11 @@ class ProfessionalServiceApiController extends Controller
                 $query->where('category', $category);
             }
 
+            // Filter by offering type (chat, product, puja)
+            if ($offeringType = $request->query('offering_type')) {
+                $query->where('offering_type', $offeringType);
+            }
+
             // Filter by active status
             if ($request->has('is_active')) {
                 $isActive = filter_var($request->query('is_active'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
@@ -115,6 +120,7 @@ class ProfessionalServiceApiController extends Controller
             'description' => 'nullable|string',
             'category' => 'required|string|max:64',
             'specialization' => 'nullable|string|max:191',
+            'offering_type' => ['nullable', 'string', Rule::in(['chat', 'product', 'puja'])],
             'pricing_model' => ['required', Rule::in(['fixed', 'hourly', 'starting_from', 'custom', 'per_message'])],
             'price' => [
                 Rule::requiredIf(fn () => in_array($request->input('pricing_model'), ['fixed', 'hourly', 'starting_from', 'per_message']) && !$request->boolean('is_free_chat')),
@@ -124,9 +130,16 @@ class ProfessionalServiceApiController extends Controller
             ],
             'currency' => 'nullable|string|max:8',
             'duration_minutes' => 'nullable|integer|min:0|max:1440',
+            'duration_value' => 'nullable|integer|min:1',
+            'duration_unit' => ['nullable', 'string', Rule::in(['minutes', 'hours', 'days'])],
             'delivery_timeframe_days' => 'nullable|integer|min:1|max:90',
             'delivery_methods' => 'required|array|min:1',
             'delivery_methods.*' => ['string', Rule::in(['online', 'phone_call', 'in_person', 'home_visit', 'at_location', 'custom', 'chat', 'email', 'whatsapp', 'courier'])],
+            'has_video_proof' => 'nullable|boolean',
+            'video_proof_available' => 'nullable|boolean',
+            'has_prasad_delivery' => 'nullable|boolean',
+            'prasad_courier_available' => 'nullable|boolean',
+            'attendance_mode' => ['nullable', 'string', Rule::in(['in_person', 'remote', 'both'])],
             'is_active' => 'nullable|boolean',
             'is_free_chat' => 'nullable|boolean',
             'max_message_characters' => 'nullable|integer|min:100|max:5000',
@@ -134,18 +147,42 @@ class ProfessionalServiceApiController extends Controller
             'additional_info' => 'nullable|string',
         ]);
 
+        $offeringType = $validated['offering_type'] ?? null;
+        if (!$offeringType) {
+            if (($validated['pricing_model'] ?? null) === 'per_message' || in_array('chat', $validated['delivery_methods'] ?? [])) {
+                $offeringType = 'chat';
+            } elseif (($validated['category'] ?? null) === 'pandit_purohit' || stripos($validated['name'] ?? '', 'puja') !== false || stripos($validated['name'] ?? '', 'pooja') !== false || stripos($validated['name'] ?? '', 'hawan') !== false) {
+                $offeringType = 'puja';
+            } else {
+                $offeringType = 'product';
+            }
+        }
+
+        $durationUnit = $validated['duration_unit'] ?? 'minutes';
+        $durationValue = $validated['duration_value'] ?? ($validated['duration_minutes'] ?? 30);
+        $durationMinutes = $validated['duration_minutes'] ?? ($durationUnit === 'hours' ? $durationValue * 60 : ($durationUnit === 'days' ? $durationValue * 1440 : $durationValue));
+
+        $hasVideoProof = (bool) ($validated['has_video_proof'] ?? $validated['video_proof_available'] ?? false);
+        $hasPrasadDelivery = (bool) ($validated['has_prasad_delivery'] ?? $validated['prasad_courier_available'] ?? false);
+
         $service = ProfessionalService::create([
             'admin_id' => $admin->id,
             'name' => $validated['name'],
             'description' => $validated['description'] ?? null,
             'category' => $validated['category'],
             'specialization' => $validated['specialization'] ?? null,
+            'offering_type' => $offeringType,
             'pricing_model' => $validated['pricing_model'],
             'price' => $validated['pricing_model'] === 'custom' ? null : ($validated['price'] ?? null),
             'currency' => $validated['currency'] ?? 'INR',
-            'duration_minutes' => $validated['duration_minutes'] ?? 30,
+            'duration_minutes' => $durationMinutes,
+            'duration_value' => $durationValue,
+            'duration_unit' => $durationUnit,
             'delivery_timeframe_days' => $validated['delivery_timeframe_days'] ?? 3,
             'delivery_methods' => $validated['delivery_methods'],
+            'has_video_proof' => $hasVideoProof,
+            'has_prasad_delivery' => $hasPrasadDelivery,
+            'attendance_mode' => $validated['attendance_mode'] ?? 'both',
             'is_active' => $validated['is_active'] ?? false,
             'is_free_chat' => $validated['is_free_chat'] ?? false,
             'max_message_characters' => $validated['max_message_characters'] ?? 1000,
@@ -207,6 +244,7 @@ class ProfessionalServiceApiController extends Controller
             'description' => 'nullable|string',
             'category' => 'sometimes|required|string|max:64',
             'specialization' => 'nullable|string|max:191',
+            'offering_type' => ['sometimes', 'nullable', 'string', Rule::in(['chat', 'product', 'puja'])],
             'pricing_model' => ['sometimes', 'required', Rule::in(['fixed', 'hourly', 'starting_from', 'custom', 'per_message'])],
             'price' => [
                 'nullable',
@@ -215,9 +253,16 @@ class ProfessionalServiceApiController extends Controller
             ],
             'currency' => 'nullable|string|max:8',
             'duration_minutes' => 'sometimes|nullable|integer|min:0|max:1440',
+            'duration_value' => 'sometimes|nullable|integer|min:1',
+            'duration_unit' => ['sometimes', 'nullable', 'string', Rule::in(['minutes', 'hours', 'days'])],
             'delivery_timeframe_days' => 'sometimes|nullable|integer|min:1|max:90',
             'delivery_methods' => 'sometimes|required|array|min:1',
             'delivery_methods.*' => ['string', Rule::in(['online', 'phone_call', 'in_person', 'home_visit', 'at_location', 'custom', 'chat', 'email', 'whatsapp', 'courier'])],
+            'has_video_proof' => 'sometimes|nullable|boolean',
+            'video_proof_available' => 'sometimes|nullable|boolean',
+            'has_prasad_delivery' => 'sometimes|nullable|boolean',
+            'prasad_courier_available' => 'sometimes|nullable|boolean',
+            'attendance_mode' => ['sometimes', 'nullable', 'string', Rule::in(['in_person', 'remote', 'both'])],
             'is_active' => 'nullable|boolean',
             'is_free_chat' => 'nullable|boolean',
             'max_message_characters' => 'nullable|integer|min:100|max:5000',
@@ -235,17 +280,38 @@ class ProfessionalServiceApiController extends Controller
             ], 422);
         }
 
+        $durationUnit = $validated['duration_unit'] ?? $service->duration_unit ?? 'minutes';
+        $durationValue = array_key_exists('duration_value', $validated) ? $validated['duration_value'] : $service->duration_value;
+        $durationMinutes = array_key_exists('duration_minutes', $validated) ? ($validated['duration_minutes'] ?? 30) : $service->duration_minutes;
+        if (array_key_exists('duration_value', $validated) && !array_key_exists('duration_minutes', $validated)) {
+            $durationMinutes = $durationUnit === 'hours' ? $durationValue * 60 : ($durationUnit === 'days' ? $durationValue * 1440 : $durationValue);
+        }
+
+        $hasVideoProof = array_key_exists('has_video_proof', $validated)
+            ? (bool)$validated['has_video_proof']
+            : (array_key_exists('video_proof_available', $validated) ? (bool)$validated['video_proof_available'] : (bool)$service->has_video_proof);
+
+        $hasPrasadDelivery = array_key_exists('has_prasad_delivery', $validated)
+            ? (bool)$validated['has_prasad_delivery']
+            : (array_key_exists('prasad_courier_available', $validated) ? (bool)$validated['prasad_courier_available'] : (bool)$service->has_prasad_delivery);
+
         $service->update([
             'name' => $validated['name'] ?? $service->name,
             'description' => array_key_exists('description', $validated) ? $validated['description'] : $service->description,
             'category' => $validated['category'] ?? $service->category,
             'specialization' => array_key_exists('specialization', $validated) ? $validated['specialization'] : $service->specialization,
+            'offering_type' => array_key_exists('offering_type', $validated) ? $validated['offering_type'] : $service->offering_type,
             'pricing_model' => $pricingModel,
             'price' => $pricingModel === 'custom' ? null : (array_key_exists('price', $validated) ? $validated['price'] : $service->price),
             'currency' => $validated['currency'] ?? $service->currency,
-            'duration_minutes' => array_key_exists('duration_minutes', $validated) ? ($validated['duration_minutes'] ?? 30) : $service->duration_minutes,
+            'duration_minutes' => $durationMinutes,
+            'duration_value' => $durationValue,
+            'duration_unit' => $durationUnit,
             'delivery_timeframe_days' => array_key_exists('delivery_timeframe_days', $validated) ? ($validated['delivery_timeframe_days'] ?? 3) : $service->delivery_timeframe_days,
             'delivery_methods' => $validated['delivery_methods'] ?? $service->delivery_methods,
+            'has_video_proof' => $hasVideoProof,
+            'has_prasad_delivery' => $hasPrasadDelivery,
+            'attendance_mode' => array_key_exists('attendance_mode', $validated) ? $validated['attendance_mode'] : $service->attendance_mode,
             'is_active' => array_key_exists('is_active', $validated) ? (bool)$validated['is_active'] : $service->is_active,
             'is_free_chat' => $isFreeChat,
             'max_message_characters' => array_key_exists('max_message_characters', $validated) ? ($validated['max_message_characters'] ?? 1000) : $service->max_message_characters,
@@ -684,6 +750,13 @@ class ProfessionalServiceApiController extends Controller
                 }
             }
 
+            $offeringTypeCounts = [];
+            foreach ($services->groupBy('offering_type') as $type => $items) {
+                if ($type !== null && $type !== '') {
+                    $offeringTypeCounts[(string)$type] = $items->count();
+                }
+            }
+
             return response()->json([
                 'success' => true,
                 'data' => [
@@ -692,6 +765,7 @@ class ProfessionalServiceApiController extends Controller
                     'inactive_services' => $inactive,
                     'category_counts' => (object)$categoryCounts,
                     'pricing_model_counts' => (object)$pricingModelCounts,
+                    'offering_type_counts' => (object)$offeringTypeCounts,
                 ],
             ]);
         } catch (\Throwable $e) {

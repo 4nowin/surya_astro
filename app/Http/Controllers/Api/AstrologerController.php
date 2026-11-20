@@ -28,7 +28,7 @@ class AstrologerController extends Controller
     $query = Astrologer::where([
       ['active', 1],
       ['language', $lang]
-    ]);
+    ])->with(['chatService', 'activeChatService', 'admin.publicProfile']);
 
     // Optional specialisation / expertise filter
     $expertise = $request->query('expertise') ?? $request->query('specialisation');

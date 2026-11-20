@@ -53,6 +53,18 @@ class ProfessionalPublicProfile extends Model
         'is_email_mandatory' => 'boolean',
     ];
 
+    protected static function booted()
+    {
+        static::creating(function ($profile) {
+            if (empty($profile->slug)) {
+                $profile->slug = static::generateUniqueSlug(
+                    $profile->display_name ?? 'practitioner',
+                    $profile->admin_id ?? 0
+                );
+            }
+        });
+    }
+
     public function admin()
     {
         return $this->belongsTo(Admin::class, 'admin_id');

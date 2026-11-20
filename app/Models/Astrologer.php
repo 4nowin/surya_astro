@@ -36,7 +36,125 @@ class Astrologer extends Model
         'image_url',
         'customer_price',
         'is_free_chat',
+        'has_active_chat',
     ];
+
+    public function getHasActiveChatAttribute(): bool
+    {
+        if (array_key_exists('has_active_chat', $this->attributes)) {
+            return (bool) $this->attributes['has_active_chat'];
+        }
+
+        if ($this->relationLoaded('activeChatService')) {
+            return $this->activeChatService !== null;
+        }
+
+        if ($this->relationLoaded('chatService')) {
+            return $this->chatService !== null && (bool) $this->chatService->is_active;
+        }
+
+        return $this->activeChatService()->exists();
+    }
+
+    public function getNameAttribute($value): ?string
+    {
+        if (!empty($value)) {
+            return $value;
+        }
+
+        if ($this->relationLoaded('admin') && $this->admin?->relationLoaded('publicProfile')) {
+            return $this->admin?->publicProfile?->display_name ?: $value;
+        }
+
+        return $value;
+    }
+
+    public function getImageAttribute($value): ?string
+    {
+        if (!empty($value)) {
+            return $value;
+        }
+
+        if ($this->relationLoaded('admin') && $this->admin?->relationLoaded('publicProfile')) {
+            return $this->admin?->publicProfile?->profile_photo_url ?: $value;
+        }
+
+        return $value;
+    }
+
+    public function getExcerptAttribute($value): ?string
+    {
+        if (!empty($value)) {
+            return $value;
+        }
+
+        if ($this->relationLoaded('admin') && $this->admin?->relationLoaded('publicProfile')) {
+            return $this->admin?->publicProfile?->headline ?: $value;
+        }
+
+        return $value;
+    }
+
+    public function getExperienceAttribute($value): ?string
+    {
+        if (!empty($value)) {
+            return (string) $value;
+        }
+
+        if ($this->relationLoaded('admin') && $this->admin?->relationLoaded('publicProfile')) {
+            $years = $this->admin?->publicProfile?->years_of_experience;
+            if ($years !== null) {
+                return $years . ($years === 1 ? ' year' : ' years');
+            }
+        }
+
+        return $value;
+    }
+
+    public function getAstrologerLanguageAttribute($value): ?string
+    {
+        if (!empty($value)) {
+            return $value;
+        }
+
+        if ($this->relationLoaded('admin') && $this->admin?->relationLoaded('publicProfile')) {
+            $langs = $this->admin?->publicProfile?->languages;
+            if (is_array($langs) && !empty($langs)) {
+                return implode(', ', $langs);
+            }
+        }
+
+        return $value;
+    }
+
+    public function getExpertiseAttribute($value): ?string
+    {
+        if (!empty($value)) {
+            return $value;
+        }
+
+        if ($this->relationLoaded('admin') && $this->admin?->relationLoaded('publicProfile')) {
+            $specs = $this->admin?->publicProfile?->specializations;
+            if (is_array($specs) && !empty($specs)) {
+                return implode(', ', $specs);
+            }
+        }
+
+        return $value;
+    }
+
+    public function getDescriptionAttribute($value): ?string
+    {
+        if (!empty($value)) {
+            return $value;
+        }
+
+        if ($this->relationLoaded('admin') && $this->admin?->relationLoaded('publicProfile')) {
+            return $this->admin?->publicProfile?->about ?: $value;
+        }
+
+        return $value;
+    }
 
     public function getCustomerPriceAttribute(): float
     {
@@ -71,15 +189,20 @@ class Astrologer extends Model
 
     public function getImageUrlAttribute(): ?string
     {
-        if (empty($this->image)) {
+        $img = $this->image;
+        if (empty($img) && $this->relationLoaded('admin') && $this->admin?->relationLoaded('publicProfile')) {
+            $img = $this->admin?->publicProfile?->profile_photo_url;
+        }
+
+        if (empty($img)) {
             return null;
         }
 
-        if (str_starts_with($this->image, 'http://') || str_starts_with($this->image, 'https://')) {
-            return $this->image;
+        if (str_starts_with($img, 'http://') || str_starts_with($img, 'https://')) {
+            return $img;
         }
 
-        $cleanPath = ltrim(preg_replace('#^/?storage/#', '', $this->image), '/');
+        $cleanPath = ltrim(preg_replace('#^/?storage/#', '', $img), '/');
         return Storage::disk('public')->url($cleanPath);
     }
 
@@ -117,7 +240,19 @@ class Astrologer extends Model
     {
         return $this->hasOne(ProfessionalService::class, 'admin_id', 'admin_id')
             ->where(function ($q) {
-                $q->where('pricing_model', 'per_message')
+                $q->where('offering_type', 'chat')
+                  ->orWhere('pricing_model', 'per_message')
+                  ->orWhereJsonContains('delivery_methods', 'chat');
+            });
+    }
+
+    public function activeChatService()
+    {
+        return $this->hasOne(ProfessionalService::class, 'admin_id', 'admin_id')
+            ->where('is_active', true)
+            ->where(function ($q) {
+                $q->where('offering_type', 'chat')
+                  ->orWhere('pricing_model', 'per_message')
                   ->orWhereJsonContains('delivery_methods', 'chat');
             });
     }

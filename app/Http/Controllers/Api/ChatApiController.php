@@ -329,8 +329,26 @@ class ChatApiController extends Controller
                         'status' => 'completed',
                     ]);
 
+                    // Check if a linked Jajman already exists in practitioner CRM for this customer
+                    $linkedJajmanId = DB::table('professional_jajmans')
+                        ->join('jajmans', 'jajmans.id', '=', 'professional_jajmans.jajman_id')
+                        ->where('professional_jajmans.admin_id', $session->admin_id)
+                        ->where('jajmans.user_id', $session->user_id)
+                        ->value('jajmans.id');
+
+                    // If not found yet and sender is user, ensure Jajman is linked
+                    if (!$linkedJajmanId && $senderType === 'user') {
+                        try {
+                            $jajman = app(\App\Services\Jajman\JajmanAutoLinkService::class)->ensureJajmanForSession($session);
+                            $linkedJajmanId = $jajman?->id;
+                        } catch (\Throwable $e) {
+                            Log::warning('JajmanAutoLinkService error resolving Jajman for chat transaction: ' . $e->getMessage());
+                        }
+                    }
+
                     ProfessionalTransaction::create([
                         'admin_id' => $session->admin_id,
+                        'jajman_id' => $linkedJajmanId,
                         'user_id' => $session->user_id,
                         'service_id' => $chatService->id,
                         'chat_session_id' => $session->id,
@@ -377,6 +395,15 @@ class ChatApiController extends Controller
                 }
             }
             throw $e;
+        }
+
+        // Auto-create or link Jajman CRM record for customer on chat message initiation
+        if ($senderType === 'user') {
+            try {
+                app(\App\Services\Jajman\JajmanAutoLinkService::class)->ensureJajmanForSession($session);
+            } catch (\Throwable $e) {
+                Log::warning('JajmanAutoLinkService error in sendMessage: ' . $e->getMessage());
+            }
         }
 
         // Post-commit: Broadcast to Ably
