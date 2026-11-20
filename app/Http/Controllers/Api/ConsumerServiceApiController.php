@@ -137,6 +137,21 @@ class ConsumerServiceApiController extends Controller
 
         $data = $services->map(fn (ProfessionalService $service) => $service->toPublicArray());
 
+        // Ensure default chat service exists for registered admin
+        if ($adminId) {
+            $existingChat = ProfessionalService::where('admin_id', $adminId)
+                ->where(function ($q) {
+                    $q->where('offering_type', 'chat')
+                      ->orWhere('pricing_model', 'per_message')
+                      ->orWhereJsonContains('delivery_methods', 'chat');
+                })
+                ->first();
+
+            if (!$existingChat) {
+                app(\App\Services\Chat\ChatServiceProvisioner::class)->provisionForAdmin((int) $adminId);
+            }
+        }
+
         // Find active chat service if configured
         $activeChat = ProfessionalService::where('admin_id', $adminId)
             ->where('is_active', true)

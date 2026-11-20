@@ -543,4 +543,141 @@ class ChatMonetizationTest extends TestCase
                 'error' => 'per_minute_billing_retired',
             ]);
     }
+
+    public function test_multi_language_astrologers_share_admin_id_chat_availability_and_allowance(): void
+    {
+        Sanctum::actingAs($this->user);
+
+        // Create Hindi profile sharing adminA
+        $astrologerAHindi = Astrologer::create([
+            'admin_id' => $this->adminA->id,
+            'name' => 'आचार्य रमन',
+            'language' => 'hi',
+            'astrologer_language' => 'हिन्दी',
+            'expertise' => 'वैदिक ज्योतिष',
+            'experience' => '12 वर्ष',
+            'price' => 0.10,
+            'status' => 'online',
+            'active' => 1,
+        ]);
+
+        // Both English and Hindi profiles must have has_active_chat == true
+        $this->assertTrue($this->astrologerA->fresh()->has_active_chat);
+        $this->assertTrue($astrologerAHindi->fresh()->has_active_chat);
+
+        // 1. Initiate session using English profile without explicit admin_id
+        $initEn = $this->postJson('/api/chat/start-session', [
+            'astrologer_id' => $this->astrologerA->id,
+        ]);
+        $initEn->assertStatus(200)
+            ->assertJson([
+                'status' => 'new',
+                'admin_id' => $this->adminA->id,
+                'astrologer_id' => $this->astrologerA->id,
+            ]);
+        $sessionId = $initEn->json('chat_session_id');
+
+        // Send 1 introductory message in English session
+        $sendEn = $this->postJson('/api/chat/message/send', [
+            'chat_session_id' => $sessionId,
+            'message' => 'Namaste Guruji in English',
+            'client_nonce' => 'nonce-en-1',
+        ]);
+        $sendEn->assertStatus(201);
+        $this->assertEquals(4, $sendEn->json('billing.free_messages_remaining'));
+
+        // 2. Initiate session using Hindi profile (same admin)
+        $initHi = $this->postJson('/api/chat/start-session', [
+            'astrologer_id' => $astrologerAHindi->id,
+        ]);
+        $initHi->assertStatus(200)
+            ->assertJson([
+                'status' => 'existing',
+                'chat_session_id' => $sessionId,
+                'admin_id' => $this->adminA->id,
+                'astrologer_id' => $astrologerAHindi->id,
+            ]);
+
+        // Check pricing on Hindi profile reflects remaining free allowance (4 remaining, NOT reset to 5)
+        $pricingHi = $this->getJson("/api/chat/pricing/{$astrologerAHindi->id}");
+        $pricingHi->assertStatus(200)
+            ->assertJson([
+                'success' => true,
+                'data' => [
+                    'astrologer_id' => $astrologerAHindi->id,
+                    'admin_id' => $this->adminA->id,
+                    'free_messages_used' => 1,
+                    'free_messages_remaining' => 4,
+                ],
+            ]);
+    }
+
+    public function test_missing_admin_id_resolves_reliably_on_session_and_message_send(): void
+    {
+        Sanctum::actingAs($this->user);
+
+        // 1. startSession called without admin_id resolves from astrologer
+        $init = $this->postJson('/api/chat/start-session', [
+            'astrologer_id' => $this->astrologerB->id,
+        ]);
+        $init->assertStatus(200)
+            ->assertJson([
+                'status' => 'new',
+                'admin_id' => $this->adminB->id,
+                'astrologer_id' => $this->astrologerB->id,
+            ]);
+
+        $session = ChatSession::find($init->json('chat_session_id'));
+        $this->assertEquals($this->adminB->id, $session->admin_id);
+
+        // 2. sendMessage succeeds and delivers message with resolved admin_id
+        $send = $this->postJson('/api/chat/message/send', [
+            'chat_session_id' => $session->id,
+            'message' => 'Testing admin resolution',
+            'client_nonce' => 'nonce-recovery-1',
+        ]);
+        $send->assertStatus(201);
+        $this->assertEquals($this->adminB->id, $session->fresh()->admin_id);
+    }
+
+    public function test_inactive_chat_service_authoritatively_rejects_with_http_422(): void
+    {
+        Sanctum::actingAs($this->user);
+
+        // Deactivate astrologer A's chat service
+        $chatService = ProfessionalService::where('admin_id', $this->adminA->id)
+            ->where(function ($q) {
+                $q->where('offering_type', 'chat')
+                  ->orWhere('pricing_model', 'per_message')
+                  ->orWhereJsonContains('delivery_methods', 'chat');
+            })
+            ->first();
+
+        $this->assertNotNull($chatService);
+        $chatService->update(['is_active' => false]);
+
+        // Model attribute has_active_chat must evaluate to false
+        $this->assertFalse($this->astrologerA->fresh()->has_active_chat);
+
+        $session = ChatSession::create([
+            'admin_id' => $this->adminA->id,
+            'astrologer_id' => $this->astrologerA->id,
+            'user_id' => $this->user->id,
+            'status' => 'ACTIVE',
+            'started_at' => now(),
+        ]);
+
+        // sendMessage must reject with HTTP 422
+        $res = $this->postJson('/api/chat/message/send', [
+            'chat_session_id' => $session->id,
+            'message' => 'Should fail when inactive',
+            'client_nonce' => 'nonce-inactive-test',
+        ]);
+
+        $res->assertStatus(422)
+            ->assertJson([
+                'success' => false,
+                'message' => 'Chat consultation service is currently not available for this astrologer.',
+            ]);
+    }
 }

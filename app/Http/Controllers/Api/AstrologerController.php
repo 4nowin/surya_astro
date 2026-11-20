@@ -80,6 +80,7 @@ class AstrologerController extends Controller
 
     // Show online astrologers first, then order by price ascending
     $astrologers = $query
+      ->with(['activeChatService', 'chatService'])
       ->orderByRaw("CASE WHEN status = 'online' THEN 1 ELSE 2 END")
       ->orderBy('price', 'asc')
       ->get();

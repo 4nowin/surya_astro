@@ -209,6 +209,16 @@ Route::prefix('astrologer')->group(function () {
         Route::post('/services/{id}/toggle-active', [ProfessionalServiceApiController::class, 'toggleActive']);
         Route::delete('/services/{id}', [ProfessionalServiceApiController::class, 'destroy']);
 
+        // 🪔 Pandit Setu - Astrologer Pooja Management
+        Route::get('/poojas', [\App\Http\Controllers\Api\AstrologerPoojaApiController::class, 'index']);
+        Route::post('/poojas', [\App\Http\Controllers\Api\AstrologerPoojaApiController::class, 'store']);
+        Route::get('/poojas/{id}', [\App\Http\Controllers\Api\AstrologerPoojaApiController::class, 'show']);
+        Route::match(['put', 'post'], '/poojas/{id}', [\App\Http\Controllers\Api\AstrologerPoojaApiController::class, 'update']);
+        Route::post('/poojas/{id}/toggle-active', [\App\Http\Controllers\Api\AstrologerPoojaApiController::class, 'toggleActive']);
+        Route::post('/poojas/{id}/image', [\App\Http\Controllers\Api\AstrologerPoojaApiController::class, 'uploadImage']);
+        Route::delete('/poojas/{id}/image', [\App\Http\Controllers\Api\AstrologerPoojaApiController::class, 'removeImage']);
+        Route::delete('/poojas/{id}', [\App\Http\Controllers\Api\AstrologerPoojaApiController::class, 'destroy']);
+
         // 💰 Pandit Setu - Professional Payments, Transactions & Earnings
         Route::get('/payments', [ProfessionalPaymentApiController::class, 'index']);
         Route::post('/payments', [ProfessionalPaymentApiController::class, 'store']);

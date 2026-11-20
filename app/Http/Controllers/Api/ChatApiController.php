@@ -180,9 +180,19 @@ class ChatApiController extends Controller
 
         $chatService = null;
         if ($senderType === 'user') {
+            // Resolve admin_id reliably if missing on session row
+            if (!$session->admin_id && $session->astrologer_id) {
+                $sessionAstrologer = Astrologer::find($session->astrologer_id);
+                if ($sessionAstrologer?->admin_id) {
+                    $session->admin_id = $sessionAstrologer->admin_id;
+                    $session->update(['admin_id' => $sessionAstrologer->admin_id]);
+                }
+            }
+
             $chatService = ProfessionalService::where('admin_id', $session->admin_id)
                 ->where(function ($q) {
-                    $q->where('pricing_model', 'per_message')
+                    $q->where('offering_type', 'chat')
+                      ->orWhere('pricing_model', 'per_message')
                       ->orWhereJsonContains('delivery_methods', 'chat');
                 })
                 ->first();
@@ -241,14 +251,23 @@ class ChatApiController extends Controller
                     $platformMarkup = 0.00;
                     $customerPrice = 0.00;
                 } else {
-                    // Lock or create one-time introductory allowance record for (user_id, astrologer_id)
-                    $allowance = UserAstrologerChatAllowance::firstOrCreate(
-                        [
+                    // Lock or create one-time introductory allowance record, unified across multi-language astrologer records sharing admin_id
+                    $siblingAstrologerIds = Astrologer::where('admin_id', $session->admin_id)->pluck('id')->all();
+                    if (empty($siblingAstrologerIds)) {
+                        $siblingAstrologerIds = [$session->astrologer_id];
+                    }
+
+                    $allowance = UserAstrologerChatAllowance::where('user_id', $session->user_id)
+                        ->whereIn('astrologer_id', $siblingAstrologerIds)
+                        ->first();
+
+                    if (!$allowance) {
+                        $allowance = UserAstrologerChatAllowance::create([
                             'user_id' => $session->user_id,
                             'astrologer_id' => $session->astrologer_id,
-                        ],
-                        ['free_messages_used' => 0]
-                    );
+                            'free_messages_used' => 0,
+                        ]);
+                    }
 
                     $allowance = UserAstrologerChatAllowance::where('id', $allowance->id)
                         ->lockForUpdate()
@@ -539,7 +558,8 @@ class ChatApiController extends Controller
 
         $chatService = ProfessionalService::where('admin_id', $astrologer->admin_id)
             ->where(function ($q) {
-                $q->where('pricing_model', 'per_message')
+                $q->where('offering_type', 'chat')
+                  ->orWhere('pricing_model', 'per_message')
                   ->orWhereJsonContains('delivery_methods', 'chat');
             })
             ->first();
@@ -557,8 +577,13 @@ class ChatApiController extends Controller
 
         $freeMessagesUsed = 0;
         if ($actor instanceof User) {
+            $siblingAstrologerIds = Astrologer::where('admin_id', $astrologer->admin_id)->pluck('id')->all();
+            if (empty($siblingAstrologerIds)) {
+                $siblingAstrologerIds = [$astrologer->id];
+            }
+
             $allowance = UserAstrologerChatAllowance::where('user_id', $actor->id)
-                ->where('astrologer_id', $astrologer->id)
+                ->whereIn('astrologer_id', $siblingAstrologerIds)
                 ->first();
             $freeMessagesUsed = $allowance ? (int) $allowance->free_messages_used : 0;
         }

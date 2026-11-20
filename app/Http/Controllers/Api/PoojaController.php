@@ -20,7 +20,8 @@ class PoojaController extends Controller
     $fallbackText = $locale === 'hi' ? 'अनुरोध पर' : 'On Demand';
     $today = Carbon::today();
 
-    $data = Pooja::where('active', 1)
+    $data = Pooja::with(['admin.astrologers', 'admin.publicProfile'])
+      ->where('active', 1)
       ->where('language', $lang)
       ->whereNull('home_priority')
       ->latest()
@@ -28,7 +29,7 @@ class PoojaController extends Controller
       ->filter(function ($item) use ($today) {
         return empty($item->end_date) || Carbon::parse($item->end_date)->gte($today);
       })
-      ->map(function ($item) use ($locale, $fallbackText) {
+      ->map(function ($item) use ($locale, $fallbackText, $lang) {
         $item->pooja_start_date = !empty($item->start_date)
           ? Carbon::parse($item->start_date)->locale($locale)->translatedFormat('d F Y')
           : $fallbackText;
@@ -36,6 +37,8 @@ class PoojaController extends Controller
         $item->pooja_end_date = !empty($item->end_date)
           ? Carbon::parse($item->end_date)->locale($locale)->translatedFormat('d F Y')
           : $fallbackText;
+
+        $item->provider_name = $item->resolveProviderName($lang);
 
         return $item;
       });
@@ -58,7 +61,8 @@ class PoojaController extends Controller
     $fallbackText = $locale === 'hi' ? 'अनुरोध पर' : 'On Demand';
     $today = Carbon::today();
 
-    $poojas = Pooja::whereNotNull('home_priority')
+    $poojas = Pooja::with(['admin.astrologers', 'admin.publicProfile'])
+      ->whereNotNull('home_priority')
       ->where('active', true)
       ->where('language', $lang)
       ->latest()
@@ -71,7 +75,8 @@ class PoojaController extends Controller
 
     // Fallback: latest 3 if nothing from home_priority is valid
     if ($poojas->isEmpty()) {
-      $poojas = Pooja::where('active', true)
+      $poojas = Pooja::with(['admin.astrologers', 'admin.publicProfile'])
+        ->where('active', true)
         ->where('language', $lang)
         ->latest()
         ->get()
@@ -82,14 +87,21 @@ class PoojaController extends Controller
         ->take(3);
     }
 
-    $poojas = $poojas->map(function ($item) use ($locale, $fallbackText) {
-      $item->start_date = !empty($item->start_date)
+    $poojas = $poojas->map(function ($item) use ($locale, $fallbackText, $lang) {
+      $formattedStart = !empty($item->start_date)
         ? Carbon::parse($item->start_date)->locale($locale)->translatedFormat('d F Y')
         : $fallbackText;
 
-      $item->end_date = !empty($item->end_date)
+      $formattedEnd = !empty($item->end_date)
         ? Carbon::parse($item->end_date)->locale($locale)->translatedFormat('d F Y')
         : $fallbackText;
+
+      $item->start_date = $formattedStart;
+      $item->end_date = $formattedEnd;
+      $item->pooja_start_date = $formattedStart;
+      $item->pooja_end_date = $formattedEnd;
+
+      $item->provider_name = $item->resolveProviderName($lang);
 
       return $item;
     });

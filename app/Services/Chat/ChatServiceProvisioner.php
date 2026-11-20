@@ -20,7 +20,8 @@ class ChatServiceProvisioner
     {
         $existing = ProfessionalService::where('admin_id', $adminId)
             ->where(function ($q) {
-                $q->where('pricing_model', 'per_message')
+                $q->where('offering_type', 'chat')
+                  ->orWhere('pricing_model', 'per_message')
                   ->orWhereJsonContains('delivery_methods', 'chat');
             })
             ->first();
@@ -31,6 +32,7 @@ class ChatServiceProvisioner
 
         if ($existing && $force) {
             $existing->update([
+                'offering_type' => 'chat',
                 'pricing_model' => 'per_message',
                 'price' => self::DEFAULT_BASE_PRICE,
                 'delivery_methods' => ['chat', 'online'],
@@ -48,6 +50,7 @@ class ChatServiceProvisioner
             'description' => 'Direct real-time Vedic astrological consultation via chat.',
             'category' => 'astrologer',
             'specialization' => 'Vedic Astrology Consultation',
+            'offering_type' => 'chat',
             'pricing_model' => 'per_message',
             'price' => self::DEFAULT_BASE_PRICE,
             'currency' => 'INR',

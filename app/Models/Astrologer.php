@@ -45,6 +45,10 @@ class Astrologer extends Model
             return (bool) $this->attributes['has_active_chat'];
         }
 
+        if (!$this->admin_id) {
+            return false;
+        }
+
         if ($this->relationLoaded('activeChatService')) {
             return $this->activeChatService !== null;
         }

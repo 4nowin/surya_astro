@@ -16,6 +16,14 @@ class ChatController extends Controller
 
   public function startSession(Request $request)
   {
+    $astrologerId = $request->input('astrologer_id');
+    $astrologer = $astrologerId ? Astrologer::find($astrologerId) : null;
+    $adminId = $astrologer?->admin_id ?: $request->input('admin_id');
+
+    if ($adminId) {
+      $request->merge(['admin_id' => $adminId]);
+    }
+
     try {
       $request->validate([
         'astrologer_id' => 'required|exists:astrologers,id',
@@ -42,8 +50,11 @@ class ChatController extends Controller
 
     try {
       $user = Auth::user();
-      $astrologerId = $request->input('astrologer_id');
-      $adminId = $request->input('admin_id');
+      $astrologerId = (int) $request->input('astrologer_id');
+      $adminId = (int) $request->input('admin_id');
+
+      // Auto-provision default chat service if missing for registered admin
+      app(\App\Services\Chat\ChatServiceProvisioner::class)->provisionForAdmin($adminId);
 
       // Debug: Log the search parameters
       Log::info('Searching for existing session', [
@@ -53,9 +64,15 @@ class ChatController extends Controller
       ]);
 
       // Check for existing session between this user, admin, and astrologer
+      // (resolving across multi-language astrologer records sharing the same admin_id)
       $existingSession = ChatSession::where('user_id', $user->id)
         ->where('admin_id', $adminId)
-        ->where('astrologer_id', $astrologerId)
+        ->where(function ($q) use ($astrologerId, $adminId) {
+          $q->where('astrologer_id', $astrologerId)
+            ->orWhereHas('astrologer', function ($sub) use ($adminId) {
+              $sub->where('admin_id', $adminId);
+            });
+        })
         ->latest('id')
         ->first();
 
@@ -76,10 +93,22 @@ class ChatController extends Controller
       if ($existingSession) {
         // Reuse existing session and reactivate it if it was previously closed
         $chatSession = $existingSession;
+        $shouldSave = false;
         if ($chatSession->ended_at !== null) {
           $chatSession->ended_at = null;
-          $chatSession->save();
+          $shouldSave = true;
           Log::info('Reactivated existing session', ['session_id' => $chatSession->id]);
+        }
+        if ($chatSession->astrologer_id != $astrologerId) {
+          $chatSession->astrologer_id = $astrologerId;
+          $shouldSave = true;
+        }
+        if ($chatSession->admin_id != $adminId) {
+          $chatSession->admin_id = $adminId;
+          $shouldSave = true;
+        }
+        if ($shouldSave) {
+          $chatSession->save();
         }
         $isNew = false;
       } else {
@@ -105,6 +134,8 @@ class ChatController extends Controller
       return response()->json([
         'status' => $isNew ? 'new' : 'existing',
         'chat_session_id' => $chatSession->id,
+        'admin_id' => (int) $chatSession->admin_id,
+        'astrologer_id' => (int) $chatSession->astrologer_id,
         'message' => $isNew ? 'New chat session started' : 'Existing chat session resumed',
       ]);
     } catch (\Throwable $e) {
